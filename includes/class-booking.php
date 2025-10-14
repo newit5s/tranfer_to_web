@@ -114,6 +114,15 @@ class RB_Booking {
         // Tự động cập nhật thông tin khách hàng vào CRM
         $rb_customer->update_customer_from_booking($booking_id);
 
+        $booking = $this->get_booking($booking_id);
+        /**
+         * Fires right after a booking has been created.
+         *
+         * @param int   $booking_id Newly created booking ID.
+         * @param object $booking   Booking record.
+         */
+        do_action('rb_booking_created', $booking_id, $booking);
+
         return $booking_id;
     }
     
@@ -164,13 +173,23 @@ class RB_Booking {
         if (false === $ok) {
             return new WP_Error('rb_update_fail', 'Xác nhận thất bại, vui lòng thử lại.');
         }
-        
+
+        $updated_booking = $this->get_booking($booking_id);
+
+        /**
+         * Fires when a booking is confirmed successfully.
+         *
+         * @param int    $booking_id Booking ID.
+         * @param object $booking    Booking record with latest data.
+         */
+        do_action('rb_booking_confirmed', $booking_id, $updated_booking);
+
         return true;
     }
-    
+
     public function cancel_booking($booking_id) {
         $result = $this->update_booking($booking_id, array('status' => 'cancelled'));
-        
+
         // Đánh dấu booking đã hủy trong CRM
         if ($result && class_exists('RB_Customer')) {
             global $rb_customer;
@@ -178,13 +197,25 @@ class RB_Booking {
                 $rb_customer->mark_cancelled($booking_id);
             }
         }
-        
+
+        if ($result) {
+            $booking = $this->get_booking($booking_id);
+
+            /**
+             * Fires after a booking has been cancelled.
+             *
+             * @param int    $booking_id Booking ID.
+             * @param object $booking    Booking record.
+             */
+            do_action('rb_booking_cancelled', $booking_id, $booking);
+        }
+
         return $result;
     }
-    
+
     public function complete_booking($booking_id) {
         $result = $this->update_booking($booking_id, array('status' => 'completed'));
-        
+
         // Đánh dấu booking đã hoàn thành trong CRM
         if ($result && class_exists('RB_Customer')) {
             global $rb_customer;
@@ -192,7 +223,12 @@ class RB_Booking {
                 $rb_customer->mark_completed($booking_id);
             }
         }
-        
+
+        if ($result) {
+            $booking = $this->get_booking($booking_id);
+            do_action('rb_booking_completed', $booking_id, $booking);
+        }
+
         return $result;
     }
     

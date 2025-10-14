@@ -127,13 +127,16 @@ wp-content/plugins/restaurant-booking-manager/
 **Actions:**
 ```php
 // Sau khi tạo đặt bàn thành công
-do_action('rb_booking_created', $booking_id);
+do_action('rb_booking_created', $booking_id, $booking);
 
 // Sau khi xác nhận đặt bàn
-do_action('rb_booking_confirmed', $booking_id);
+do_action('rb_booking_confirmed', $booking_id, $booking);
 
 // Sau khi hủy đặt bàn
-do_action('rb_booking_cancelled', $booking_id);
+do_action('rb_booking_cancelled', $booking_id, $booking);
+
+// Sau khi hoàn tất phục vụ (đánh dấu completed)
+do_action('rb_booking_completed', $booking_id, $booking);
 ```
 
 **Filters:**
@@ -147,40 +150,59 @@ add_filter('rb_booking_validation', 'custom_validation', 10, 2);
 
 ## 📊 Database Schema
 
-### Bảng `wp_restaurant_bookings`
+### Bảng `wp_rb_bookings`
 ```sql
 - id: ID đặt bàn
-- customer_name: Tên khách hàng  
-- customer_phone: Số điện thoại
+- customer_name: Tên khách hàng
+- customer_phone: Số điện thoại (đã chuẩn hóa)
 - customer_email: Email
 - guest_count: Số lượng khách
 - booking_date: Ngày đặt
-- booking_time: Giờ đặt  
-- table_number: Số bàn
-- status: Trạng thái (pending/confirmed/cancelled/completed)
+- booking_time: Giờ đặt
+- table_number: Số bàn được gán khi xác nhận
+- status: Trạng thái (pending/confirmed/cancelled/completed/no-show)
 - special_requests: Yêu cầu đặc biệt
+- booking_source: Nguồn đặt bàn (website, hotline...)
+- location_id: Chi nhánh phục vụ
+- language: Ngôn ngữ khách đã chọn
 - created_at: Thời gian tạo
 - confirmed_at: Thời gian xác nhận
 ```
 
-### Bảng `wp_restaurant_tables`  
+### Bảng `wp_rb_tables`
 ```sql
 - id: ID bàn
+- location_id: Thuộc chi nhánh nào
 - table_number: Số bàn
-- capacity: Sức chứa
-- is_available: Có hoạt động không
+- capacity: Sức chứa tối đa
+- is_available: Bàn đang hoạt động?
 - created_at: Thời gian tạo
 ```
 
-### Bảng `wp_restaurant_table_availability`
-```sql  
-- id: ID record
-- table_id: ID bàn
-- booking_date: Ngày
-- booking_time: Giờ
-- is_occupied: Có bị chiếm không  
-- booking_id: ID đặt bàn
-- created_at: Thời gian tạo
+### Bảng `wp_rb_customers`
+```sql
+- id: ID khách hàng
+- name: Tên khách
+- phone: Số điện thoại
+- email: Email
+- total_bookings: Tổng số lần đặt bàn
+- total_guests: Tổng số khách đã phục vụ
+- status: VIP/Black-list/Normal
+- last_booking_at: Lần đặt gần nhất
+```
+
+### Bảng `wp_rb_locations`
+```sql
+- id: ID chi nhánh
+- name: Tên chi nhánh
+- slug: Định danh duy nhất
+- hotline: Hotline liên hệ
+- email: Email nhận thông báo
+- address: Địa chỉ
+- opening_time / closing_time: Giờ mở - đóng cửa
+- time_slot_interval: Khoảng cách giữa các ca
+- min_advance_booking / max_advance_booking: Giới hạn đặt trước
+- languages: Danh sách ngôn ngữ phục vụ
 ```
 
 ## 🔒 Bảo mật
