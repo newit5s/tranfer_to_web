@@ -29,21 +29,40 @@ class RB_Email {
      */
     public function send_confirmation_email($booking) {
         $settings = get_option('rb_settings', array());
-        
+
         if (!isset($settings['enable_email']) || $settings['enable_email'] !== 'yes') {
             return false;
         }
-        
+
         $to = $booking->customer_email;
         $subject = sprintf(__('[%s] Xác nhận đặt bàn', 'restaurant-booking'), get_bloginfo('name'));
         $message = $this->get_confirmation_email_template($booking);
-        
+
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
             'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
         );
-        
+
         return wp_mail($to, $subject, $message, $headers);
+    }
+
+    public function send_pending_confirmation($booking, $location = array()) {
+        $settings = get_option('rb_settings', array());
+
+        if (!isset($settings['enable_email']) || $settings['enable_email'] !== 'yes' || empty($booking->customer_email)) {
+            return false;
+        }
+
+        $confirm_link = add_query_arg('rb_confirm_token', $booking->confirmation_token, home_url('/'));
+        $subject = sprintf(__('[%s] Please confirm your reservation', 'restaurant-booking'), get_bloginfo('name'));
+        $message = $this->get_pending_confirmation_template($booking, $confirm_link, $location);
+
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        );
+
+        return wp_mail($booking->customer_email, $subject, $message, $headers);
     }
     
     /**
@@ -174,7 +193,7 @@ class RB_Email {
                         <a href="' . home_url() . '" class="button">Ghé thăm website</a>
                     </center>
                 </div>
-                
+
                 <div class="footer">
                     <p>Cảm ơn bạn đã chọn ' . get_bloginfo('name') . '!</p>
                     <p>
@@ -185,7 +204,65 @@ class RB_Email {
             </div>
         </body>
         </html>';
-        
+
+        return $template;
+    }
+
+    private function get_pending_confirmation_template($booking, $confirm_link, $location = array()) {
+        $location_block = '';
+        if (!empty($location)) {
+            $location_block .= '<p><strong>' . esc_html($location['name']) . '</strong><br>';
+            if (!empty($location['address'])) {
+                $location_block .= esc_html($location['address']) . '<br>';
+            }
+            if (!empty($location['hotline'])) {
+                $location_block .= __('Hotline:', 'restaurant-booking') . ' ' . esc_html($location['hotline']);
+            }
+            $location_block .= '</p>';
+        }
+
+        $template = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #f39c12; color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0; }
+                .content { background: #fff; padding: 30px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }
+                .button { display: inline-block; padding: 12px 30px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .booking-details { background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0; }
+                .footer { text-align: center; padding: 20px; color: #777; font-size: 14px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>' . get_bloginfo('name') . '</h1>
+                    <p>' . __('Confirm your reservation', 'restaurant-booking') . '</p>
+                </div>
+                <div class="content">
+                    <p>' . sprintf(__('Hi %s,', 'restaurant-booking'), esc_html($booking->customer_name)) . '</p>
+                    <p>' . __('Thank you for choosing us! Please confirm your reservation by clicking the button below.', 'restaurant-booking') . '</p>
+                    <div class="booking-details">
+                        <p><strong>' . __('Date', 'restaurant-booking') . ':</strong> ' . date_i18n('l, d/m/Y', strtotime($booking->booking_date)) . '</p>
+                        <p><strong>' . __('Time', 'restaurant-booking') . ':</strong> ' . esc_html($booking->booking_time) . '</p>
+                        <p><strong>' . __('Guests', 'restaurant-booking') . ':</strong> ' . esc_html($booking->guest_count) . '</p>
+                    </div>
+                    <center>
+                        <a href="' . esc_url($confirm_link) . '" class="button">' . __('Confirm my reservation', 'restaurant-booking') . '</a>
+                    </center>
+                    <p>' . __('If you did not make this reservation or need assistance, please contact us using the details below.', 'restaurant-booking') . '</p>
+                    ' . $location_block . '
+                </div>
+                <div class="footer">
+                    <p>' . get_bloginfo('name') . '</p>
+                </div>
+            </div>
+        </body>
+        </html>';
+
         return $template;
     }
     

@@ -81,19 +81,21 @@
             var formData = form.serialize();
             var submitBtn = form.find('[type="submit"]');
             var originalText = submitBtn.text();
-            
+            var nonceField = form.find('[name="rb_nonce"], [name="rb_nonce_inline"], [name="rb_nonce_portal"]');
+            var nonceValue = nonceField.length ? nonceField.val() : '';
+
             // Show loading state
             submitBtn.text(rb_ajax.loading_text).prop('disabled', true);
             form.addClass('rb-loading');
-            
+
             // Clear previous messages
             $(messageContainer).removeClass('success error').hide();
-            
+
             // AJAX request
             $.ajax({
                 url: rb_ajax.ajax_url,
                 type: 'POST',
-                data: formData + '&action=rb_submit_booking&rb_nonce=' + form.find('[name="rb_nonce"], [name="rb_nonce_inline"]').val(),
+                data: formData + '&action=rb_submit_booking&rb_nonce=' + nonceValue,
                 success: function(response) {
                     if (response.success) {
                         // Show success message
@@ -269,26 +271,255 @@
         $('#rb_booking_date, #rb_date_inline').attr('max', maxDate);
         
         // Enhanced phone validation
-        $('#rb-booking-form, #rb-booking-form-inline').on('submit', function(e) {
-            var phone = $(this).find('input[type="tel"]').val();
-            
-            // Vietnamese phone number validation
-            if (!/^(0[3|5|7|8|9])+([0-9]{8})$/.test(phone)) {
+        $('#rb-booking-form, #rb-booking-form-inline, #rb-portal-details-form').on('submit', function(e) {
+            var phone = $(this).find('input[type="tel"]').val().replace(/\D+/g, '');
+
+            if (phone.length < 8 || phone.length > 15) {
                 e.preventDefault();
-                
-                var messageContainer = $(this).attr('id') === 'rb-booking-form' ? 
-                    '#rb-form-message' : '#rb-form-message-inline';
-                    
+
+                var messageContainer = '#rb-form-message';
+                if ($(this).attr('id') === 'rb-booking-form-inline') {
+                    messageContainer = '#rb-form-message-inline';
+                } else if ($(this).attr('id') === 'rb-portal-details-form') {
+                    messageContainer = '#rb-portal-details-message';
+                }
+
                 $(messageContainer)
                     .removeClass('success')
                     .addClass('error')
-                    .html('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam hợp lệ.')
+                    .html(rb_ajax.invalid_phone_text || 'Invalid phone number. Please enter a valid phone number.')
                     .show();
-                    
+
                 return false;
             }
         });
-        
+
+        // Multi-step portal handling
+        var portalWrapper = $('.rb-portal');
+        if (portalWrapper.length) {
+            var locationsData = rb_ajax.locations || [];
+
+            function findLocation(id) {
+                id = parseInt(id, 10);
+                for (var i = 0; i < locationsData.length; i++) {
+                    if (parseInt(locationsData[i].id, 10) === id) {
+                        return locationsData[i];
+                    }
+                }
+                return null;
+            }
+
+            function formatDate(dateObj) {
+                var year = dateObj.getFullYear();
+                var month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                var day = String(dateObj.getDate()).padStart(2, '0');
+                return year + '-' + month + '-' + day;
+            }
+
+            function showPortalStep(step) {
+                portalWrapper.find('.rb-portal-step').attr('hidden', true);
+                portalWrapper.find('.rb-portal-step[data-step="' + step + '"]').removeAttr('hidden');
+            }
+
+            function updatePortalLocationSummary(location) {
+                if (!location) {
+                    return;
+                }
+                $('#rb-portal-location-hotline').text(location.hotline || '');
+                $('#rb-portal-hotline-note').text(location.hotline ? ' ' + location.hotline : '');
+                $('#rb-portal-location-address').text(location.address || '');
+            }
+
+            $('#rb-portal-go-to-availability').on('click', function() {
+                var selectedLocation = $('#rb-portal-location-form').find('input[name="location_id"]:checked').val();
+                var language = $('#rb-portal-language-select').val();
+
+                if (!selectedLocation) {
+                    alert(rb_ajax.choose_location_text || 'Please select a location.');
+                    return;
+                }
+
+                var location = findLocation(selectedLocation);
+                $('#rb-portal-availability-form [name="location_id"]').val(selectedLocation);
+                $('#rb-portal-availability-form [name="language"]').val(language);
+                $('#rb-portal-location-hidden').val(selectedLocation);
+                $('#rb-portal-language-hidden').val(language);
+
+                if (location) {
+                    var minAdvance = parseInt(location.min_advance_booking, 10) || 2;
+                    var maxAdvance = parseInt(location.max_advance_booking, 10) || 30;
+
+                    var minDate = new Date();
+                    minDate.setHours(minDate.getHours() + minAdvance);
+                    var maxDate = new Date();
+                    maxDate.setDate(maxDate.getDate() + maxAdvance);
+
+                    $('#rb-portal-date').attr('min', formatDate(minDate));
+                    $('#rb-portal-date').attr('max', formatDate(maxDate));
+
+                    updatePortalLocationSummary(location);
+                }
+
+                showPortalStep(2);
+            });
+
+            $('#rb-portal-back-to-location').on('click', function() {
+                showPortalStep(1);
+            });
+
+            $('#rb-portal-availability-form').on('submit', function(e) {
+                e.preventDefault();
+
+                var form = $(this);
+                var resultDiv = $('#rb-portal-availability-result');
+                var suggestionsWrap = $('#rb-portal-suggestions');
+                var suggestionList = suggestionsWrap.find('.rb-portal-suggestion-list');
+                var continueWrap = $('#rb-portal-availability-continue');
+
+                resultDiv.removeClass('success error').text(rb_ajax.loading_text).show();
+                suggestionsWrap.attr('hidden', true);
+                suggestionList.empty();
+                continueWrap.attr('hidden', true);
+
+                $.ajax({
+                    url: rb_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_check_availability',
+                        nonce: rb_ajax.nonce,
+                        date: form.find('[name="booking_date"]').val(),
+                        time: form.find('[name="booking_time"]').val(),
+                        guests: form.find('[name="guest_count"]').val(),
+                        location_id: form.find('[name="location_id"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            if (response.data.available) {
+                                resultDiv.removeClass('error').addClass('success').text(response.data.message);
+                                continueWrap.removeAttr('hidden');
+                            } else {
+                                resultDiv.removeClass('success').addClass('error').text(response.data.message);
+                                if (response.data.suggestions && response.data.suggestions.length) {
+                                    suggestionsWrap.removeAttr('hidden');
+                                    suggestionList.empty();
+                                    response.data.suggestions.forEach(function(time) {
+                                        suggestionList.append('<button type="button" class="rb-btn-secondary rb-portal-suggestion" data-time="' + time + '">' + time + '</button>');
+                                    });
+                                }
+                            }
+                        } else {
+                            resultDiv.removeClass('success').addClass('error').text(response.data.message);
+                        }
+                    },
+                    error: function() {
+                        resultDiv.removeClass('success').addClass('error').text(rb_ajax.error_text);
+                    }
+                });
+            });
+
+            $(document).on('click', '.rb-portal-suggestion', function() {
+                $('#rb-portal-time').val($(this).data('time'));
+                $('#rb-portal-availability-form').trigger('submit');
+            });
+
+            $('#rb-portal-go-to-details').on('click', function() {
+                var dateValue = $('#rb-portal-date').val();
+                var timeValue = $('#rb-portal-time').val();
+                var guestsValue = $('#rb-portal-guests').val();
+                var location = findLocation($('#rb-portal-location-hidden').val());
+
+                $('#rb-portal-date-hidden').val(dateValue);
+                $('#rb-portal-time-hidden').val(timeValue);
+                $('#rb-portal-guests-hidden').val(guestsValue);
+
+                updatePortalLocationSummary(location);
+
+                showPortalStep(3);
+            });
+
+            $('#rb-portal-back-to-availability').on('click', function() {
+                showPortalStep(2);
+            });
+
+            $('#rb-portal-details-form').on('submit', function(e) {
+                e.preventDefault();
+                submitBookingForm($(this), '#rb-portal-details-message');
+            });
+        }
+
+        // Manager dashboard actions
+        var managerWrapper = $('.rb-manager');
+        if (managerWrapper.length) {
+            function updateManagerRow(row, newStatus) {
+                var statusLabel = row.find('.rb-status');
+                statusLabel.removeClass(function(index, className) {
+                    return (className.match(/rb-status-[^\s]+/g) || []).join(' ');
+                });
+                statusLabel.addClass('rb-status-' + newStatus);
+                statusLabel.text(newStatus.replace(/-/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }));
+
+                var bookingId = row.data('booking-id');
+                var actionsCell = row.find('.rb-manager-actions');
+
+                if (newStatus === 'pending') {
+                    actionsCell.html('<button class="rb-btn-success rb-manager-action" data-action="confirm" data-id="' + bookingId + '">' + (rb_ajax.confirm_text || 'Confirm') + '</button>' +
+                        '<button class="rb-btn-danger rb-manager-action" data-action="cancel" data-id="' + bookingId + '">' + (rb_ajax.cancel_text || 'Cancel') + '</button>');
+                } else if (newStatus === 'confirmed') {
+                    actionsCell.html('<button class="rb-btn-info rb-manager-action" data-action="complete" data-id="' + bookingId + '">' + (rb_ajax.complete_text || 'Complete') + '</button>' +
+                        '<button class="rb-btn-danger rb-manager-action" data-action="cancel" data-id="' + bookingId + '">' + (rb_ajax.cancel_text || 'Cancel') + '</button>');
+                } else {
+                    actionsCell.html('<em>' + (rb_ajax.no_actions_text || 'No actions available') + '</em>');
+                }
+            }
+
+            managerWrapper.on('click', '.rb-manager-action', function(e) {
+                e.preventDefault();
+                var button = $(this);
+                if (button.prop('disabled')) {
+                    return;
+                }
+
+                var bookingId = button.data('id');
+                var action = button.data('action');
+                var row = button.closest('tr');
+                var feedback = $('#rb-manager-feedback');
+
+                button.prop('disabled', true);
+
+                $.ajax({
+                    url: rb_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_manager_update_booking',
+                        booking_id: bookingId,
+                        manager_action: action,
+                        nonce: rb_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            feedback.removeClass('error').addClass('success').text(response.data.message).show();
+
+                            if (action === 'confirm') {
+                                updateManagerRow(row, 'confirmed');
+                            } else if (action === 'cancel') {
+                                updateManagerRow(row, 'cancelled');
+                            } else if (action === 'complete') {
+                                updateManagerRow(row, 'completed');
+                            }
+                        } else {
+                            feedback.removeClass('success').addClass('error').text(response.data.message).show();
+                        }
+                    },
+                    error: function() {
+                        feedback.removeClass('success').addClass('error').text(rb_ajax.error_text).show();
+                    },
+                    complete: function() {
+                        button.prop('disabled', false);
+                    }
+                });
+            });
+        }
+
         // Auto-hide messages after 10 seconds
         $(document).on('rb_booking_success', function() {
             setTimeout(function() {

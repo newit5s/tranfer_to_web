@@ -73,22 +73,94 @@ class RB_Admin {
     }
     
     public function display_create_booking_page() {
-        global $wpdb;
+        global $wpdb, $rb_location;
         $settings = get_option('rb_settings', array());
-        
-        $opening_time = isset($settings['opening_time']) ? $settings['opening_time'] : '09:00';
-        $closing_time = isset($settings['closing_time']) ? $settings['closing_time'] : '22:00';
-        $time_interval = isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : 30;
-        
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $locations = $rb_location ? $rb_location->all() : array();
+
+        if (empty($locations)) {
+            echo '<div class="notice notice-warning"><p>' . esc_html__('No locations found. Please create at least one location before creating bookings.', 'restaurant-booking') . '</p></div>';
+            return;
+        }
+
+        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
+        if (empty($selected_location_id)) {
+            $selected_location_id = (int) $locations[0]->id;
+        }
+
+        $available_location_ids = array_map('intval', wp_list_pluck($locations, 'id'));
+        if (!in_array($selected_location_id, $available_location_ids, true)) {
+            $selected_location_id = (int) $locations[0]->id;
+        }
+
+        $location_settings = $rb_location->get_settings($selected_location_id);
+        $location_details = $rb_location->get($selected_location_id);
+
+        $opening_time = isset($location_settings['opening_time']) ? substr($location_settings['opening_time'], 0, 5) : '09:00';
+        $closing_time = isset($location_settings['closing_time']) ? substr($location_settings['closing_time'], 0, 5) : '22:00';
+        $time_interval = isset($location_settings['time_slot_interval']) ? intval($location_settings['time_slot_interval']) : 30;
+
         $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
-        
+
+        $min_hours = isset($location_settings['min_advance_booking']) ? intval($location_settings['min_advance_booking']) : 2;
+        if ($min_hours < 0) {
+            $min_hours = 0;
+        }
+        $max_days = isset($location_settings['max_advance_booking']) ? intval($location_settings['max_advance_booking']) : 30;
+        if ($max_days <= 0) {
+            $max_days = 30;
+        }
+        $now = current_time('timestamp');
+        $min_timestamp = $now + ($min_hours * HOUR_IN_SECONDS);
+        if ($min_timestamp < $now) {
+            $min_timestamp = $now;
+        }
+        $min_date = date('Y-m-d', $min_timestamp);
+        $max_date = date('Y-m-d', $now + ($max_days * DAY_IN_SECONDS));
+
         ?>
         <div class="wrap">
             <h1><?php rb_e('create_new_booking'); ?></h1>
-            
+
+            <div class="rb-location-switcher" style="margin: 20px 0;">
+                <form method="get" action="" style="display: inline-flex; gap: 10px; align-items: center;">
+                    <input type="hidden" name="page" value="rb-create-booking">
+                    <label for="rb-admin-location" style="font-weight: 600;">
+                        <?php esc_html_e('Location', 'restaurant-booking'); ?>
+                    </label>
+                    <select id="rb-admin-location" name="location_id" onchange="this.form.submit();">
+                        <?php foreach ($locations as $location) : ?>
+                            <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, (int) $location->id); ?>>
+                                <?php echo esc_html($location->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+                <?php if ($location_details) : ?>
+                    <div style="margin-top: 10px; color: #555;">
+                        <strong><?php echo esc_html($location_details->name); ?></strong>
+                        <?php if (!empty($location_details->address)) : ?>
+                            <span style="margin-left: 8px;">
+                                <?php echo esc_html($location_details->address); ?>
+                            </span>
+                        <?php endif; ?>
+                        <?php if (!empty($location_details->hotline)) : ?>
+                            <span style="margin-left: 8px;">
+                                📞 <?php echo esc_html($location_details->hotline); ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
             <!-- Language Switcher -->
             <div class="rb-admin-language-switcher" style="float: right; margin-top: -50px;">
-                <?php 
+                <?php
                 if (class_exists('RB_Language_Switcher')) {
                     $switcher = new RB_Language_Switcher();
                     $switcher->render_dropdown();
@@ -100,7 +172,8 @@ class RB_Admin {
                 <form method="post" action="" id="rb-admin-create-booking-form">
                     <?php wp_nonce_field('rb_create_admin_booking', 'rb_nonce'); ?>
                     <input type="hidden" name="action" value="create_admin_booking">
-                    
+                    <input type="hidden" name="location_id" value="<?php echo esc_attr($selected_location_id); ?>">
+
                     <table class="form-table">
                         <tr>
                             <th scope="row">
@@ -150,8 +223,9 @@ class RB_Admin {
                                 <label for="booking_date"><?php rb_e('booking_date'); ?> *</label>
                             </th>
                             <td>
-                                <input type="date" name="booking_date" id="booking_date" 
-                                       min="<?php echo date('Y-m-d'); ?>" required>
+                                <input type="date" name="booking_date" id="booking_date"
+                                       min="<?php echo esc_attr($min_date); ?>"
+                                       max="<?php echo esc_attr($max_date); ?>" required>
                             </td>
                         </tr>
                         
@@ -277,9 +351,34 @@ class RB_Admin {
     }
     
     public function display_dashboard_page() {
-        global $wpdb;
+        global $wpdb, $rb_location;
         $table_name = $wpdb->prefix . 'rb_bookings';
-        
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $locations = $rb_location ? $rb_location->all() : array();
+        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
+
+        if (empty($selected_location_id) && !empty($locations)) {
+            $selected_location_id = (int) $locations[0]->id;
+        }
+
+        $location_lookup = array();
+        foreach ($locations as $location_item) {
+            $location_lookup[(int) $location_item->id] = $location_item;
+        }
+
+        if ($selected_location_id && !isset($location_lookup[$selected_location_id])) {
+            $selected_location_id = !empty($locations) ? (int) $locations[0]->id : 0;
+        }
+
+        $active_location = $selected_location_id && isset($location_lookup[$selected_location_id])
+            ? $location_lookup[$selected_location_id]
+            : (!empty($locations) ? $locations[0] : null);
+
         $filter_status = isset($_GET['filter_status']) ? sanitize_text_field($_GET['filter_status']) : '';
         $filter_source = isset($_GET['filter_source']) ? sanitize_text_field($_GET['filter_source']) : '';
         $filter_date_from = isset($_GET['filter_date_from']) ? sanitize_text_field($_GET['filter_date_from']) : '';
@@ -288,6 +387,10 @@ class RB_Admin {
         $sort_order = isset($_GET['sort_order']) ? sanitize_text_field($_GET['sort_order']) : 'DESC';
 
         $where_clauses = array('1=1');
+
+        if ($selected_location_id) {
+            $where_clauses[] = $wpdb->prepare('location_id = %d', $selected_location_id);
+        }
 
         if (!empty($filter_status)) {
             $where_clauses[] = $wpdb->prepare("status = %s", $filter_status);
@@ -315,22 +418,44 @@ class RB_Admin {
         $sort_order = strtoupper($sort_order) === 'ASC' ? 'ASC' : 'DESC';
         
         $bookings = $wpdb->get_results("SELECT * FROM $table_name WHERE $where ORDER BY $sort_by $sort_order");
-        
-        $stats = array(
-            'total' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name"),
-            'pending' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'pending'"),
-            'confirmed' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'confirmed'"),
-            'completed' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'completed'"),
-            'cancelled' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'cancelled'"),
-            'today' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE booking_date = %s", date('Y-m-d')))
-        );
-        
-        $source_stats = $wpdb->get_results(
-            "SELECT booking_source, COUNT(*) as count 
-            FROM $table_name 
-            GROUP BY booking_source 
-            ORDER BY count DESC"
-        );
+
+        if ($selected_location_id) {
+            $stats = array(
+                'total' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE location_id = %d", $selected_location_id)),
+                'pending' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE status = 'pending' AND location_id = %d", $selected_location_id)),
+                'confirmed' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE status = 'confirmed' AND location_id = %d", $selected_location_id)),
+                'completed' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE status = 'completed' AND location_id = %d", $selected_location_id)),
+                'cancelled' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE status = 'cancelled' AND location_id = %d", $selected_location_id)),
+                'today' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE booking_date = %s AND location_id = %d", date('Y-m-d'), $selected_location_id))
+            );
+
+            $source_stats = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT booking_source, COUNT(*) as count
+                    FROM $table_name
+                    WHERE location_id = %d
+                    GROUP BY booking_source
+                    ORDER BY count DESC",
+                    $selected_location_id
+                )
+            );
+        } else {
+            $stats = array(
+                'total' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name"),
+                'pending' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'pending'"),
+                'confirmed' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'confirmed'"),
+                'completed' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'completed'"),
+                'cancelled' => $wpdb->get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'cancelled'"),
+                'today' => $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE booking_date = %s", date('Y-m-d')))
+            );
+
+            $source_stats = $wpdb->get_results(
+                "SELECT booking_source, COUNT(*) as count
+                FROM $table_name
+                GROUP BY booking_source
+                ORDER BY count DESC"
+            );
+        }
         
         ?>
         <div class="wrap">
@@ -340,17 +465,38 @@ class RB_Admin {
                     <?php rb_e('create_new_booking'); ?>
                 </a>
             </h1>
-            
+
             <!-- Language Switcher -->
             <div class="rb-admin-language-switcher" style="float: right; margin-top: -50px;">
-                <?php 
+                <?php
                 if (class_exists('RB_Language_Switcher')) {
                     $switcher = new RB_Language_Switcher();
                     $switcher->render_dropdown();
                 }
                 ?>
             </div>
-            
+
+            <?php if ($active_location) : ?>
+                <div class="rb-location-summary" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #2271b1; clear: both;">
+                    <strong><?php esc_html_e('Viewing location:', 'restaurant-booking'); ?></strong>
+                    <?php echo esc_html($active_location->name); ?>
+                    <?php if (!empty($active_location->address)) : ?>
+                        <span style="margin-left: 10px; color: #555;">
+                            <?php echo esc_html($active_location->address); ?>
+                        </span>
+                    <?php endif; ?>
+                    <?php if (!empty($active_location->hotline)) : ?>
+                        <span style="margin-left: 10px; color: #555;">
+                            📞 <?php echo esc_html($active_location->hotline); ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            <?php elseif (empty($locations)) : ?>
+                <div class="notice notice-warning" style="margin: 20px 0; clear: both;">
+                    <p><?php esc_html_e('No locations found. Please configure at least one location before managing bookings.', 'restaurant-booking'); ?></p>
+                </div>
+            <?php endif; ?>
+
             <div class="rb-stats-grid" style="margin-bottom: 30px; clear: both;">
                 <div class="rb-stat-box">
                     <h3><?php rb_e('total_bookings'); ?></h3>
@@ -399,6 +545,21 @@ class RB_Admin {
                 <h2 style="margin-top: 0;"><?php rb_e('filters_and_sorting'); ?></h2>
                 <form method="get" action="" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: end;">
                     <input type="hidden" name="page" value="restaurant-booking">
+
+                    <?php if (!empty($locations)) : ?>
+                        <div style="flex: 1; min-width: 180px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                                <?php esc_html_e('Location', 'restaurant-booking'); ?>
+                            </label>
+                            <select name="location_id" style="width: 100%;" onchange="this.form.submit();">
+                                <?php foreach ($locations as $location) : ?>
+                                    <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, (int) $location->id); ?>>
+                                        <?php echo esc_html($location->name); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
 
                     <div style="flex: 1; min-width: 150px;">
                         <label style="display: block; margin-bottom: 5px; font-weight: 600;">
@@ -469,10 +630,19 @@ class RB_Admin {
 
                     <div style="display: flex; gap: 10px;">
                         <button type="submit" class="button button-primary"><?php rb_e('apply'); ?></button>
-                        <a href="?page=restaurant-booking" class="button"><?php rb_e('clear_filters'); ?></a>
+                        <?php
+                        $clear_filters_url = add_query_arg(
+                            array(
+                                'page' => 'restaurant-booking',
+                                'location_id' => $selected_location_id
+                            ),
+                            admin_url('admin.php')
+                        );
+                        ?>
+                        <a href="<?php echo esc_url($clear_filters_url); ?>" class="button"><?php rb_e('clear_filters'); ?></a>
                     </div>
                 </form>
-            </div>            
+            </div>
            
             <p style="margin-bottom: 10px;">
                 <strong><?php printf(rb_t('showing_results'), count($bookings)); ?></strong>
@@ -601,30 +771,87 @@ class RB_Admin {
     }
     
     public function display_tables_page() {
-        global $wpdb;
+        global $wpdb, $rb_location;
         $table_name = $wpdb->prefix . 'rb_tables';
-        
-        $tables = $wpdb->get_results("SELECT * FROM $table_name ORDER BY table_number");
-        
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $locations = $rb_location ? $rb_location->all() : array();
+
+        if (empty($locations)) {
+            echo '<div class="notice notice-warning"><p>' . esc_html__('No locations found. Please configure a location before managing tables.', 'restaurant-booking') . '</p></div>';
+            return;
+        }
+
+        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
+        if (!$selected_location_id) {
+            $selected_location_id = (int) $locations[0]->id;
+        }
+
+        $location_lookup = array();
+        foreach ($locations as $location_item) {
+            $location_lookup[(int) $location_item->id] = $location_item;
+        }
+
+        if ($selected_location_id && !isset($location_lookup[$selected_location_id])) {
+            $selected_location_id = (int) $locations[0]->id;
+        }
+
+        $active_location = isset($location_lookup[$selected_location_id]) ? $location_lookup[$selected_location_id] : $locations[0];
+
+        $tables = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE location_id = %d ORDER BY table_number",
+            $selected_location_id
+        ));
+
         ?>
         <div class="wrap">
             <h1><?php rb_e('manage_tables'); ?></h1>
-            
+
             <!-- Language Switcher -->
             <div class="rb-admin-language-switcher" style="float: right; margin-top: -50px;">
-                <?php 
+                <?php
                 if (class_exists('RB_Language_Switcher')) {
                     $switcher = new RB_Language_Switcher();
                     $switcher->render_dropdown();
                 }
                 ?>
             </div>
-            
+
+            <div class="rb-location-switcher" style="margin: 20px 0; clear: both;">
+                <form method="get" action="" style="display: inline-flex; gap: 10px; align-items: center;">
+                    <input type="hidden" name="page" value="rb-tables">
+                    <label for="rb-tables-location" style="font-weight: 600;">
+                        <?php esc_html_e('Location', 'restaurant-booking'); ?>
+                    </label>
+                    <select id="rb-tables-location" name="location_id" onchange="this.form.submit();">
+                        <?php foreach ($locations as $location) : ?>
+                            <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, (int) $location->id); ?>>
+                                <?php echo esc_html($location->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+                <div style="margin-top: 10px; color: #555;">
+                    <strong><?php echo esc_html($active_location->name); ?></strong>
+                    <?php if (!empty($active_location->address)) : ?>
+                        <span style="margin-left: 8px;"><?php echo esc_html($active_location->address); ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($active_location->hotline)) : ?>
+                        <span style="margin-left: 8px;">📞 <?php echo esc_html($active_location->hotline); ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div class="card" style="clear: both;">
                 <h2><?php rb_e('add_new_table'); ?></h2>
                 <form method="post" action="">
                     <?php wp_nonce_field('rb_add_table', 'rb_nonce'); ?>
                     <input type="hidden" name="action" value="add_table">
+                    <input type="hidden" name="location_id" value="<?php echo esc_attr($selected_location_id); ?>">
                     <table class="form-table">
                         <tr>
                             <th><label for="table_number"><?php rb_e('table_number'); ?></label></th>
@@ -675,8 +902,8 @@ class RB_Admin {
                                         data-available="<?php echo $table->is_available ? '1' : '0'; ?>">
                                         <?php echo $table->is_available ? rb_t('deactivate') : rb_t('activate'); ?>
                                     </button>
-                                    <a href="?page=rb-tables&action=delete_table&id=<?php echo $table->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>" 
-                                       class="button button-small" 
+                                    <a href="?page=rb-tables&action=delete_table&id=<?php echo $table->id; ?>&location_id=<?php echo esc_attr($selected_location_id); ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>"
+                                       class="button button-small"
                                        onclick="return confirm('<?php echo esc_js(rb_t('delete_table_confirm')); ?>')">
                                         <?php rb_e('delete'); ?>
                                     </a>
@@ -1955,8 +2182,30 @@ class RB_Admin {
     }
     
     private function create_admin_booking() {
-        global $wpdb, $rb_booking;
-        
+        global $wpdb, $rb_booking, $rb_location;
+
+        $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $location = $rb_location ? $rb_location->get($location_id) : null;
+
+        if (!$location_id || !$location) {
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'rb-create-booking',
+                    'message' => 'invalid_location'
+                ),
+                admin_url('admin.php')
+            );
+
+            wp_redirect($redirect_url);
+            exit;
+        }
+
         $booking_data = array(
             'customer_name' => sanitize_text_field($_POST['customer_name']),
             'customer_phone' => sanitize_text_field($_POST['customer_phone']),
@@ -1969,24 +2218,45 @@ class RB_Admin {
             'admin_notes' => isset($_POST['admin_notes']) ? sanitize_textarea_field($_POST['admin_notes']) : '',
             'status' => 'pending',
             'created_by' => get_current_user_id(),
-            'created_at' => current_time('mysql')
+            'created_at' => current_time('mysql'),
+            'location_id' => $location_id
         );
-        
+
         $is_available = $rb_booking->is_time_slot_available(
             $booking_data['booking_date'],
             $booking_data['booking_time'],
-            $booking_data['guest_count']
+            $booking_data['guest_count'],
+            null,
+            $location_id
         );
-        
+
         if (!$is_available) {
-            wp_redirect(admin_url('admin.php?page=rb-create-booking&message=no_availability'));
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'rb-create-booking',
+                    'message' => 'no_availability',
+                    'location_id' => $location_id
+                ),
+                admin_url('admin.php')
+            );
+
+            wp_redirect($redirect_url);
             exit;
         }
-        
+
         $booking_id = $rb_booking->create_booking($booking_data);
-        
+
         if (is_wp_error($booking_id)) {
-            wp_redirect(admin_url('admin.php?page=rb-create-booking&message=error'));
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'rb-create-booking',
+                    'message' => 'error',
+                    'location_id' => $location_id
+                ),
+                admin_url('admin.php')
+            );
+
+            wp_redirect($redirect_url);
             exit;
         }
         
@@ -2001,8 +2271,17 @@ class RB_Admin {
                 }
             }
         }
-        
-        wp_redirect(admin_url('admin.php?page=restaurant-booking&message=admin_booking_created'));
+
+        $redirect_url = add_query_arg(
+            array(
+                'page' => 'restaurant-booking',
+                'message' => 'admin_booking_created',
+                'location_id' => $location_id
+            ),
+            admin_url('admin.php')
+        );
+
+        wp_redirect($redirect_url);
         exit;
     }
     
@@ -2064,38 +2343,93 @@ class RB_Admin {
     private function delete_table($id) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'rb_tables';
-        
+
+        $location_id = $wpdb->get_var($wpdb->prepare("SELECT location_id FROM $table_name WHERE id = %d", $id));
+
         $wpdb->delete($table_name, array('id' => $id));
-        
-        wp_redirect(admin_url('admin.php?page=rb-tables&message=deleted'));
+
+        $redirect_args = array(
+            'page' => 'rb-tables',
+            'message' => 'deleted'
+        );
+
+        if ($location_id) {
+            $redirect_args['location_id'] = (int) $location_id;
+        }
+
+        wp_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
         exit;
     }
     
     private function add_table() {
-        global $wpdb;
+        global $wpdb, $rb_location;
         $table_name = $wpdb->prefix . 'rb_tables';
-        
+
         $table_number = intval($_POST['table_number']);
         $capacity = intval($_POST['capacity']);
-        
-        $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table_name WHERE table_number = %d", $table_number));
-        
-        if ($exists) {
-            wp_redirect(admin_url('admin.php?page=rb-tables&message=exists'));
+        $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $location = $rb_location ? $rb_location->get($location_id) : null;
+
+        if (!$location_id || !$location) {
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'rb-tables',
+                    'message' => 'invalid_location'
+                ),
+                admin_url('admin.php')
+            );
+
+            wp_redirect($redirect_url);
             exit;
         }
-        
+
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name WHERE table_number = %d AND location_id = %d",
+            $table_number,
+            $location_id
+        ));
+
+        if ($exists) {
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'rb-tables',
+                    'message' => 'exists',
+                    'location_id' => $location_id
+                ),
+                admin_url('admin.php')
+            );
+
+            wp_redirect($redirect_url);
+            exit;
+        }
+
         $wpdb->insert(
             $table_name,
             array(
+                'location_id' => $location_id,
                 'table_number' => $table_number,
                 'capacity' => $capacity,
                 'is_available' => 1,
                 'created_at' => current_time('mysql')
             )
         );
-        
-        wp_redirect(admin_url('admin.php?page=rb-tables&message=added'));
+
+        $redirect_url = add_query_arg(
+            array(
+                'page' => 'rb-tables',
+                'message' => 'added',
+                'location_id' => $location_id
+            ),
+            admin_url('admin.php')
+        );
+
+        wp_redirect($redirect_url);
         exit;
     }
     
@@ -2183,6 +2517,14 @@ class RB_Admin {
                 break;
             case 'exists':
                 $text = rb_t('table_number_exists');
+                $type = 'error';
+                break;
+            case 'error':
+                $text = __('Something went wrong while processing your request. Please try again.', 'restaurant-booking');
+                $type = 'error';
+                break;
+            case 'invalid_location':
+                $text = __('Please choose a valid location before continuing.', 'restaurant-booking');
                 $type = 'error';
                 break;
             case 'booking_not_found':
