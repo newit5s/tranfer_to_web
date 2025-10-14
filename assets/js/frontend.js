@@ -53,18 +53,18 @@
             var date = $(this).val();
             var guestCount = $(this).closest('form').find('[name="guest_count"]').val();
             var timeSelect = $(this).closest('form').find('[name="booking_time"]');
-            
+
             if (date && guestCount) {
                 updateAvailableTimeSlots(date, guestCount, timeSelect);
             }
         });
-        
+
         // Guest count change - update available times
         $('#rb_guest_count, #rb_guests_inline').on('change', function() {
             var guestCount = $(this).val();
             var date = $(this).closest('form').find('[name="booking_date"]').val();
             var timeSelect = $(this).closest('form').find('[name="booking_time"]');
-            
+
             if (date && guestCount) {
                 updateAvailableTimeSlots(date, guestCount, timeSelect);
             }
@@ -146,6 +146,22 @@
         
         // Update available time slots
         function updateAvailableTimeSlots(date, guestCount, timeSelect) {
+            if (!timeSelect || !timeSelect.length) {
+                return;
+            }
+
+            var form = timeSelect.closest('form');
+            var locationField = form.find('[name="location_id"]');
+            var locationId = locationField.length ? locationField.val() : '';
+
+            if (!locationId && rb_ajax.default_location_id) {
+                locationId = rb_ajax.default_location_id;
+            }
+
+            if (!locationId) {
+                return;
+            }
+
             $.ajax({
                 url: rb_ajax.ajax_url,
                 type: 'POST',
@@ -153,13 +169,14 @@
                     action: 'rb_get_time_slots',
                     date: date,
                     guest_count: guestCount,
+                    location_id: locationId,
                     nonce: rb_ajax.nonce
                 },
                 success: function(response) {
-                    if (response.success) {
+                    if (response.success && response.data) {
                         var slots = response.data.slots;
                         var currentValue = timeSelect.val();
-                        
+
                         // Clear and rebuild options
                         timeSelect.empty();
                         timeSelect.append('<option value="">Chọn giờ</option>');
@@ -176,23 +193,24 @@
                 }
             });
         }
-        
+
         // Check availability
         function checkAvailability() {
             var date = $('#rb_booking_date').val();
             var time = $('#rb_booking_time').val();
             var guests = $('#rb_guest_count').val();
+            var locationId = $('#rb-booking-form').find('[name="location_id"]').val() || rb_ajax.default_location_id || '';
             var resultDiv = $('#rb-availability-result');
-            
-            if (!date || !time || !guests) {
+
+            if (!date || !time || !guests || !locationId) {
                 resultDiv
                     .removeClass('success')
                     .addClass('error')
-                    .html('Vui lòng chọn đầy đủ ngày, giờ và số khách')
+                    .html('Please select date, time, guests and location before checking availability.')
                     .show();
                 return;
             }
-            
+
             // Show loading
             resultDiv
                 .removeClass('success error')
@@ -207,6 +225,7 @@
                     date: date,
                     time: time,
                     guests: guests,
+                    location_id: locationId,
                     nonce: rb_ajax.nonce
                 },
                 success: function(response) {

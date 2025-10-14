@@ -35,6 +35,9 @@ class RB_Frontend {
         add_action('wp_ajax_rb_check_availability', array($this, 'check_availability'));
         add_action('wp_ajax_nopriv_rb_check_availability', array($this, 'check_availability'));
 
+        add_action('wp_ajax_rb_get_time_slots', array($this, 'get_time_slots'));
+        add_action('wp_ajax_nopriv_rb_get_time_slots', array($this, 'get_time_slots'));
+
         add_action('wp_ajax_rb_manager_update_booking', array($this, 'handle_manager_update_booking'));
     }
 
@@ -78,9 +81,19 @@ class RB_Frontend {
             'show_button' => 'yes'
         ), $atts, 'restaurant_booking');
 
+        $locations = $this->get_locations_data();
+
+        if (empty($locations)) {
+            return '<div class="rb-alert rb-no-location">' . esc_html__('Please configure at least one restaurant location before displaying the booking form.', 'restaurant-booking') . '</div>';
+        }
+
+        $default_location = $locations[0];
+        $default_location_id = (int) $default_location['id'];
+        $current_language = rb_get_current_language();
+
         $settings = get_option('rb_settings', array(
             'opening_time' => '09:00',
-            'closing_time' => '22:00', 
+            'closing_time' => '22:00',
             'time_slot_interval' => 30,
             'min_advance_booking' => 2,
             'max_advance_booking' => 30
@@ -128,6 +141,8 @@ class RB_Frontend {
 
                     <form id="rb-booking-form" class="rb-form">
                         <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce'); ?>
+                        <input type="hidden" name="location_id" value="<?php echo esc_attr($default_location_id); ?>">
+                        <input type="hidden" name="language" value="<?php echo esc_attr($current_language); ?>">
 
                         <div class="rb-form-row">
                             <div class="rb-form-group">
@@ -234,6 +249,8 @@ class RB_Frontend {
 
                     <form id="rb-booking-form-inline" class="rb-form">
                         <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce_inline'); ?>
+                        <input type="hidden" name="location_id" value="<?php echo esc_attr($default_location_id); ?>">
+                        <input type="hidden" name="language" value="<?php echo esc_attr($current_language); ?>">
 
                         <div class="rb-form-grid">
                             <div class="rb-form-group">
@@ -1112,6 +1129,68 @@ class RB_Frontend {
                 'suggestions' => $suggestions
             ));
         }
+
+        wp_die();
+    }
+
+    public function get_time_slots() {
+        if (!check_ajax_referer('rb_frontend_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => __('Security check failed', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $date = isset($_POST['date']) ? sanitize_text_field($_POST['date']) : '';
+        $guest_count = isset($_POST['guest_count']) ? intval($_POST['guest_count']) : 0;
+        $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
+
+        if (empty($date) || $guest_count <= 0 || !$location_id) {
+            wp_send_json_error(array('message' => __('Missing data. Please select date, guests and location.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        if (!$this->is_booking_allowed_on_date($date, $location_id)) {
+            wp_send_json_success(array('slots' => array()));
+            wp_die();
+        }
+
+        global $rb_booking;
+
+        if (!$rb_booking) {
+            require_once RB_PLUGIN_DIR . 'includes/class-booking.php';
+            $rb_booking = new RB_Booking();
+        }
+
+        $settings = array();
+
+        if ($this->location_helper) {
+            $settings = $this->location_helper->get_settings($location_id);
+        }
+
+        if (empty($settings)) {
+            $settings = get_option('rb_settings', array());
+        }
+
+        $opening_time = isset($settings['opening_time']) ? $settings['opening_time'] : null;
+        $closing_time = isset($settings['closing_time']) ? $settings['closing_time'] : null;
+        $interval = isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : null;
+
+        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $interval);
+        $available_slots = array();
+        $current_timestamp = current_time('timestamp');
+
+        foreach ($time_slots as $slot) {
+            $slot_timestamp = strtotime($date . ' ' . $slot);
+
+            if (!$slot_timestamp || $slot_timestamp <= $current_timestamp) {
+                continue;
+            }
+
+            if ($rb_booking->is_time_slot_available($date, $slot, $guest_count, null, $location_id)) {
+                $available_slots[] = $slot;
+            }
+        }
+
+        wp_send_json_success(array('slots' => array_values(array_unique($available_slots))));
 
         wp_die();
     }

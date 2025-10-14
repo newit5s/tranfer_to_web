@@ -174,6 +174,8 @@ function rb_frontend_enqueue_scripts() {
         }
     }
 
+    $default_location_id = !empty($location_data) ? (int) $location_data[0]['id'] : 0;
+
     wp_localize_script('rb-frontend-js', 'rb_ajax', array(
         'ajax_url' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('rb_frontend_nonce'),
@@ -181,6 +183,7 @@ function rb_frontend_enqueue_scripts() {
         'translations' => RB_I18n::get_instance()->get_js_translations(),
         'current_language' => rb_get_current_language(),
         'locations' => $location_data,
+        'default_location_id' => $default_location_id,
         'loading_text' => __('Checking...', 'restaurant-booking'),
         'error_text' => __('Something went wrong. Please try again.', 'restaurant-booking'),
         'invalid_phone_text' => __('Invalid phone number. Please enter a valid phone number.', 'restaurant-booking'),
