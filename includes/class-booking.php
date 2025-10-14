@@ -23,11 +23,12 @@ class RB_Booking {
             $booking_id
         ));
     }
-    
+
     public function get_bookings($args = array()) {
         $defaults = array(
             'status' => '',
             'date' => '',
+            'location_id' => 0,
             'limit' => -1,
             'offset' => 0,
             'orderby' => 'booking_date',
@@ -42,14 +43,18 @@ class RB_Booking {
         if (!empty($args['status'])) {
             $where_clauses[] = $this->wpdb->prepare("status = %s", $args['status']);
         }
-        
+
         if (!empty($args['date'])) {
             $where_clauses[] = $this->wpdb->prepare("booking_date = %s", $args['date']);
         }
-        
+
+        if (!empty($args['location_id'])) {
+            $where_clauses[] = $this->wpdb->prepare("location_id = %d", $args['location_id']);
+        }
+
         $where = implode(' AND ', $where_clauses);
         $orderby = sanitize_sql_orderby($args['orderby'] . ' ' . $args['order']);
-        
+
         $sql = "SELECT * FROM $table_name WHERE $where ORDER BY $orderby";
         
         if ($args['limit'] > 0) {
@@ -66,18 +71,26 @@ class RB_Booking {
             'status' => 'pending',
             'booking_source' => 'website',
             'created_at' => current_time('mysql'),
-            'table_number' => null
+            'table_number' => null,
+            'location_id' => 1,
+            'language' => rb_get_current_language(),
+            'confirmation_token' => $this->generate_confirmation_token(),
+            'confirmation_token_expires' => gmdate('Y-m-d H:i:s', current_time('timestamp', true) + DAY_IN_SECONDS)
         );
 
         $data = wp_parse_args($data, $defaults);
 
         // Validate required fields
-        $required = array('customer_name', 'customer_phone', 'customer_email', 'guest_count', 'booking_date', 'booking_time');
+        $required = array('customer_name', 'customer_phone', 'guest_count', 'booking_date', 'booking_time', 'location_id');
 
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 return new WP_Error('missing_field', sprintf(__('Field %s is required', 'restaurant-booking'), $field));
             }
+        }
+
+        if (!empty($data['customer_email']) && !is_email($data['customer_email'])) {
+            return new WP_Error('invalid_email', __('Customer email is invalid', 'restaurant-booking'));
         }
 
         $result = $this->wpdb->insert($table_name, $data);
@@ -131,7 +144,7 @@ class RB_Booking {
         }
 
         // Chọn bàn nhỏ nhất đủ chỗ
-        $slot_table = $this->get_smallest_available_table($bk->booking_date, $bk->booking_time, (int)$bk->guest_count);
+        $slot_table = $this->get_smallest_available_table($bk->booking_date, $bk->booking_time, (int)$bk->guest_count, (int)$bk->location_id);
         if (!$slot_table) {
             return new WP_Error('rb_no_table', 'Hết bàn phù hợp để xác nhận ở khung giờ này.');
         }
@@ -199,15 +212,16 @@ class RB_Booking {
         return $result;
     }
     
-    public function is_time_slot_available($date, $time, $guest_count, $exclude_booking_id = null) {
+    public function is_time_slot_available($date, $time, $guest_count, $exclude_booking_id = null, $location_id = 1) {
         global $wpdb;
         $tables_table = $wpdb->prefix . 'rb_tables';
         $bookings_table = $wpdb->prefix . 'rb_bookings';
 
         // Tính tổng sức chứa
-        $total_capacity = (int) $wpdb->get_var(
-            "SELECT SUM(capacity) FROM {$tables_table} WHERE is_available = 1"
-        );
+        $total_capacity = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT SUM(capacity) FROM {$tables_table} WHERE is_available = 1 AND location_id = %d",
+            $location_id
+        ));
 
         if ($total_capacity <= 0) {
             return false;
@@ -220,21 +234,22 @@ class RB_Booking {
         }
 
         $booked_guests = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT SUM(guest_count) 
+            "SELECT SUM(guest_count)
             FROM {$bookings_table}
             WHERE booking_date = %s
             AND booking_time = %s
+            AND location_id = %d
             AND status IN ('pending', 'confirmed')
             {$exclude_sql}",
-            $date, $time
+            $date, $time, $location_id
         ));
 
         $remaining_capacity = $total_capacity - $booked_guests;
-        
+
         return $remaining_capacity >= $guest_count;
     }
 
-    public function get_smallest_available_table($date, $time, $guest_count) {
+    public function get_smallest_available_table($date, $time, $guest_count, $location_id = 1) {
         global $wpdb;
         $t = $wpdb->prefix . 'rb_tables';
         $b = $wpdb->prefix . 'rb_bookings';
@@ -243,24 +258,26 @@ class RB_Booking {
             "SELECT t.table_number, t.capacity
              FROM {$t} t
              WHERE t.is_available = 1
+               AND t.location_id = %d
                AND t.capacity >= %d
                AND t.table_number NOT IN (
                  SELECT b.table_number
                  FROM {$b} b
                  WHERE b.booking_date = %s
                    AND b.booking_time = %s
+                   AND b.location_id = %d
                    AND b.status IN ('confirmed', 'pending')
                    AND b.table_number IS NOT NULL
                )
              ORDER BY t.capacity ASC, t.table_number ASC
              LIMIT 1",
-            (int)$guest_count, $date, $time
+            (int)$location_id, (int)$guest_count, $date, $time, (int)$location_id
         );
-        
+
         return $wpdb->get_row($sql);
     }
 
-    public function available_table_count($date, $time, $guest_count) {
+    public function available_table_count($date, $time, $guest_count, $location_id = 1) {
         global $wpdb;
         $t = $wpdb->prefix . 'rb_tables';
         $b = $wpdb->prefix . 'rb_bookings';
@@ -269,18 +286,133 @@ class RB_Booking {
             "SELECT COUNT(*)
              FROM {$t} x
              WHERE x.is_available = 1
+               AND x.location_id = %d
                AND x.capacity >= %d
                AND x.table_number NOT IN (
                  SELECT y.table_number
                  FROM {$b} y
                  WHERE y.booking_date = %s
                    AND y.booking_time = %s
+                   AND y.location_id = %d
                    AND y.status IN ('confirmed', 'pending')
                    AND y.table_number IS NOT NULL
                )",
-            (int)$guest_count, $date, $time
+            (int)$location_id, (int)$guest_count, $date, $time, (int)$location_id
         );
-        
+
         return (int) $wpdb->get_var($sql);
+    }
+
+    public function suggest_time_slots($location_id, $date, $time, $guest_count, $range_minutes = 30) {
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $settings = $rb_location->get_settings($location_id);
+
+        if (empty($settings)) {
+            return array();
+        }
+
+        $interval = isset($settings['time_slot_interval']) ? (int) $settings['time_slot_interval'] : 30;
+        if ($interval <= 0) {
+            $interval = 30;
+        }
+
+        $all_slots = $this->generate_time_slots_for_location($settings['opening_time'], $settings['closing_time'], $interval);
+
+        $target_timestamp = strtotime($date . ' ' . $time);
+        if (!$target_timestamp) {
+            return array();
+        }
+
+        $range_seconds = absint($range_minutes) * MINUTE_IN_SECONDS;
+        $suggestions = array();
+
+        foreach ($all_slots as $slot) {
+            $slot_timestamp = strtotime($date . ' ' . $slot);
+            if (!$slot_timestamp) {
+                continue;
+            }
+
+            if (abs($slot_timestamp - $target_timestamp) <= $range_seconds) {
+                if ($this->is_time_slot_available($date, $slot, $guest_count, null, $location_id)) {
+                    $suggestions[] = $slot;
+                }
+            }
+        }
+
+        return $suggestions;
+    }
+
+    private function generate_time_slots_for_location($opening_time, $closing_time, $interval) {
+        $slots = array();
+        $current = strtotime($opening_time);
+        $end = strtotime($closing_time);
+
+        if ($current === false || $end === false) {
+            return $slots;
+        }
+
+        while ($current <= $end) {
+            $slots[] = date('H:i', $current);
+            $current = strtotime("+{$interval} minutes", $current);
+        }
+
+        return $slots;
+    }
+
+    private function generate_confirmation_token() {
+        return wp_generate_password(32, false, false);
+    }
+
+    public function confirm_booking_by_token($token) {
+        if (empty($token)) {
+            return new WP_Error('rb_invalid_token', __('Invalid confirmation token', 'restaurant-booking'));
+        }
+
+        $table_name = $this->wpdb->prefix . 'rb_bookings';
+        $booking = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$table_name} WHERE confirmation_token = %s",
+            $token
+        ));
+
+        if (!$booking) {
+            return new WP_Error('rb_token_not_found', __('Booking not found or already confirmed', 'restaurant-booking'));
+        }
+
+        if (!empty($booking->confirmation_token_expires)) {
+            $expires = strtotime($booking->confirmation_token_expires);
+            if ($expires && $expires < current_time('timestamp', true)) {
+                return new WP_Error('rb_token_expired', __('Confirmation link has expired', 'restaurant-booking'));
+            }
+        }
+
+        if ($booking->status === 'confirmed') {
+            return true;
+        }
+
+        $result = $this->confirm_booking($booking->id);
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        $this->wpdb->update(
+            $table_name,
+            array(
+                'confirmation_token' => null,
+                'confirmation_token_expires' => null,
+                'confirmed_via' => 'email'
+            ),
+            array('id' => $booking->id),
+            array('%s', '%s', '%s'),
+            array('%d')
+        );
+
+        return true;
     }
 }

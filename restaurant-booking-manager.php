@@ -28,9 +28,10 @@ define('RB_PLUGIN_BASENAME', plugin_basename(__FILE__));
 register_activation_hook(__FILE__, 'rb_activate_plugin');
 function rb_activate_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-database.php';
+    require_once RB_PLUGIN_DIR . 'includes/class-location.php';
     $database = new RB_Database();
     $database->create_tables();
-    
+
     add_option('rb_settings', array(
         'max_tables' => 20,
         'opening_time' => '09:00',
@@ -39,7 +40,20 @@ function rb_activate_plugin() {
         'admin_email' => get_option('admin_email'),
         'enable_email' => 'yes'
     ));
-    
+
+    add_role(
+        'rb_location_manager',
+        __('Location Manager', 'restaurant-booking'),
+        array(
+            'read' => true,
+            'rb_manage_location' => true
+        )
+    );
+
+    if ($administrator = get_role('administrator')) {
+        $administrator->add_cap('rb_manage_location');
+    }
+
     flush_rewrite_rules();
 }
 
@@ -78,13 +92,15 @@ function rb_init_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-customer.php';
     require_once RB_PLUGIN_DIR . 'includes/class-ajax.php';
     require_once RB_PLUGIN_DIR . 'includes/class-email.php';
-    
+    require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+
     // Initialize globals
-    global $rb_database, $rb_booking, $rb_customer, $rb_email;
+    global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
     $rb_database = new RB_Database();
     $rb_booking = new RB_Booking();
     $rb_customer = new RB_Customer();
     $rb_email = new RB_Email();
+    $rb_location = new RB_Location();
     
     // Initialize AJAX
     new RB_Ajax();
@@ -130,13 +146,49 @@ add_action('wp_enqueue_scripts', 'rb_frontend_enqueue_scripts');
 function rb_frontend_enqueue_scripts() {
     wp_enqueue_style('rb-frontend-css', RB_PLUGIN_URL . 'assets/css/frontend.css', array(), RB_VERSION);
     wp_enqueue_script('rb-frontend-js', RB_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), RB_VERSION, true);
-    
+
+    global $rb_location;
+    if (!$rb_location) {
+        require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+        $rb_location = new RB_Location();
+    }
+
+    $location_data = array();
+    if ($rb_location) {
+        $locations = $rb_location->all();
+        foreach ($locations as $location) {
+            $location_data[] = array(
+                'id' => (int) $location->id,
+                'name' => $location->name,
+                'slug' => $location->slug,
+                'hotline' => $location->hotline,
+                'email' => $location->email,
+                'address' => $location->address,
+                'opening_time' => $location->opening_time,
+                'closing_time' => $location->closing_time,
+                'time_slot_interval' => (int) $location->time_slot_interval,
+                'min_advance_booking' => (int) $location->min_advance_booking,
+                'max_advance_booking' => (int) $location->max_advance_booking,
+                'languages' => array_map('trim', explode(',', $location->languages)),
+            );
+        }
+    }
+
     wp_localize_script('rb-frontend-js', 'rb_ajax', array(
         'ajax_url' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('rb_frontend_nonce'),
         'language_nonce' => wp_create_nonce('rb_language_nonce'),
         'translations' => RB_I18n::get_instance()->get_js_translations(),
-        'current_language' => rb_get_current_language()
+        'current_language' => rb_get_current_language(),
+        'locations' => $location_data,
+        'loading_text' => __('Checking...', 'restaurant-booking'),
+        'error_text' => __('Something went wrong. Please try again.', 'restaurant-booking'),
+        'invalid_phone_text' => __('Invalid phone number. Please enter a valid phone number.', 'restaurant-booking'),
+        'choose_location_text' => __('Please select a location.', 'restaurant-booking'),
+        'confirm_text' => __('Confirm', 'restaurant-booking'),
+        'cancel_text' => __('Cancel', 'restaurant-booking'),
+        'complete_text' => __('Complete', 'restaurant-booking'),
+        'no_actions_text' => __('No actions available', 'restaurant-booking')
     ));
 }
 
@@ -148,9 +200,29 @@ function rb_booking_shortcode($atts) {
     if (!class_exists('RB_Frontend')) {
         require_once RB_PLUGIN_DIR . 'public/class-frontend.php';
     }
-    
+
     $frontend = new RB_Frontend();
     return $frontend->render_booking_form($atts);
+}
+
+add_shortcode('restaurant_booking_portal', 'rb_booking_portal_shortcode');
+function rb_booking_portal_shortcode($atts) {
+    if (!class_exists('RB_Frontend')) {
+        require_once RB_PLUGIN_DIR . 'public/class-frontend.php';
+    }
+
+    $frontend = new RB_Frontend();
+    return $frontend->render_multi_location_portal($atts);
+}
+
+add_shortcode('restaurant_booking_manager', 'rb_booking_manager_shortcode');
+function rb_booking_manager_shortcode($atts) {
+    if (!class_exists('RB_Frontend')) {
+        require_once RB_PLUGIN_DIR . 'public/class-frontend.php';
+    }
+
+    $frontend = new RB_Frontend();
+    return $frontend->render_location_manager($atts);
 }
 
 /**

@@ -159,15 +159,30 @@ class RB_Ajax {
         
         $table_number = intval($_POST['table_number']);
         $capacity = intval($_POST['capacity']);
-        
+        $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
+
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $location = $rb_location ? $rb_location->get($location_id) : null;
+
+        if (!$location_id || !$location) {
+            wp_send_json_error(array('message' => __('Please select a valid location.', 'restaurant-booking')));
+        }
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'rb_tables';
-        
+
         $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE table_number = %d",
-            $table_number
+            "SELECT COUNT(*) FROM $table_name WHERE table_number = %d AND location_id = %d",
+            $table_number,
+            $location_id
         ));
-        
+
         if ($exists) {
             wp_send_json_error(array('message' => __('Table number already exists', 'restaurant-booking')));
         }
@@ -175,6 +190,7 @@ class RB_Ajax {
         $result = $wpdb->insert(
             $table_name,
             array(
+                'location_id' => $location_id,
                 'table_number' => $table_number,
                 'capacity' => $capacity,
                 'is_available' => 1,

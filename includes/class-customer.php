@@ -1,12 +1,12 @@
 <?php
 class RB_Customer {
     private $wpdb;
-    
+
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
     }
-    
+
     /**
      * Tự động cập nhật thông tin khách khi có booking mới
      */
@@ -15,37 +15,41 @@ class RB_Customer {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
 
         $booking = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM $booking_table WHERE id = %d", $booking_id
+            "SELECT * FROM $booking_table WHERE id = %d",
+            $booking_id
         ));
 
         if (!$booking) {
             return false;
         }
 
-        // Check if customer exists
+        $location_id = isset($booking->location_id) ? (int) $booking->location_id : 1;
+
+        // Check if customer exists in the same location
         $customer = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM $customer_table WHERE phone = %s", 
-            $booking->customer_phone
+            "SELECT * FROM $customer_table WHERE phone = %s AND location_id = %d",
+            $booking->customer_phone,
+            $location_id
         ));
 
         if ($customer) {
-            // Update existing customer
             $this->wpdb->query($this->wpdb->prepare(
-                "UPDATE $customer_table SET 
+                "UPDATE $customer_table SET
                 total_bookings = total_bookings + 1,
                 last_visit = %s,
                 name = %s,
                 email = %s,
                 updated_at = NOW()
-                WHERE phone = %s",
+                WHERE phone = %s AND location_id = %d",
                 $booking->booking_date,
                 $booking->customer_name,
                 $booking->customer_email,
-                $booking->customer_phone
+                $booking->customer_phone,
+                $location_id
             ));
         } else {
-            // Create new customer
             $this->wpdb->insert($customer_table, array(
+                'location_id' => $location_id,
                 'phone' => $booking->customer_phone,
                 'email' => $booking->customer_email,
                 'name' => $booking->customer_name,
@@ -59,262 +63,301 @@ class RB_Customer {
 
         return true;
     }
-    
+
     /**
      * Cập nhật khi booking completed + Auto VIP
      */
     public function mark_completed($booking_id) {
-        $booking_table = $this->wpdb->prefix . 'rb_bookings';
-        $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
-        $booking = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM $booking_table WHERE id = %d", $booking_id
-        ));
-        
+        $booking = $this->get_booking_with_location($booking_id);
         if ($booking) {
+            $customer_table = $this->wpdb->prefix . 'rb_customers';
             $this->wpdb->query($this->wpdb->prepare(
-                "UPDATE $customer_table SET 
+                "UPDATE $customer_table SET
                 completed_bookings = completed_bookings + 1
-                WHERE phone = %s",
-                $booking->customer_phone
+                WHERE phone = %s AND location_id = %d",
+                $booking->customer_phone,
+                (int) $booking->location_id
             ));
-            
-            // *** AUTO VIP CHECK ***
-            $this->auto_upgrade_vip($booking->customer_phone);
+
+            $this->auto_upgrade_vip($booking->customer_phone, (int) $booking->location_id);
         }
     }
-    
+
     /**
      * Auto upgrade to VIP nếu completed >= 5
      */
-    private function auto_upgrade_vip($phone) {
+    private function auto_upgrade_vip($phone, $location_id) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
+
         $customer = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM $customer_table WHERE phone = %s", $phone
+            "SELECT * FROM $customer_table WHERE phone = %s AND location_id = %d",
+            $phone,
+            $location_id
         ));
-        
+
         if ($customer && $customer->completed_bookings >= 5 && !$customer->vip_status) {
             $this->wpdb->update(
                 $customer_table,
                 array('vip_status' => 1),
-                array('phone' => $phone)
+                array(
+                    'phone' => $phone,
+                    'location_id' => $location_id
+                )
             );
-            
-            // Trigger VIP upgrade action (for notifications, etc.)
+
             do_action('rb_customer_upgraded_vip', $customer);
         }
     }
-    
+
     /**
      * Manual set VIP status
      */
     public function set_vip_status($customer_id, $status) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
+
         return $this->wpdb->update(
             $customer_table,
             array('vip_status' => $status ? 1 : 0),
             array('id' => $customer_id)
         );
     }
-    
+
     /**
      * Blacklist customer
      */
     public function set_blacklist($customer_id, $status) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
+
         return $this->wpdb->update(
             $customer_table,
             array('blacklisted' => $status ? 1 : 0),
             array('id' => $customer_id)
         );
     }
-    
+
     /**
      * Cập nhật khi booking cancelled
      */
     public function mark_cancelled($booking_id) {
-        $booking_table = $this->wpdb->prefix . 'rb_bookings';
-        $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
-        $booking = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM $booking_table WHERE id = %d", $booking_id
-        ));
-        
+        $booking = $this->get_booking_with_location($booking_id);
         if ($booking) {
+            $customer_table = $this->wpdb->prefix . 'rb_customers';
             $this->wpdb->query($this->wpdb->prepare(
-                "UPDATE $customer_table SET 
+                "UPDATE $customer_table SET
                 cancelled_bookings = cancelled_bookings + 1
-                WHERE phone = %s",
-                $booking->customer_phone
+                WHERE phone = %s AND location_id = %d",
+                $booking->customer_phone,
+                (int) $booking->location_id
             ));
-            
-            // Auto check for problematic customer
-            $this->check_problematic_customer($booking->customer_phone);
+
+            $this->check_problematic_customer($booking->customer_phone, (int) $booking->location_id);
         }
     }
-    
+
     /**
      * Đánh dấu no-show
      */
     public function mark_no_show($booking_id) {
-        $booking_table = $this->wpdb->prefix . 'rb_bookings';
-        $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
-        $booking = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM $booking_table WHERE id = %d", $booking_id
-        ));
-        
+        $booking = $this->get_booking_with_location($booking_id);
         if ($booking) {
+            $customer_table = $this->wpdb->prefix . 'rb_customers';
             $this->wpdb->query($this->wpdb->prepare(
-                "UPDATE $customer_table SET 
+                "UPDATE $customer_table SET
                 no_shows = no_shows + 1
-                WHERE phone = %s",
-                $booking->customer_phone
+                WHERE phone = %s AND location_id = %d",
+                $booking->customer_phone,
+                (int) $booking->location_id
             ));
-            
-            $this->check_problematic_customer($booking->customer_phone);
+
+            $this->check_problematic_customer($booking->customer_phone, (int) $booking->location_id);
         }
     }
-    
+
     /**
      * Check nếu customer có vấn đề (nhiều cancel/no-show)
      */
-    private function check_problematic_customer($phone) {
+    private function check_problematic_customer($phone, $location_id) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
+
         $customer = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM $customer_table WHERE phone = %s", $phone
+            "SELECT * FROM $customer_table WHERE phone = %s AND location_id = %d",
+            $phone,
+            $location_id
         ));
-        
+
         if ($customer && $customer->total_bookings >= 3) {
             $problem_count = $customer->no_shows + $customer->cancelled_bookings;
-            $problem_rate = ($problem_count / $customer->total_bookings) * 100;
-            
-            // Nếu > 50% cancel/no-show -> trigger warning
+            $problem_rate = ($problem_count / max(1, $customer->total_bookings)) * 100;
+
             if ($problem_rate > 50) {
                 do_action('rb_problematic_customer_detected', $customer);
             }
         }
     }
-    
+
     /**
      * Lấy lịch sử khách hàng
      */
-    public function get_customer_history($phone) {
+    public function get_customer_history($phone, $location_id = null) {
         $booking_table = $this->wpdb->prefix . 'rb_bookings';
-        
-        return $this->wpdb->get_results($this->wpdb->prepare(
-            "SELECT * FROM $booking_table 
-            WHERE customer_phone = %s 
-            ORDER BY booking_date DESC, booking_time DESC 
-            LIMIT 20",
-            $phone
-        ));
+        $where = array('customer_phone = %s');
+        $params = array($phone);
+
+        if ($location_id) {
+            $where[] = 'location_id = %d';
+            $params[] = (int) $location_id;
+        }
+
+        $sql = "SELECT * FROM $booking_table WHERE " . implode(' AND ', $where) . " ORDER BY booking_date DESC, booking_time DESC LIMIT 20";
+
+        return $this->wpdb->get_results($this->wpdb->prepare($sql, $params));
     }
-    
+
     /**
      * Gợi ý VIP (khách đặt nhiều)
      */
-    public function get_vip_suggestions() {
+    public function get_vip_suggestions($location_id = null) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
-        return $this->wpdb->get_results(
-            "SELECT * FROM $customer_table 
-            WHERE completed_bookings >= 5 
-            AND vip_status = 0
-            ORDER BY completed_bookings DESC
-            LIMIT 20"
-        );
+        $where = array('completed_bookings >= 5', 'vip_status = 0');
+        $params = array();
+
+        if ($location_id) {
+            $where[] = 'location_id = %d';
+            $params[] = (int) $location_id;
+        }
+
+        $sql = "SELECT * FROM $customer_table WHERE " . implode(' AND ', $where) . " ORDER BY completed_bookings DESC LIMIT 20";
+
+        return $this->prepare_and_get_results($sql, $params);
     }
-    
+
     /**
      * Cảnh báo khách có vấn đề
      */
-    public function get_problematic_customers() {
+    public function get_problematic_customers($location_id = null) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
-        return $this->wpdb->get_results(
-            "SELECT *, 
-            (no_shows + cancelled_bookings) as problem_count,
-            (no_shows + cancelled_bookings) / total_bookings * 100 as problem_rate
-            FROM $customer_table 
-            WHERE total_bookings >= 3
-            AND (no_shows + cancelled_bookings) / total_bookings > 0.3
-            ORDER BY problem_rate DESC
-            LIMIT 20"
-        );
+
+        $where = array('total_bookings >= 3', '(no_shows + cancelled_bookings) / total_bookings > 0.3');
+        $params = array();
+
+        if ($location_id) {
+            $where[] = 'location_id = %d';
+            $params[] = (int) $location_id;
+        }
+
+        $sql = "SELECT *,
+                (no_shows + cancelled_bookings) as problem_count,
+                (no_shows + cancelled_bookings) / total_bookings * 100 as problem_rate
+                FROM $customer_table
+                WHERE " . implode(' AND ', $where) . '
+                ORDER BY problem_rate DESC
+                LIMIT 20';
+
+        return $this->prepare_and_get_results($sql, $params);
     }
-    
+
     /**
      * Get customers với filters và sorting
      */
     public function get_customers($args = array()) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
+
         $defaults = array(
             'vip_only' => false,
             'blacklisted' => null,
             'search' => '',
             'orderby' => 'total_bookings',
             'order' => 'DESC',
-            'limit' => -1
+            'limit' => -1,
+            'location_id' => null,
         );
-        
+
         $args = wp_parse_args($args, $defaults);
-        
+
         $where = array('1=1');
-        
+        $params = array();
+
         if ($args['vip_only']) {
             $where[] = 'vip_status = 1';
         }
-        
+
         if ($args['blacklisted'] !== null) {
-            $where[] = $this->wpdb->prepare('blacklisted = %d', $args['blacklisted']);
+            $where[] = 'blacklisted = %d';
+            $params[] = $args['blacklisted'] ? 1 : 0;
         }
-        
+
         if (!empty($args['search'])) {
             $search = '%' . $this->wpdb->esc_like($args['search']) . '%';
-            $where[] = $this->wpdb->prepare(
-                '(name LIKE %s OR phone LIKE %s OR email LIKE %s)',
-                $search, $search, $search
-            );
+            $where[] = '(name LIKE %s OR phone LIKE %s OR email LIKE %s)';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
         }
-        
+
+        if ($args['location_id']) {
+            $where[] = 'location_id = %d';
+            $params[] = (int) $args['location_id'];
+        }
+
         $where_sql = implode(' AND ', $where);
-        
         $orderby = sanitize_sql_orderby($args['orderby'] . ' ' . $args['order']);
-        
+
         $limit_sql = '';
         if ($args['limit'] > 0) {
             $limit_sql = $this->wpdb->prepare('LIMIT %d', $args['limit']);
         }
-        
-        $sql = "SELECT * FROM $customer_table 
-                WHERE $where_sql 
-                ORDER BY $orderby 
-                $limit_sql";
-        
-        return $this->wpdb->get_results($sql);
+
+        $sql = "SELECT * FROM $customer_table WHERE $where_sql ORDER BY $orderby $limit_sql";
+
+        return $this->prepare_and_get_results($sql, $params);
     }
-    
+
     /**
      * Get customer stats
      */
-    public function get_stats() {
+    public function get_stats($location_id = null) {
         $customer_table = $this->wpdb->prefix . 'rb_customers';
-        
+        $where = '1=1';
+        $params = array();
+
+        if ($location_id) {
+            $where = 'location_id = %d';
+            $params[] = (int) $location_id;
+        }
+
         return array(
-            'total' => $this->wpdb->get_var("SELECT COUNT(*) FROM $customer_table"),
-            'vip' => $this->wpdb->get_var("SELECT COUNT(*) FROM $customer_table WHERE vip_status = 1"),
-            'blacklisted' => $this->wpdb->get_var("SELECT COUNT(*) FROM $customer_table WHERE blacklisted = 1"),
-            'new_this_month' => $this->wpdb->get_var(
-                "SELECT COUNT(*) FROM $customer_table 
-                WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) 
-                AND YEAR(created_at) = YEAR(CURRENT_DATE())"
-            )
+            'total' => $this->prepare_and_get_var("SELECT COUNT(*) FROM $customer_table WHERE $where", $params),
+            'vip' => $this->prepare_and_get_var("SELECT COUNT(*) FROM $customer_table WHERE vip_status = 1 AND $where", $params),
+            'blacklisted' => $this->prepare_and_get_var("SELECT COUNT(*) FROM $customer_table WHERE blacklisted = 1 AND $where", $params),
+            'new_this_month' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $customer_table WHERE $where AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())",
+                $params
+            ),
         );
+    }
+
+    private function get_booking_with_location($booking_id) {
+        $booking_table = $this->wpdb->prefix . 'rb_bookings';
+
+        return $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM $booking_table WHERE id = %d",
+            $booking_id
+        ));
+    }
+
+    private function prepare_and_get_results($sql, $params = array()) {
+        if (!empty($params)) {
+            return $this->wpdb->get_results($this->wpdb->prepare($sql, $params));
+        }
+
+        return $this->wpdb->get_results($sql);
+    }
+
+    private function prepare_and_get_var($sql, $params = array()) {
+        if (!empty($params)) {
+            return $this->wpdb->get_var($this->wpdb->prepare($sql, $params));
+        }
+
+        return $this->wpdb->get_var($sql);
     }
 }
