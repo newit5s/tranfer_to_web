@@ -1,0 +1,524 @@
+/* Restaurant Booking - Frontend Styles - Dark Theme (Synchronized) */
+
+/* Booking Widget Container */
+.rb-booking-widget {
+    position: relative;
+}
+
+/* Open Modal Button */
+.rb-open-modal-btn {
+    background: #8b6f47;
+    color: #ffffff;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+
+.rb-open-modal-btn:hover {
+    background: #a08153;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(139, 111, 71, 0.5);
+}
+
+/* Modal Styles */
+.rb-modal {
+    display: none;
+    position: fixed;
+    z-index: 99999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.85);
+    animation: fadeIn 0.3s;
+}
+
+.rb-modal.show {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.rb-modal-content {
+    background-color: #1a1a1a;
+    margin: 20px auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+    animation: slideIn 0.3s;
+    border: 1px solid #3a3a3a;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.rb-modal-content h2 {
+    background: #2a2318;
+    color: #e8e8e8;
+    margin: 0;
+    padding: 20px 30px;
+    border-radius: 8px 8px 0 0;
+    font-size: 24px;
+    border-bottom: 2px solid #8b6f47;
+}
+
+/* Close Button */
+.rb-close {
+    color: #999999;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 20px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.rb-close:hover,
+.rb-close:focus {
+    color: #e8e8e8;
+}
+
+/* Form Styles */
+.rb-form {
+    padding: 30px;
+    background: #1a1a1a;
+}
+
+.rb-form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.rb-form-group {
+    flex: 1;
+    margin-bottom: 20px;
+}
+
+.rb-form-row .rb-form-group {
+    margin-bottom: 0;
+}
+
+.rb-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #d4d4d4;
+    font-size: 14px;
+}
+
+.rb-form-group input,
+.rb-form-group select,
+.rb-form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+    background: #2a2a2a;
+    color: #e8e8e8;
+}
+
+.rb-form-group input:focus,
+.rb-form-group select:focus,
+.rb-form-group textarea:focus {
+    outline: none;
+    border-color: #8b6f47;
+    box-shadow: 0 0 0 2px rgba(139, 111, 71, 0.3);
+}
+
+.rb-form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.rb-form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e8e8e8' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px;
+}
+
+/* Form Actions */
+.rb-form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #3a3a3a;
+}
+
+/* Buttons */
+.rb-btn-primary,
+.rb-btn-secondary,
+.rb-btn-cancel {
+    padding: 12px 30px !important;
+    border: none !important;
+    border-radius: 4px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.rb-btn-primary {
+    background: #8b6f47 !important;
+    color: #ffffff !important;
+}
+
+.rb-btn-primary:hover {
+    background: #a08153 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 5px rgba(139, 111, 71, 0.5) !important;
+}
+
+.rb-btn-secondary {
+    background: #4a4a4a !important;
+    color: #e8e8e8 !important;
+}
+
+.rb-btn-secondary:hover {
+    background: #5a5a5a !important;
+}
+
+.rb-btn-cancel,
+.rb-close-modal {
+    background: #3a3a3a !important;
+    color: #d4d4d4 !important;
+}
+
+.rb-btn-cancel:hover,
+.rb-close-modal:hover {
+    background: #4a4a4a !important;
+}
+
+/* Availability Check */
+.rb-availability-check {
+    margin-top: 20px;
+    padding: 20px;
+    background: #252525;
+    border-radius: 4px;
+    border: 1px solid #3a3a3a;
+}
+
+#rb-availability-result {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 4px;
+    display: none;
+}
+
+#rb-availability-result.success {
+    background: #1b3a1b;
+    color: #81c784;
+    border: 1px solid #2e7d32;
+    display: block;
+}
+
+#rb-availability-result.error {
+    background: #3a1b1b;
+    color: #ef5350;
+    border: 1px solid #c62828;
+    display: block;
+}
+
+/* Form Messages */
+#rb-form-message,
+#rb-form-message-inline {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    display: none;
+    animation: slideDown 0.3s;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#rb-form-message.success,
+#rb-form-message-inline.success {
+    background: #1b3a1b;
+    color: #81c784;
+    border: 1px solid #2e7d32;
+    display: block;
+}
+
+#rb-form-message.error,
+#rb-form-message-inline.error {
+    background: #3a1b1b;
+    color: #ef5350;
+    border: 1px solid #c62828;
+    display: block;
+}
+
+/* Inline Form Styles */
+.rb-inline-form {
+    background: #1a1a1a;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    border: 1px solid #3a3a3a;
+}
+
+.rb-inline-form h3 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #e8e8e8;
+    font-size: 24px;
+    border-bottom: 2px solid #8b6f47;
+    padding-bottom: 10px;
+}
+
+.rb-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Loading State */
+.rb-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.rb-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid #3a3a3a;
+    border-top: 3px solid #8b6f47;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .rb-modal-content {
+        width: 95%;
+        margin: 10px auto;
+    }
+    
+    .rb-form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .rb-form {
+        padding: 20px;
+    }
+    
+    .rb-form-actions {
+        flex-direction: column;
+    }
+    
+    .rb-btn-primary,
+    .rb-btn-secondary,
+    .rb-btn-cancel {
+        width: 100%;
+    }
+    
+    .rb-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .rb-modal-content h2 {
+        font-size: 20px;
+        padding: 15px 20px;
+    }
+    
+    .rb-form {
+        padding: 15px;
+    }
+    
+    .rb-open-modal-btn {
+        width: 100%;
+        padding: 15px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .rb-modal {
+        display: none !important;
+    }
+}
+/* ========================================
+   LANGUAGE SWITCHER IN BOOKING FORM
+   ======================================== */
+
+/* Modal Header with Language Switcher */
+.rb-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: #2a2318;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid #8b6f47;
+    margin: 0;
+}
+
+.rb-modal-content h2 {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+.rb-modal-header h2 {
+    margin: 0;
+    color: #e8e8e8;
+    font-size: 24px;
+    flex: 1;
+}
+
+.rb-modal-language-switcher {
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.rb-modal-language-switcher .rb-lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e8e8e8;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.rb-modal-language-switcher .rb-lang-select:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #8b6f47;
+}
+
+.rb-modal-language-switcher .rb-lang-select option {
+    background: #2a2318;
+    color: #e8e8e8;
+}
+
+/* Inline Form Header with Language Switcher */
+.rb-inline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #8b6f47;
+}
+
+.rb-inline-header h3 {
+    margin: 0;
+    color: #e8e8e8;
+    font-size: 24px;
+    flex: 1;
+}
+
+.rb-inline-language-switcher {
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.rb-inline-language-switcher .rb-lang-select {
+    background: #2a2a2a;
+    color: #e8e8e8;
+    border: 1px solid #3a3a3a;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.rb-inline-language-switcher .rb-lang-select:hover {
+    background: #3a3a3a;
+    border-color: #8b6f47;
+}
+
+.rb-inline-language-switcher .rb-lang-select option {
+    background: #2a2a2a;
+    color: #e8e8e8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .rb-modal-header,
+    .rb-inline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .rb-modal-header h2,
+    .rb-inline-header h3 {
+        font-size: 20px;
+    }
+    
+    .rb-modal-language-switcher,
+    .rb-inline-language-switcher {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .rb-modal-language-switcher .rb-lang-select,
+    .rb-inline-language-switcher .rb-lang-select {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .rb-modal-header {
+        padding: 15px 20px;
+    }
+    
+    .rb-modal-header h2,
+    .rb-inline-header h3 {
+        font-size: 18px;
+    }
+}
