@@ -53,22 +53,6 @@ class RB_Frontend {
         add_action('wp_ajax_nopriv_rb_manager_update_booking', array($this, 'handle_manager_update_booking'));
     }
 
-    private function get_manager_allowed_location_ids($user_id) {
-        $assigned = get_user_meta($user_id, 'rb_manager_locations', true);
-
-        if (empty($assigned)) {
-            return array();
-        }
-
-        if (!is_array($assigned)) {
-            $assigned = array($assigned);
-        }
-
-        $assigned = array_map('intval', $assigned);
-
-        return array_values(array_filter($assigned));
-    }
-
     private function resolve_location_from_allowed($requested_location_id, $locations, $allowed_ids, $fallback_id = 0) {
         if (empty($locations)) {
             return 0;
@@ -107,13 +91,6 @@ class RB_Frontend {
         return (int) $allowed_ids[0];
     }
 
-    private function resolve_manager_location($user_id, $requested_location_id, $locations, $allowed_override = null, $fallback_override = null) {
-        $allowed_ids = is_array($allowed_override) ? array_map('intval', $allowed_override) : $this->get_manager_allowed_location_ids($user_id);
-        $fallback = !is_null($fallback_override) ? (int) $fallback_override : (int) get_user_meta($user_id, 'rb_active_location', true);
-
-        return $this->resolve_location_from_allowed($requested_location_id, $locations, $allowed_ids, $fallback);
-    }
-
     private function get_portal_session_account() {
         if (!$this->portal_session) {
             return null;
@@ -128,27 +105,12 @@ class RB_Frontend {
     }
 
     private function get_current_manager_permissions() {
-        if (is_user_logged_in()) {
-            $user = wp_get_current_user();
-
-            if ($user && $user->has_cap('rb_manage_location')) {
-                $allowed = $this->get_manager_allowed_location_ids($user->ID);
-
-                return array(
-                    'type' => 'wp',
-                    'user' => $user,
-                    'allowed_locations' => $allowed,
-                );
-            }
-        }
-
         $account = $this->get_portal_session_account();
 
         if ($account) {
             $allowed = !empty($account->locations) ? array_map('intval', (array) $account->locations) : array();
 
             return array(
-                'type' => 'portal',
                 'account' => $account,
                 'allowed_locations' => $allowed,
             );
@@ -734,10 +696,6 @@ class RB_Frontend {
                 $this->portal_account = null;
             }
 
-            if (is_user_logged_in()) {
-                wp_logout();
-            }
-
             wp_safe_redirect(esc_url_raw(add_query_arg(array())));
             exit;
         }
@@ -764,37 +722,23 @@ class RB_Frontend {
         $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
         $manager_name = '';
 
-        if ($manager_permissions['type'] === 'wp') {
-            /** @var WP_User $user */
-            $user = $manager_permissions['user'];
-            $fallback_location = (int) get_user_meta($user->ID, 'rb_active_location', true);
-            $selected_location_id = $this->resolve_location_from_allowed($selected_location_id, $filtered_locations, $allowed_location_ids, $fallback_location);
+        $account = $manager_permissions['account'];
 
-            if (!$selected_location_id) {
-                return '<div class="rb-manager rb-alert">' . esc_html__('Selected location is no longer available. Please contact an administrator.', 'restaurant-booking') . '</div>';
-            }
-
-            update_user_meta($user->ID, 'rb_active_location', $selected_location_id);
-            $manager_name = $user->display_name ? $user->display_name : $user->user_login;
-        } else {
-            $account = $manager_permissions['account'];
-
-            if (empty($allowed_location_ids)) {
-                return '<div class="rb-manager rb-alert">' . esc_html__('This account is not assigned to any locations. Please contact an administrator.', 'restaurant-booking') . '</div>';
-            }
-
-            $fallback_location = isset($account->last_location_id) ? (int) $account->last_location_id : 0;
-            $selected_location_id = $this->resolve_location_from_allowed($selected_location_id, $filtered_locations, $allowed_location_ids, $fallback_location);
-
-            if (!$selected_location_id) {
-                return '<div class="rb-manager rb-alert">' . esc_html__('Selected location is no longer available. Please contact an administrator.', 'restaurant-booking') . '</div>';
-            }
-
-            $this->portal_account_manager->set_active_location($account->id, $selected_location_id);
-            $account->last_location_id = $selected_location_id;
-            $this->portal_account = $account;
-            $manager_name = !empty($account->display_name) ? $account->display_name : $account->username;
+        if (empty($allowed_location_ids)) {
+            return '<div class="rb-manager rb-alert">' . esc_html__('This account is not assigned to any locations. Please contact an administrator.', 'restaurant-booking') . '</div>';
         }
+
+        $fallback_location = isset($account->last_location_id) ? (int) $account->last_location_id : 0;
+        $selected_location_id = $this->resolve_location_from_allowed($selected_location_id, $filtered_locations, $allowed_location_ids, $fallback_location);
+
+        if (!$selected_location_id) {
+            return '<div class="rb-manager rb-alert">' . esc_html__('Selected location is no longer available. Please contact an administrator.', 'restaurant-booking') . '</div>';
+        }
+
+        $this->portal_account_manager->set_active_location($account->id, $selected_location_id);
+        $account->last_location_id = $selected_location_id;
+        $this->portal_account = $account;
+        $manager_name = !empty($account->display_name) ? $account->display_name : $account->username;
 
         $locations = $filtered_locations;
 
@@ -1037,77 +981,37 @@ class RB_Frontend {
 
             if ($identifier === '' || $password === '') {
                 $error = __('Please provide both username/email and password.', 'restaurant-booking');
-            } else {
-                $login_username = $identifier;
+            } elseif ($this->portal_account_manager && $this->portal_session) {
+                $account = $this->portal_account_manager->authenticate($identifier, $password);
 
-                if (strpos($identifier, '@') !== false) {
-                    $maybe_user = get_user_by('email', $identifier);
-                    if ($maybe_user) {
-                        $login_username = $maybe_user->user_login;
-                    }
-                }
+                if ($account instanceof WP_Error) {
+                    $error = $account->get_error_message();
+                } elseif ($account) {
+                    $allowed_locations = !empty($account->locations) ? array_map('intval', (array) $account->locations) : array();
 
-                $user = wp_signon(array(
-                    'user_login' => $login_username,
-                    'user_password' => $password,
-                    'remember' => true,
-                ), false);
-
-                if (!is_wp_error($user) && $user) {
-                    if ($user->has_cap('rb_manage_location')) {
-                        $resolved_location = $this->resolve_manager_location($user->ID, $location_id, $locations);
-
-                        if ($resolved_location) {
-                            update_user_meta($user->ID, 'rb_active_location', $resolved_location);
-                        } else {
-                            delete_user_meta($user->ID, 'rb_active_location');
-                        }
-
-                        if ($this->portal_session) {
-                            $this->portal_session->destroy_session();
-                            $this->portal_account = null;
-                        }
-
-                        wp_safe_redirect(esc_url_raw(add_query_arg(array())));
-                        exit;
-                    }
-
-                    wp_logout();
-                    $error = __('Your WordPress account does not have permission to manage locations.', 'restaurant-booking');
-                } else {
-                    // Try portal account authentication if available.
-                    if ($this->portal_account_manager && $this->portal_session) {
-                        $account = $this->portal_account_manager->authenticate($identifier, $password);
-
-                        if ($account instanceof WP_Error) {
-                            $error = $account->get_error_message();
-                        } elseif ($account) {
-                            $allowed_locations = !empty($account->locations) ? (array) $account->locations : array();
-
-                            if (empty($allowed_locations)) {
-                                $error = __('This account is not assigned to any locations. Please contact an administrator.', 'restaurant-booking');
-                            } else {
-                                $resolved_location = $this->resolve_location_from_allowed($location_id, $locations, $allowed_locations, isset($account->last_location_id) ? (int) $account->last_location_id : 0);
-
-                                if (!$resolved_location) {
-                                    $error = __('The selected location is not available for this account.', 'restaurant-booking');
-                                } else {
-                                    $this->portal_session->start_session($account->id);
-                                    $this->portal_account_manager->set_active_location($account->id, $resolved_location);
-                                    $account->last_location_id = $resolved_location;
-                                    $this->portal_account = $account;
-
-                                    wp_safe_redirect(esc_url_raw(add_query_arg(array())));
-                                    exit;
-                                }
-                            }
-                        } else {
-                            $error = __('Invalid credentials. Please try again.', 'restaurant-booking');
-                        }
+                    if (empty($allowed_locations)) {
+                        $error = __('This account is not assigned to any locations. Please contact an administrator.', 'restaurant-booking');
                     } else {
-                        $error = __('Invalid credentials. Please try again.', 'restaurant-booking');
+                        $resolved_location = $this->resolve_location_from_allowed($location_id, $locations, $allowed_locations, isset($account->last_location_id) ? (int) $account->last_location_id : 0);
+
+                        if (!$resolved_location) {
+                            $error = __('The selected location is not available for this account.', 'restaurant-booking');
+                        } else {
+                            $this->portal_session->start_session($account->id);
+                            $this->portal_account_manager->set_active_location($account->id, $resolved_location);
+                            $account->last_location_id = $resolved_location;
+                            $account->locations = $allowed_locations;
+                            $this->portal_account = $account;
+
+                            wp_safe_redirect(esc_url_raw(add_query_arg(array())));
+                            exit;
+                        }
                     }
+                } else {
+                    $error = __('Invalid credentials. Please try again.', 'restaurant-booking');
                 }
+            } else {
+                $error = __('Portal account authentication is not available. Please contact an administrator.', 'restaurant-booking');
             }
         }
 
@@ -1166,18 +1070,13 @@ class RB_Frontend {
             wp_die();
         }
 
-        if ($permissions['type'] === 'portal' && (!$this->portal_session || !$this->portal_account_manager)) {
+        if (!$this->portal_session || !$this->portal_account_manager) {
             wp_send_json_error(array('message' => __('You are not allowed to perform this action.', 'restaurant-booking')));
             wp_die();
         }
 
-        $active_location = 0;
-        if ($permissions['type'] === 'wp') {
-            $active_location = (int) get_user_meta($permissions['user']->ID, 'rb_active_location', true);
-        } else {
-            $account = $permissions['account'];
-            $active_location = isset($account->last_location_id) ? (int) $account->last_location_id : 0;
-        }
+        $account = $permissions['account'];
+        $active_location = isset($account->last_location_id) ? (int) $account->last_location_id : 0;
 
         global $rb_booking;
         if (!$rb_booking) {

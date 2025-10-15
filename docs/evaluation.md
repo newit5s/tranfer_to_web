@@ -2,7 +2,7 @@
 
 ## Yêu cầu: Tách 2 trang (frontend & backend location)
 - Plugin cung cấp shortcode `[restaurant_booking_portal]` với flow 3 bước: chọn chi nhánh & ngôn ngữ, kiểm tra chỗ trống, rồi nhập chi tiết đặt bàn cho khách. 【F:public/class-frontend.php†L382-L566】
-- Shortcode `[restaurant_booking_manager]` hiển thị portal đăng nhập và bảng điều khiển riêng cho từng location, chỉ dành cho tài khoản có quyền `rb_manage_location`. 【F:public/class-frontend.php†L574-L727】【F:restaurant-booking-manager.php†L44-L55】
+- Shortcode `[restaurant_booking_manager]` hiển thị portal đăng nhập và bảng điều khiển riêng cho từng location, chỉ dành cho các tài khoản portal được tạo trong phần cài đặt plugin. 【F:public/class-frontend.php†L567-L757】【F:admin/class-admin.php†L1586-L1706】
 
 ## Yêu cầu: 3 location (HCM, HN, JP)
 - Khi kích hoạt plugin, bảng `rb_locations` được tạo kèm dữ liệu mẫu cho 3 chi nhánh HCM, HN, JP, đồng thời tạo bàn mặc định cho từng chi nhánh. 【F:includes/class-database.php†L203-L305】
@@ -16,7 +16,7 @@
 - Email pending chứa link `rb_confirm_token` để khách tự động xác nhận. 【F:includes/class-email.php†L49-L66】
 
 ## Yêu cầu: Backend theo location và admin tổng
-- Người dùng có vai trò `rb_location_manager` (được tạo khi kích hoạt) chỉ xem/duyệt đơn trong chi nhánh của họ; admin mặc định có thêm quyền này nên xem toàn bộ. 【F:restaurant-booking-manager.php†L44-L55】【F:public/class-frontend.php†L897-L953】
+- Các tài khoản portal được gán chi nhánh nào thì chỉ xem/duyệt đơn trong chi nhánh đó; admin WordPress quản lý tài khoản thông qua tab Portal Accounts thay vì dùng vai trò riêng. 【F:includes/class-portal-account.php†L31-L199】【F:public/class-frontend.php†L720-L903】
 
 ## Yêu cầu: Đa ngôn ngữ
 - Lớp `RB_I18n` quản lý ngôn ngữ (Vi/En/Ja), lưu vào session/cookie/user meta và cung cấp switcher cho frontend/backend. 【F:includes/class-i18n.php†L15-L131】【F:includes/class-language-switcher.php†L12-L103】
