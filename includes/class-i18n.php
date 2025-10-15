@@ -13,6 +13,7 @@ class RB_I18n {
     private $translations = array();
     private $default_language = 'vi_VN';
     private static $instance = null;
+    private $session_supported = null;
     
     public static function get_instance() {
         if (null === self::$instance) {
@@ -61,19 +62,19 @@ class RB_I18n {
     
     private function detect_language() {
         // Priority 1: Session (persists across pages)
-        if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
+        if ($this->can_use_sessions()) {
+            if (isset($_SESSION['rb_language'])) {
+                $this->current_language = sanitize_text_field($_SESSION['rb_language']);
+                return;
+            }
         }
-        
-        if (isset($_SESSION['rb_language'])) {
-            $this->current_language = sanitize_text_field($_SESSION['rb_language']);
-            return;
-        }
-        
+
         // Priority 2: Cookie
         if (isset($_COOKIE['rb_language'])) {
             $this->current_language = sanitize_text_field($_COOKIE['rb_language']);
-            $_SESSION['rb_language'] = $this->current_language;
+            if ($this->can_use_sessions()) {
+                $_SESSION['rb_language'] = $this->current_language;
+            }
             return;
         }
         
@@ -180,13 +181,12 @@ class RB_I18n {
     public function set_language($lang) {
         if ($this->is_valid_language($lang)) {
             $this->current_language = $lang;
-            
+
             // Save to session
-            if (session_status() === PHP_SESSION_NONE) {
-                @session_start();
+            if ($this->can_use_sessions()) {
+                $_SESSION['rb_language'] = $lang;
             }
-            $_SESSION['rb_language'] = $lang;
-            
+
             // Save to cookie (30 days)
             setcookie('rb_language', $lang, time() + (86400 * 30), COOKIEPATH, COOKIE_DOMAIN, is_ssl());
             
@@ -255,18 +255,53 @@ class RB_I18n {
      * ✅ NEW: Reset language to default
      */
     public function reset_language() {
-        if (session_status() !== PHP_SESSION_NONE) {
+        if ($this->can_use_sessions() && isset($_SESSION['rb_language'])) {
             unset($_SESSION['rb_language']);
         }
-        
+
         setcookie('rb_language', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl());
-        
+
         if (is_user_logged_in()) {
             delete_user_meta(get_current_user_id(), 'rb_preferred_language');
         }
         
         $this->current_language = $this->default_language;
         $this->load_translations();
+    }
+
+    private function can_use_sessions() {
+        if (true === $this->session_supported) {
+            return true;
+        }
+
+        if (!function_exists('session_status') || !function_exists('session_start')) {
+            return false;
+        }
+
+        $status = session_status();
+
+        if (defined('PHP_SESSION_DISABLED') && PHP_SESSION_DISABLED === $status) {
+            return false;
+        }
+
+        if (defined('PHP_SESSION_ACTIVE') && PHP_SESSION_ACTIVE === $status) {
+            $this->session_supported = true;
+            return true;
+        }
+
+        if (!defined('PHP_SESSION_NONE') || PHP_SESSION_NONE !== $status) {
+            return false;
+        }
+
+        if (@session_start()) {
+            $status = session_status();
+            if (!defined('PHP_SESSION_ACTIVE') || PHP_SESSION_ACTIVE === $status) {
+                $this->session_supported = true;
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
