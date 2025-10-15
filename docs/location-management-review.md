@@ -14,6 +14,8 @@
 
 ### 3. Functional parity with super admin booking actions
 - Manager-triggered actions (`confirm`, `cancel`, `complete`) delegate to the `RB_Booking` class used in the administrator backend, so table assignment, CRM syncing, and status transitions behave the same for both roles. Follow-up hooks like `rb_booking_confirmed` still fire, keeping downstream integrations consistent. 【F:public/class-frontend-manager.php†L464-L486】【F:includes/class-booking.php†L70-L212】
+- The manager portal exposes the same feature surface as the super admin dashboard: the navigation renders Dashboard, Create Booking, Manage Tables, Customers, and Location Settings tabs, each guarded by the same location filters. 【F:public/class-frontend-manager.php†L224-L318】
+- Each tab mirrors the corresponding super admin panel — upcoming reservations with inline status actions, a full booking creation form, table CRUD, customer CRM tooling (VIP/blacklist toggles and history), and editable location settings — ensuring managers can perform the same day-to-day tasks within their assigned branches. 【F:public/class-frontend-manager.php†L326-L784】
 
 ## Redundancy Review
 - The location guard clauses double-check both the assigned list and the active branch, but each serves a purpose: the former prevents tampering with unassigned branches, while the latter blocks stale UI submissions if the manager switches locations. No extraneous paths or dead code were identified around portal auth or booking management.
