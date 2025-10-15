@@ -34,6 +34,35 @@ class RB_Database {
         $this->add_booking_source_column();
     }
 
+    public function ensure_portal_schema() {
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+
+        $accounts_table = $this->wpdb->prefix . 'rb_portal_accounts';
+        $locations_table = $this->wpdb->prefix . 'rb_portal_account_locations';
+
+        if ($this->table_exists($accounts_table)) {
+            $this->maybe_add_column($accounts_table, 'password_hash', "ALTER TABLE {$accounts_table} ADD COLUMN password_hash varchar(255) NOT NULL AFTER username");
+            $this->maybe_add_column($accounts_table, 'display_name', "ALTER TABLE {$accounts_table} ADD COLUMN display_name varchar(100) DEFAULT '' AFTER password_hash");
+            $this->maybe_add_column($accounts_table, 'email', "ALTER TABLE {$accounts_table} ADD COLUMN email varchar(100) DEFAULT NULL AFTER display_name");
+            $this->maybe_add_column($accounts_table, 'status', "ALTER TABLE {$accounts_table} ADD COLUMN status varchar(20) NOT NULL DEFAULT 'active' AFTER email");
+            $this->maybe_add_column($accounts_table, 'last_location_id', "ALTER TABLE {$accounts_table} ADD COLUMN last_location_id bigint(20) UNSIGNED DEFAULT 0 AFTER status");
+            $this->maybe_add_column($accounts_table, 'last_login_at', "ALTER TABLE {$accounts_table} ADD COLUMN last_login_at datetime DEFAULT NULL AFTER last_location_id");
+            $this->maybe_add_column($accounts_table, 'created_at', "ALTER TABLE {$accounts_table} ADD COLUMN created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER last_login_at");
+            $this->maybe_add_column($accounts_table, 'updated_at', "ALTER TABLE {$accounts_table} ADD COLUMN updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at");
+
+            $this->maybe_add_index($accounts_table, 'username', "ALTER TABLE {$accounts_table} ADD UNIQUE KEY username (username)");
+            $this->maybe_add_index($accounts_table, 'email', "ALTER TABLE {$accounts_table} ADD UNIQUE KEY email (email)");
+        } else {
+            $this->create_portal_accounts_table();
+        }
+
+        if ($this->table_exists($locations_table)) {
+            $this->maybe_add_index($locations_table, 'location_id', "ALTER TABLE {$locations_table} ADD KEY location_id (location_id)");
+        } else {
+            $this->create_portal_account_locations_table();
+        }
+    }
+
     private function create_bookings_table() {
         $table_name = $this->wpdb->prefix . 'rb_bookings';
 
@@ -176,6 +205,14 @@ class RB_Database {
         ) $this->charset_collate;";
 
         dbDelta($sql);
+    }
+
+    private function table_exists($table) {
+        $found = $this->wpdb->get_var(
+            $this->wpdb->prepare('SHOW TABLES LIKE %s', $table)
+        );
+
+        return $found === $table;
     }
 
     private function add_location_columns() {
