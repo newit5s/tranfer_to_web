@@ -2,6 +2,8 @@
 
 Plugin WordPress quản lý đặt bàn nhà hàng hoàn chỉnh với giao diện thân thiện người dùng và quản lý admin chuyên nghiệp.
 
+Phiên bản hiện tại bổ sung **tài khoản portal nội bộ** cho nhân viên duyệt đơn, quy trình đặt bàn đa bước `[restaurant_booking_portal]` và bộ lọc chi nhánh theo người dùng, cho phép triển khai hệ thống đặt bàn mà không cần tạo tài khoản WordPress cho từng quản lý.
+
 ## 📁 Cấu trúc thư mục
 
 ```
@@ -11,18 +13,19 @@ restaurant-booking-manager/
 │   ├── class-database.php                  # Quản lý cơ sở dữ liệu
 │   ├── class-booking.php                   # Logic nghiệp vụ đặt bàn  
 │   ├── class-ajax.php                      # Xử lý AJAX requests
-│   └── class-email.php                     # Gửi email tự động
+│   ├── class-email.php                     # Gửi email tự động
+│   └── class-portal-account.php            # Quản lý tài khoản portal & session
 ├── admin/
 │   └── class-admin.php                     # Giao diện admin
 ├── public/
 │   └── class-frontend.php                  # Giao diện frontend
 └── assets/
     ├── css/
-    │   ├── frontend.css                    # CSS cho frontend
-    │   └── admin.css                       # CSS cho admin
+    │   ├── frontend.css                    # CSS cho frontend & portal đa bước
+    │   └── admin.css                       # CSS cho admin & tab portal accounts
     └── js/
-        ├── frontend.js                     # JavaScript frontend
-        └── admin.js                        # JavaScript admin
+        ├── frontend.js                     # JavaScript frontend & flow đa bước
+        └── admin.js                        # JavaScript admin & CRUD portal account
 ```
 
 ## 🚀 Cài đặt
@@ -43,10 +46,11 @@ wp-content/plugins/restaurant-booking-manager/
 
 ### Bước 4: Cấu hình cơ bản
 1. Vào **Admin > Đặt bàn > Cài đặt**
-2. Thiết lập:
+2. Ở tab **Cấu hình**, thiết lập:
    - Số bàn tối đa
    - Giờ mở cửa/đóng cửa
    - Thời gian đặt bàn
+3. Chuyển sang tab **Portal Accounts** để tạo tài khoản portal, gán chi nhánh và thiết lập trạng thái hoạt động cho từng nhân viên.
 
 ## 📝 Sử dụng
 
@@ -62,6 +66,16 @@ wp-content/plugins/restaurant-booking-manager/
 [restaurant_booking title="Đặt bàn ngay" button_text="Book Now"]
 ```
 
+### Portal đa bước cho khách
+
+Shortcode mới hiển thị flow đặt bàn 3 bước, hỗ trợ đa ngôn ngữ và kiểm tra chỗ trống theo chi nhánh:
+
+```
+[restaurant_booking_portal]
+```
+
+*Bước 1:* chọn ngôn ngữ & chi nhánh → *Bước 2:* kiểm tra giờ trống (kèm gợi ý) → *Bước 3:* nhập thông tin khách và xác nhận.
+
 ### Quản lý đặt bàn
 
 1. **Xem đặt bàn:** Admin > Đặt bàn
@@ -69,12 +83,20 @@ wp-content/plugins/restaurant-booking-manager/
    - Tab "Đã xác nhận": Đặt bàn đã confirm
    - Tab "Đã hủy": Đặt bàn bị hủy
 
-2. **Xác nhận đặt bàn:**
+2. **Quản lý chi nhánh theo tài khoản:**
+   - Tab **Portal Accounts** (trong trang Cài đặt) cho phép tạo tài khoản nội bộ, đặt tên hiển thị, email, trạng thái, mật khẩu.
+   - Chọn một hoặc nhiều chi nhánh để giới hạn quyền truy cập của từng tài khoản.
+
+3. **Portal quản lý đặt bàn:**
+   - Shortcode `[restaurant_booking_manager]` hiển thị portal quản lý cho tài khoản portal và người dùng có quyền `rb_manage_location`.
+   - Portal chỉ load danh sách chi nhánh đã gán và lưu lựa chọn vào hồ sơ người vận hành.
+
+4. **Xác nhận đặt bàn:**
    - Click "Xác nhận" trên đặt bàn pending
    - Chọn bàn phù hợp
    - Email confirm tự động gửi cho khách
 
-3. **Quản lý bàn:** Admin > Quản lý bàn
+5. **Quản lý bàn:** Admin > Quản lý bàn
    - Xem tình trạng tất cả bàn
    - Reset bàn khi khách sử dụng xong
    - Tạm ngưng/kích hoạt bàn
@@ -97,9 +119,15 @@ wp-content/plugins/restaurant-booking-manager/
 
 ### Hệ thống Email
 - ✅ Email thông báo admin khi có đặt bàn mới
-- ✅ Email xác nhận cho khách hàng  
+- ✅ Email xác nhận cho khách hàng
 - ✅ Template HTML responsive
 - ✅ Thông tin đầy đủ và đẹp mắt
+
+### Portal Accounts (Quản lý nội bộ)
+- ✅ Tạo/Chỉnh sửa/Xoá tài khoản portal ngay trong trang Cài đặt plugin
+- ✅ Gán nhiều chi nhánh cho mỗi tài khoản và tự động giới hạn truy cập
+- ✅ Đăng nhập portal độc lập không cần tài khoản WordPress
+- ✅ Ghi nhận trạng thái, lần đăng nhập gần nhất và khóa/mở tài khoản nhanh chóng
 
 ## 🔧 Customization
 
@@ -203,6 +231,26 @@ add_filter('rb_booking_validation', 'custom_validation', 10, 2);
 - time_slot_interval: Khoảng cách giữa các ca
 - min_advance_booking / max_advance_booking: Giới hạn đặt trước
 - languages: Danh sách ngôn ngữ phục vụ
+```
+
+### Bảng `wp_rb_portal_accounts`
+```sql
+- id: ID tài khoản portal
+- username: Định danh đăng nhập duy nhất
+- display_name: Tên hiển thị trong giao diện quản lý
+- email: Email liên hệ (tùy chọn)
+- password_hash: Mật khẩu đã băm theo chuẩn WordPress
+- status: Trạng thái (active/inactive/locked)
+- last_login_at: Lần đăng nhập gần nhất
+- created_at: Thời gian tạo tài khoản
+- updated_at: Lần cập nhật gần nhất
+```
+
+### Bảng `wp_rb_portal_account_locations`
+```sql
+- account_id: Liên kết tới tài khoản portal
+- location_id: Chi nhánh được phép truy cập
+- assigned_at: Thời điểm gán quyền
 ```
 
 ## 🔒 Bảo mật
