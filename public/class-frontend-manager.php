@@ -786,7 +786,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         return ob_get_clean();
     }
 
-    private function generate_time_slots($start, $end, $interval) {
+    protected function generate_time_slots($start = null, $end = null, $interval = null) {
         $slots = array();
 
         $start_time = strtotime($start);
