@@ -527,8 +527,8 @@
 .rb-manager {
     background: #121212;
     border: 1px solid #2c2c2c;
-    border-radius: 10px;
-    padding: 30px;
+    border-radius: 12px;
+    padding: 24px;
     color: #f0f0f0;
     margin: 30px auto;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
@@ -537,10 +537,26 @@
 .rb-manager-header {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 24px;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.rb-manager-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+    min-width: 220px;
+}
+
+.rb-manager-header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    min-width: 200px;
 }
 
 .rb-manager-header h2 {
@@ -554,18 +570,11 @@
     color: #d8cfc0;
 }
 
-.rb-manager-logout button {
-    padding: 10px 20px;
-}
-
-.rb-manager-location-switcher {
-    margin-bottom: 20px;
-}
-
 .rb-manager-location-switcher form {
     display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     align-items: center;
-    gap: 10px;
 }
 
 .rb-manager-location-switcher select,
@@ -577,47 +586,154 @@
     padding: 8px 12px;
 }
 
+.rb-manager-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.rb-manager-sidebar {
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.rb-manager-location-card {
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 18px;
+    font-size: 14px;
+    color: #d8d8d8;
+}
+
+.rb-manager-location-card h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: #f7f3e9;
+}
+
+.rb-manager-location-card p {
+    margin: 4px 0;
+}
+
+.rb-manager-location-notes {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 13px;
+    color: #c5bbac;
+}
+
 .rb-manager-nav ul {
     list-style: none;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 10px;
     padding: 0;
-    margin: 20px 0;
+    margin: 0;
 }
 
 .rb-manager-nav li a {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 999px;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
     text-decoration: none;
     transition: all 0.2s ease-in-out;
-    border: 1px solid transparent;
+    border: 1px solid #2f2f2f;
+    background: #1e1e1e;
 }
 
 .rb-manager-nav li.active a,
 .rb-manager-nav li a:hover {
     background: linear-gradient(135deg, #8b6f47, #bfa678);
     color: #111111;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
-.rb-manager-location-info {
+.rb-manager-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rb-manager-filters {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.rb-manager-filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.rb-manager-filter-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #d8cfc0;
+}
+
+.rb-manager-filter-grid input,
+.rb-manager-filter-grid select {
+    background: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    padding: 10px;
+    color: #f0f0f0;
+    font-size: 14px;
+}
+
+.rb-manager-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.rb-manager-dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+.rb-manager-dashboard-sources {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.rb-manager-source-card {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 15px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #d8d8d8;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #d8cfc0;
+}
+
+.rb-manager-content {
+    flex: 1;
+    min-width: 0;
 }
 
 .rb-manager-section {
-    margin-top: 30px;
+    margin-top: 10px;
 }
 
 .rb-manager-bookings-table {
@@ -653,6 +769,10 @@
     color: #c7b79a;
 }
 
+.rb-manager-note-internal {
+    color: #8faee0;
+}
+
 .rb-manager-empty {
     text-align: center;
     padding: 30px !important;
@@ -663,7 +783,9 @@
     overflow-x: auto;
 }
 
+.rb-manager-form-grid,
 .rb-manager-create .rb-form-grid,
+.rb-manager-settings-grid,
 .rb-manager-settings .rb-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -672,6 +794,8 @@
 }
 
 .rb-manager-create label,
+.rb-manager-form-grid label,
+.rb-manager-settings-grid label,
 .rb-manager-settings label,
 .rb-manager-customers label {
     display: flex;
@@ -684,6 +808,12 @@
 .rb-manager-create input,
 .rb-manager-create select,
 .rb-manager-create textarea,
+.rb-manager-form-grid input,
+.rb-manager-form-grid select,
+.rb-manager-form-grid textarea,
+.rb-manager-settings-grid input,
+.rb-manager-settings-grid select,
+.rb-manager-settings-grid textarea,
 .rb-manager-settings input,
 .rb-manager-settings select,
 .rb-manager-settings textarea {
@@ -708,10 +838,90 @@
     height: 18px;
 }
 
+.rb-manager-wide {
+    grid-column: 1 / -1;
+}
+
 .rb-manager-actions-row {
     display: flex;
     justify-content: flex-end;
     margin-top: 20px;
+}
+
+.rb-manager-action-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rb-manager-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rb-manager-settings-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.rb-manager-settings-tab {
+    background: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 999px;
+    padding: 8px 18px;
+    color: #f0f0f0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.rb-manager-settings-tab:hover,
+.rb-manager-settings-tab.active {
+    background: linear-gradient(135deg, #8b6f47, #bfa678);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #111111;
+}
+
+.rb-manager-settings-panels {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.rb-manager-settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.rb-manager-settings-panel[hidden] {
+    display: none !important;
+}
+
+.rb-manager-toggle-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rb-manager-toggle-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #d8cfc0;
+}
+
+.rb-manager-settings small {
+    font-size: 12px;
+    color: #9a9a9a;
 }
 
 .rb-manager-stats {
@@ -759,6 +969,76 @@
 .rb-manager-warning {
     background: rgba(255, 99, 71, 0.12);
     border: 1px solid rgba(255, 99, 71, 0.4);
+}
+
+.rb-manager-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.rb-manager-modal[hidden] {
+    display: none !important;
+}
+
+.rb-manager-modal-dialog {
+    background: #161616;
+    border-radius: 16px;
+    padding: 28px;
+    width: min(640px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.rb-manager-modal h3 {
+    margin-top: 0;
+    margin-bottom: 18px;
+    color: #f7f3e9;
+}
+
+.rb-manager-modal-close {
+    background: transparent;
+    border: none;
+    color: #f0f0f0;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    position: absolute;
+    top: 14px;
+    right: 18px;
+}
+
+.rb-manager-modal textarea,
+.rb-manager-modal input,
+.rb-manager-modal select {
+    background: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    padding: 10px;
+    color: #f0f0f0;
+    width: 100%;
+}
+
+.rb-manager-modal textarea {
+    resize: vertical;
+}
+
+.rb-manager-customer-note {
+    width: 100%;
+    background: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #f0f0f0;
+    font-size: 13px;
+    margin-bottom: 8px;
 }
 
 .rb-manager-history {
@@ -889,6 +1169,20 @@
     margin-top: 10px;
 }
 
+@media (max-width: 1024px) {
+    .rb-manager-layout {
+        flex-direction: column;
+    }
+
+    .rb-manager-sidebar {
+        width: 100%;
+    }
+
+    .rb-manager-filter-actions {
+        justify-content: flex-start;
+    }
+}
+
 @media (max-width: 768px) {
     .rb-manager {
         padding: 20px;
@@ -904,8 +1198,23 @@
         justify-content: center;
     }
 
+    .rb-manager-dashboard,
+    .rb-manager-filter-grid,
+    .rb-manager-dashboard-stats,
+    .rb-manager-dashboard-sources,
+    .rb-manager-stats {
+        gap: 14px;
+    }
+
+    .rb-manager-filter-grid,
+    .rb-manager-settings-grid,
+    .rb-manager-form-grid,
     .rb-manager-create .rb-form-grid,
     .rb-manager-settings .rb-form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .rb-manager-modal-dialog {
+        padding: 22px;
     }
 }
