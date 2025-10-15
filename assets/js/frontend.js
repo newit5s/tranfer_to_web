@@ -179,7 +179,7 @@
 
                         // Clear and rebuild options
                         timeSelect.empty();
-                        timeSelect.append('<option value="">Chọn giờ</option>');
+                        timeSelect.append('<option value="">' + (rb_ajax.select_time_text || 'Select time') + '</option>');
                         
                         if (slots.length > 0) {
                             $.each(slots, function(i, slot) {
@@ -187,7 +187,7 @@
                                 timeSelect.append('<option value="' + slot + '"' + selected + '>' + slot + '</option>');
                             });
                         } else {
-                            timeSelect.append('<option value="">Không có giờ trống</option>');
+                            timeSelect.append('<option value="">' + (rb_ajax.no_slots_text || 'No available times') + '</option>');
                         }
                     }
                 }
@@ -206,7 +206,7 @@
                 resultDiv
                     .removeClass('success')
                     .addClass('error')
-                    .html('Please select date, time, guests and location before checking availability.')
+                    .html(rb_ajax.missing_fields_text || 'Please select date, time, guests and location before checking availability.')
                     .show();
                 return;
             }
@@ -214,7 +214,7 @@
             // Show loading
             resultDiv
                 .removeClass('success error')
-                .html('Đang kiểm tra...')
+                .html(rb_ajax.loading_text || 'Checking...')
                 .show();
             
             $.ajax({
@@ -252,14 +252,17 @@
                     resultDiv
                         .removeClass('success')
                         .addClass('error')
-                        .html('Có lỗi xảy ra. Vui lòng thử lại.');
+                        .html(rb_ajax.error_text || 'Something went wrong. Please try again.');
                 }
             });
         }
-        
+
         // Reset form
         function resetForm() {
-            $('#rb-booking-form')[0].reset();
+            var modalForm = $('#rb-booking-form');
+            if (modalForm.length) {
+                modalForm[0].reset();
+            }
             $('#rb-form-message').removeClass('success error').hide();
             $('#rb-availability-result').removeClass('success error').hide();
         }
@@ -317,6 +320,7 @@
         var portalWrapper = $('.rb-portal');
         if (portalWrapper.length) {
             var locationsData = rb_ajax.locations || [];
+            var selectedLanguage = rb_ajax.current_language || '';
 
             function findLocation(id) {
                 id = parseInt(id, 10);
@@ -349,41 +353,91 @@
                 $('#rb-portal-location-address').text(location.address || '');
             }
 
-            $('#rb-portal-go-to-availability').on('click', function() {
-                var selectedLocation = $('#rb-portal-location-form').find('input[name="location_id"]:checked').val();
-                var language = $('#rb-portal-language-select').val();
+            function setLanguage(language) {
+                selectedLanguage = language;
+                var availabilityLanguageField = $('#rb-portal-language-selected');
+                var detailsLanguageField = $('#rb-portal-language-hidden');
 
-                if (!selectedLocation) {
-                    alert(rb_ajax.choose_location_text || 'Please select a location.');
+                if (availabilityLanguageField.length) {
+                    availabilityLanguageField.val(language);
+                }
+
+                if (detailsLanguageField.length) {
+                    detailsLanguageField.val(language);
+                }
+            }
+
+            function applyLocationConstraints(locationId) {
+                var location = findLocation(locationId);
+                if (!location) {
                     return;
                 }
 
-                var location = findLocation(selectedLocation);
-                $('#rb-portal-availability-form [name="location_id"]').val(selectedLocation);
-                $('#rb-portal-availability-form [name="language"]').val(language);
-                $('#rb-portal-location-hidden').val(selectedLocation);
-                $('#rb-portal-language-hidden').val(language);
+                var minAdvance = parseInt(location.min_advance_booking, 10) || 2;
+                var maxAdvance = parseInt(location.max_advance_booking, 10) || 30;
 
-                if (location) {
-                    var minAdvance = parseInt(location.min_advance_booking, 10) || 2;
-                    var maxAdvance = parseInt(location.max_advance_booking, 10) || 30;
+                var minDate = new Date();
+                minDate.setHours(minDate.getHours() + minAdvance);
+                var maxDate = new Date();
+                maxDate.setDate(maxDate.getDate() + maxAdvance);
 
-                    var minDate = new Date();
-                    minDate.setHours(minDate.getHours() + minAdvance);
-                    var maxDate = new Date();
-                    maxDate.setDate(maxDate.getDate() + maxAdvance);
+                $('#rb-portal-date').attr('min', formatDate(minDate));
+                $('#rb-portal-date').attr('max', formatDate(maxDate));
 
-                    $('#rb-portal-date').attr('min', formatDate(minDate));
-                    $('#rb-portal-date').attr('max', formatDate(maxDate));
+                updatePortalLocationSummary(location);
+            }
 
-                    updatePortalLocationSummary(location);
-                }
+            function resetAvailabilityState() {
+                var resultDiv = $('#rb-portal-availability-result');
+                var suggestionsWrap = $('#rb-portal-suggestions');
+                var suggestionList = suggestionsWrap.find('.rb-portal-suggestion-list');
+                var continueWrap = $('#rb-portal-availability-continue');
 
-                showPortalStep(2);
+                resultDiv.removeClass('success error').text('').attr('hidden', true);
+                suggestionsWrap.attr('hidden', true);
+                suggestionList.empty();
+                continueWrap.attr('hidden', true);
+            }
+
+            $('#rb-portal-start').on('click', function() {
+                showPortalStep('1');
             });
 
-            $('#rb-portal-back-to-location').on('click', function() {
-                showPortalStep(1);
+            $('#rb-portal-back-to-start').on('click', function() {
+                showPortalStep('start');
+            });
+
+            $('#rb-portal-language-form').on('submit', function(e) {
+                e.preventDefault();
+                var language = $(this).find('input[name="language"]:checked').val();
+
+                if (!language) {
+                    alert(rb_ajax.choose_language_text || 'Please select a language.');
+                    return;
+                }
+
+                setLanguage(language);
+                resetAvailabilityState();
+
+                var currentLocation = $('#rb-portal-location').val();
+                if (!currentLocation && locationsData.length) {
+                    currentLocation = locationsData[0].id;
+                    $('#rb-portal-location').val(currentLocation);
+                }
+
+                applyLocationConstraints(currentLocation);
+                showPortalStep('2');
+            });
+
+            $('#rb-portal-back-to-language').on('click', function() {
+                resetAvailabilityState();
+                showPortalStep('1');
+            });
+
+            $('#rb-portal-location').on('change', function() {
+                applyLocationConstraints($(this).val());
+                resetAvailabilityState();
+                $('#rb-portal-time').val('');
             });
 
             $('#rb-portal-availability-form').on('submit', function(e) {
@@ -395,7 +449,7 @@
                 var suggestionList = suggestionsWrap.find('.rb-portal-suggestion-list');
                 var continueWrap = $('#rb-portal-availability-continue');
 
-                resultDiv.removeClass('success error').text(rb_ajax.loading_text).show();
+                resultDiv.removeClass('success error').text(rb_ajax.loading_text).removeAttr('hidden').show();
                 suggestionsWrap.attr('hidden', true);
                 suggestionList.empty();
                 continueWrap.attr('hidden', true);
@@ -415,9 +469,11 @@
                         if (response.success) {
                             if (response.data.available) {
                                 resultDiv.removeClass('error').addClass('success').text(response.data.message);
+                                resultDiv.removeAttr('hidden');
                                 continueWrap.removeAttr('hidden');
                             } else {
                                 resultDiv.removeClass('success').addClass('error').text(response.data.message);
+                                resultDiv.removeAttr('hidden');
                                 if (response.data.suggestions && response.data.suggestions.length) {
                                     suggestionsWrap.removeAttr('hidden');
                                     suggestionList.empty();
@@ -428,10 +484,12 @@
                             }
                         } else {
                             resultDiv.removeClass('success').addClass('error').text(response.data.message);
+                            resultDiv.removeAttr('hidden');
                         }
                     },
                     error: function() {
                         resultDiv.removeClass('success').addClass('error').text(rb_ajax.error_text);
+                        resultDiv.removeAttr('hidden');
                     }
                 });
             });
@@ -445,25 +503,33 @@
                 var dateValue = $('#rb-portal-date').val();
                 var timeValue = $('#rb-portal-time').val();
                 var guestsValue = $('#rb-portal-guests').val();
-                var location = findLocation($('#rb-portal-location-hidden').val());
+                var locationId = $('#rb-portal-location').val();
+                var location = findLocation(locationId);
 
+                $('#rb-portal-location-hidden').val(locationId);
                 $('#rb-portal-date-hidden').val(dateValue);
                 $('#rb-portal-time-hidden').val(timeValue);
                 $('#rb-portal-guests-hidden').val(guestsValue);
 
                 updatePortalLocationSummary(location);
 
-                showPortalStep(3);
+                showPortalStep('3');
             });
 
             $('#rb-portal-back-to-availability').on('click', function() {
-                showPortalStep(2);
+                showPortalStep('2');
             });
 
             $('#rb-portal-details-form').on('submit', function(e) {
                 e.preventDefault();
                 submitBookingForm($(this), '#rb-portal-details-message');
             });
+
+            // Initialize default state
+            if (locationsData.length) {
+                applyLocationConstraints($('#rb-portal-location').val() || locationsData[0].id);
+            }
+            setLanguage(selectedLanguage || $('#rb-portal-language-selected').val());
         }
 
         // Manager dashboard actions

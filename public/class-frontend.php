@@ -373,22 +373,23 @@ class RB_Frontend {
     }
 
     public function render_multi_location_portal($atts) {
+        $default_title = rb_t('reserve_your_table', __('Reserve Your Table', 'restaurant-booking'));
         $atts = shortcode_atts(array(
-            'title' => __('Reserve Your Table', 'restaurant-booking'),
+            'title' => $default_title,
             'show_language_selector' => 'yes'
         ), $atts, 'restaurant_booking_portal');
 
         $locations = $this->get_locations_data();
 
         if (empty($locations)) {
-            return '<div class="rb-portal rb-alert">' . esc_html__('Locations are not configured yet.', 'restaurant-booking') . '</div>';
+            return '<div class="rb-portal rb-alert">' . esc_html(rb_t('locations_not_configured', __('Locations are not configured yet.', 'restaurant-booking'))) . '</div>';
         }
 
         $default_location = $locations[0];
         $languages = array(
-            'vi' => __('Vietnamese', 'restaurant-booking'),
-            'en' => __('English', 'restaurant-booking'),
-            'ja' => __('Japanese', 'restaurant-booking'),
+            'vi' => rb_t('language_vietnamese', __('Vietnamese', 'restaurant-booking')),
+            'en' => rb_t('language_english', __('English', 'restaurant-booking')),
+            'ja' => rb_t('language_japanese', __('Japanese', 'restaurant-booking')),
         );
 
         $confirmation_state = isset($_GET['rb_confirmation']) ? sanitize_text_field(wp_unslash($_GET['rb_confirmation'])) : '';
@@ -408,72 +409,75 @@ class RB_Frontend {
                 <div class="rb-portal-notice <?php echo $confirmation_state === 'success' ? 'success' : 'error'; ?>">
                     <?php
                     if ($confirmation_state === 'success') {
-                        echo esc_html__('Your reservation has been confirmed. We look forward to serving you!', 'restaurant-booking');
+                        echo esc_html(rb_t('reservation_confirmed_notice', __('Your reservation has been confirmed. We look forward to serving you!', 'restaurant-booking')));
                     } else {
-                        echo esc_html($confirmation_message ? $confirmation_message : __('We could not confirm your reservation. Please contact the restaurant.', 'restaurant-booking'));
+                        $fallback_message = rb_t('reservation_confirmed_error', __('We could not confirm your reservation. Please contact the restaurant.', 'restaurant-booking'));
+                        echo esc_html($confirmation_message ? $confirmation_message : $fallback_message);
                     }
                     ?>
                 </div>
             <?php endif; ?>
 
-            <div class="rb-portal-step rb-portal-step-select" data-step="1">
-                <h3><?php esc_html_e('Choose location & language', 'restaurant-booking'); ?></h3>
-                <form id="rb-portal-location-form">
-                    <div class="rb-portal-locations">
-                        <?php foreach ($locations as $index => $location) : ?>
-                            <label class="rb-portal-location-option">
-                                <input type="radio" name="location_id" value="<?php echo esc_attr($location['id']); ?>"
-                                       data-hotline="<?php echo esc_attr($location['hotline']); ?>"
-                                       data-email="<?php echo esc_attr($location['email']); ?>"
-                                       data-address="<?php echo esc_attr($location['address']); ?>"
-                                       <?php checked($index === 0); ?> />
-                                <span class="rb-portal-location-name"><?php echo esc_html($location['name']); ?></span>
-                                <?php if (!empty($location['hotline'])) : ?>
-                                    <span class="rb-portal-location-hotline"><?php echo esc_html($location['hotline']); ?></span>
-                                <?php endif; ?>
+            <div class="rb-portal-step rb-portal-step-start" data-step="start">
+                <p><?php echo esc_html(rb_t('portal_start_prompt', __('Ready to make a reservation? Start by choosing your language.', 'restaurant-booking'))); ?></p>
+                <div class="rb-portal-actions">
+                    <button type="button" class="rb-btn-primary" id="rb-portal-start">
+                        <?php echo esc_html(rb_t('book_a_table', __('Book a table', 'restaurant-booking'))); ?>
+                    </button>
+                </div>
+            </div>
+
+            <div class="rb-portal-step rb-portal-step-language" data-step="1" hidden>
+                <h3><?php echo esc_html(rb_t('select_language', __('Select language', 'restaurant-booking'))); ?></h3>
+                <form id="rb-portal-language-form">
+                    <div class="rb-portal-language-options">
+                        <?php foreach ($languages as $code => $label) : ?>
+                            <label class="rb-portal-language-option">
+                                <input type="radio" name="language" value="<?php echo esc_attr($code); ?>"
+                                    <?php checked($code, rb_get_current_language()); ?> />
+                                <span><?php echo esc_html($label); ?></span>
                             </label>
                         <?php endforeach; ?>
                     </div>
 
-                    <?php if ($atts['show_language_selector'] === 'yes') : ?>
-                        <div class="rb-portal-language">
-                            <label for="rb-portal-language-select"><?php esc_html_e('Language', 'restaurant-booking'); ?></label>
-                            <select id="rb-portal-language-select" name="language">
-                                <?php foreach ($languages as $code => $label) : ?>
-                                    <option value="<?php echo esc_attr($code); ?>"
-                                        <?php selected($code, rb_get_current_language()); ?>>
-                                        <?php echo esc_html($label); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    <?php endif; ?>
-
                     <div class="rb-portal-actions">
-                        <button type="button" class="rb-btn-primary" id="rb-portal-go-to-availability">
-                            <?php esc_html_e('Continue', 'restaurant-booking'); ?>
+                        <button type="button" class="rb-btn-secondary" id="rb-portal-back-to-start">
+                            <?php echo esc_html(rb_t('back', __('Back', 'restaurant-booking'))); ?>
+                        </button>
+                        <button type="submit" class="rb-btn-primary">
+                            <?php echo esc_html(rb_t('continue', __('Continue', 'restaurant-booking'))); ?>
                         </button>
                     </div>
                 </form>
             </div>
 
             <div class="rb-portal-step rb-portal-step-availability" data-step="2" hidden>
-                <h3><?php esc_html_e('Check availability', 'restaurant-booking'); ?></h3>
+                <h3><?php echo esc_html(rb_t('check_availability', __('Check availability', 'restaurant-booking'))); ?></h3>
                 <form id="rb-portal-availability-form">
-                    <input type="hidden" name="location_id" value="<?php echo esc_attr($default_location['id']); ?>" />
-                    <input type="hidden" name="language" value="<?php echo esc_attr(rb_get_current_language()); ?>" />
+                    <div class="rb-form-group">
+                        <label for="rb-portal-location"><?php echo esc_html(rb_t('location', __('Location', 'restaurant-booking'))); ?> *</label>
+                        <select id="rb-portal-location" name="location_id" required>
+                            <?php foreach ($locations as $location) : ?>
+                                <option value="<?php echo esc_attr($location['id']); ?>">
+                                    <?php echo esc_html($location['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <input type="hidden" name="language" id="rb-portal-language-selected" value="<?php echo esc_attr(rb_get_current_language()); ?>" />
 
                     <div class="rb-form-row">
                         <div class="rb-form-group">
-                            <label for="rb-portal-date"><?php esc_html_e('Booking date', 'restaurant-booking'); ?> *</label>
+                            <label for="rb-portal-date"><?php echo esc_html(rb_t('booking_date', __('Booking date', 'restaurant-booking'))); ?> *</label>
                             <input type="date" id="rb-portal-date" name="booking_date" required />
                         </div>
                         <div class="rb-form-group">
-                            <label for="rb-portal-time"><?php esc_html_e('Booking time', 'restaurant-booking'); ?> *</label>
+                            <label for="rb-portal-time"><?php echo esc_html(rb_t('booking_time', __('Booking time', 'restaurant-booking'))); ?> *</label>
                             <input type="time" id="rb-portal-time" name="booking_time" required />
                         </div>
                         <div class="rb-form-group">
-                            <label for="rb-portal-guests"><?php esc_html_e('Guests', 'restaurant-booking'); ?> *</label>
+                            <label for="rb-portal-guests"><?php echo esc_html(rb_t('guests', __('Guests', 'restaurant-booking'))); ?> *</label>
                             <select id="rb-portal-guests" name="guest_count" required>
                                 <?php for ($i = 1; $i <= 20; $i++) : ?>
                                     <option value="<?php echo esc_attr($i); ?>"><?php echo esc_html($i); ?></option>
@@ -483,30 +487,30 @@ class RB_Frontend {
                     </div>
 
                     <div class="rb-portal-actions">
-                        <button type="button" class="rb-btn-secondary" id="rb-portal-back-to-location">
-                            <?php esc_html_e('Back', 'restaurant-booking'); ?>
+                        <button type="button" class="rb-btn-secondary" id="rb-portal-back-to-language">
+                            <?php echo esc_html(rb_t('back', __('Back', 'restaurant-booking'))); ?>
                         </button>
                         <button type="submit" class="rb-btn-primary" id="rb-portal-check-availability">
-                            <?php esc_html_e('Check availability', 'restaurant-booking'); ?>
+                            <?php echo esc_html(rb_t('check_availability', __('Check availability', 'restaurant-booking'))); ?>
                         </button>
                     </div>
 
                     <div id="rb-portal-availability-result" class="rb-portal-result" hidden></div>
                     <div id="rb-portal-suggestions" class="rb-portal-suggestions" hidden>
-                        <p><?php esc_html_e('Suggested time slots within ±30 minutes:', 'restaurant-booking'); ?></p>
+                        <p><?php echo esc_html(rb_t('suggested_time_slots', __('Suggested time slots within ±30 minutes:', 'restaurant-booking'))); ?></p>
                         <div class="rb-portal-suggestion-list"></div>
                     </div>
 
                     <div class="rb-portal-actions" id="rb-portal-availability-continue" hidden>
                         <button type="button" class="rb-btn-success" id="rb-portal-go-to-details">
-                            <?php esc_html_e('Continue to reservation details', 'restaurant-booking'); ?>
+                            <?php echo esc_html(rb_t('continue_to_details', __('Continue to reservation details', 'restaurant-booking'))); ?>
                         </button>
                     </div>
                 </form>
             </div>
 
             <div class="rb-portal-step rb-portal-step-details" data-step="3" hidden>
-                <h3><?php esc_html_e('Your reservation details', 'restaurant-booking'); ?></h3>
+                <h3><?php echo esc_html(rb_t('reservation_details_heading', __('Your reservation details', 'restaurant-booking'))); ?></h3>
                 <form id="rb-portal-details-form">
                     <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce_portal'); ?>
                     <input type="hidden" name="location_id" id="rb-portal-location-hidden" value="<?php echo esc_attr($default_location['id']); ?>" />
@@ -517,45 +521,45 @@ class RB_Frontend {
 
                     <div class="rb-form-row">
                         <div class="rb-form-group">
-                            <label for="rb-portal-name"><?php esc_html_e('Full name', 'restaurant-booking'); ?> *</label>
+                            <label for="rb-portal-name"><?php echo esc_html(rb_t('full_name', __('Full name', 'restaurant-booking'))); ?> *</label>
                             <input type="text" id="rb-portal-name" name="customer_name" required />
                         </div>
                         <div class="rb-form-group">
-                            <label for="rb-portal-phone"><?php esc_html_e('Phone number', 'restaurant-booking'); ?> *</label>
+                            <label for="rb-portal-phone"><?php echo esc_html(rb_t('phone_number', __('Phone number', 'restaurant-booking'))); ?> *</label>
                             <input type="tel" id="rb-portal-phone" name="customer_phone" pattern="[0-9]{8,15}" required />
                         </div>
                     </div>
 
                     <div class="rb-form-row">
                         <div class="rb-form-group">
-                            <label for="rb-portal-email"><?php esc_html_e('Email', 'restaurant-booking'); ?> *</label>
+                            <label for="rb-portal-email"><?php echo esc_html(rb_t('email', __('Email', 'restaurant-booking'))); ?> *</label>
                             <input type="email" id="rb-portal-email" name="customer_email" required />
                             <small class="rb-portal-email-note">
-                                <?php esc_html_e('A confirmation link will be sent to this email. If you do not have an email address, please call the hotline of your selected location to reserve.', 'restaurant-booking'); ?>
+                                <?php echo esc_html(rb_t('confirmation_email_note', __('A confirmation link will be sent to this email. If you do not have an email address, please call the hotline of your selected location to reserve.', 'restaurant-booking'))); ?>
                                 <strong id="rb-portal-hotline-note"></strong>
                             </small>
                         </div>
                         <div class="rb-form-group">
-                            <label for="rb-portal-special"><?php esc_html_e('Special requests', 'restaurant-booking'); ?></label>
+                            <label for="rb-portal-special"><?php echo esc_html(rb_t('special_requests', __('Special requests', 'restaurant-booking'))); ?></label>
                             <textarea id="rb-portal-special" name="special_requests" rows="3"></textarea>
                         </div>
                     </div>
 
                     <div class="rb-portal-location-summary">
-                        <h4><?php esc_html_e('Location information', 'restaurant-booking'); ?></h4>
+                        <h4><?php echo esc_html(rb_t('location_information', __('Location information', 'restaurant-booking'))); ?></h4>
                         <p id="rb-portal-location-address"></p>
                         <p>
-                            <?php esc_html_e('Hotline:', 'restaurant-booking'); ?>
+                            <?php echo esc_html(rb_t('hotline_label', __('Hotline:', 'restaurant-booking'))); ?>
                             <span id="rb-portal-location-hotline"></span>
                         </p>
                     </div>
 
                     <div class="rb-portal-actions">
                         <button type="button" class="rb-btn-secondary" id="rb-portal-back-to-availability">
-                            <?php esc_html_e('Back', 'restaurant-booking'); ?>
+                            <?php echo esc_html(rb_t('back', __('Back', 'restaurant-booking'))); ?>
                         </button>
                         <button type="submit" class="rb-btn-primary">
-                            <?php esc_html_e('Submit reservation', 'restaurant-booking'); ?>
+                            <?php echo esc_html(rb_t('submit_reservation', __('Submit reservation', 'restaurant-booking'))); ?>
                         </button>
                     </div>
 
