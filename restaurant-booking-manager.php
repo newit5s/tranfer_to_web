@@ -85,6 +85,7 @@ function rb_init_plugin() {
     // Initialize globals
     global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
     $rb_database = new RB_Database();
+    $rb_database->ensure_portal_schema();
     $rb_booking = new RB_Booking();
     $rb_customer = new RB_Customer();
     $rb_email = new RB_Email();
