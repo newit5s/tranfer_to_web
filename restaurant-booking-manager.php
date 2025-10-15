@@ -197,7 +197,12 @@ function rb_frontend_enqueue_scripts() {
         'confirm_text' => __('Confirm', 'restaurant-booking'),
         'cancel_text' => __('Cancel', 'restaurant-booking'),
         'complete_text' => __('Complete', 'restaurant-booking'),
-        'no_actions_text' => __('No actions available', 'restaurant-booking')
+        'no_actions_text' => __('No actions available', 'restaurant-booking'),
+        'no_history_text' => __('No history found.', 'restaurant-booking'),
+        'confirm_delete_table' => __('Are you sure you want to delete this table?', 'restaurant-booking'),
+        'confirm_set_vip' => __('Upgrade this customer to VIP?', 'restaurant-booking'),
+        'confirm_blacklist' => __('Blacklist this customer?', 'restaurant-booking'),
+        'confirm_unblacklist' => __('Remove this customer from blacklist?', 'restaurant-booking')
     ));
 }
 
