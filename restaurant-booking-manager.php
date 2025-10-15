@@ -93,6 +93,7 @@ function rb_init_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-ajax.php';
     require_once RB_PLUGIN_DIR . 'includes/class-email.php';
     require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+    require_once RB_PLUGIN_DIR . 'includes/class-portal-account.php';
 
     // Initialize globals
     global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
