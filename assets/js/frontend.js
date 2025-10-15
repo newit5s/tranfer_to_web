@@ -653,6 +653,14 @@
         // Manager dashboard actions
         var managerWrapper = $('.rb-manager');
         if (managerWrapper.length) {
+            function showManagerFeedback(container, type, message) {
+                container
+                    .removeClass('success error')
+                    .addClass(type)
+                    .text(message)
+                    .show();
+            }
+
             function updateManagerRow(row, newStatus) {
                 var statusLabel = row.find('.rb-status');
                 statusLabel.removeClass(function(index, className) {
@@ -721,6 +729,303 @@
                     }
                 });
             });
+
+            var createForm = $('#rb-manager-create-booking');
+            if (createForm.length) {
+                createForm.on('submit', function(e) {
+                    e.preventDefault();
+                    var form = $(this);
+                    var submitBtn = form.find('button[type="submit"]');
+                    var feedback = $('#rb-manager-create-feedback');
+
+                    submitBtn.prop('disabled', true);
+                    feedback.removeClass('success error').hide();
+
+                    $.ajax({
+                        url: rb_ajax.ajax_url,
+                        type: 'POST',
+                        data: form.serialize() + '&action=rb_manager_create_booking',
+                        success: function(response) {
+                            if (response.success) {
+                                form[0].reset();
+                                showManagerFeedback(feedback, 'success', response.data.message);
+                            } else if (response.data && response.data.message) {
+                                showManagerFeedback(feedback, 'error', response.data.message);
+                            } else {
+                                showManagerFeedback(feedback, 'error', rb_ajax.error_text);
+                            }
+                        },
+                        error: function() {
+                            showManagerFeedback(feedback, 'error', rb_ajax.error_text);
+                        },
+                        complete: function() {
+                            submitBtn.prop('disabled', false);
+                        }
+                    });
+                });
+            }
+
+            var addTableForm = $('#rb-manager-add-table');
+            if (addTableForm.length) {
+                addTableForm.on('submit', function(e) {
+                    e.preventDefault();
+                    var form = $(this);
+                    var feedback = $('#rb-manager-table-feedback');
+                    var submitBtn = form.find('button[type="submit"]');
+
+                    submitBtn.prop('disabled', true);
+                    feedback.hide();
+
+                    $.ajax({
+                        url: rb_ajax.ajax_url,
+                        type: 'POST',
+                        data: form.serialize() + '&action=rb_manager_add_table',
+                        success: function(response) {
+                            if (response.success) {
+                                location.reload();
+                            } else if (response.data && response.data.message) {
+                                showManagerFeedback(feedback, 'error', response.data.message);
+                            } else {
+                                showManagerFeedback(feedback, 'error', rb_ajax.error_text);
+                            }
+                        },
+                        error: function() {
+                            showManagerFeedback(feedback, 'error', rb_ajax.error_text);
+                        },
+                        complete: function() {
+                            submitBtn.prop('disabled', false);
+                        }
+                    });
+                });
+            }
+
+            managerWrapper.on('click', '.rb-manager-toggle-table', function(e) {
+                e.preventDefault();
+                var button = $(this);
+                if (button.prop('disabled')) {
+                    return;
+                }
+
+                button.prop('disabled', true);
+
+                $.ajax({
+                    url: rb_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_manager_toggle_table',
+                        table_id: button.data('table-id'),
+                        is_available: button.data('next-status'),
+                        nonce: rb_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else if (response.data && response.data.message) {
+                            alert(response.data.message);
+                        } else {
+                            alert(rb_ajax.error_text);
+                        }
+                    },
+                    error: function() {
+                        alert(rb_ajax.error_text);
+                    },
+                    complete: function() {
+                        button.prop('disabled', false);
+                    }
+                });
+            });
+
+            managerWrapper.on('click', '.rb-manager-delete-table', function(e) {
+                e.preventDefault();
+                if (!confirm(rb_ajax.confirm_delete_table || 'Are you sure you want to delete this table?')) {
+                    return;
+                }
+
+                var button = $(this);
+
+                $.ajax({
+                    url: rb_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_manager_delete_table',
+                        table_id: button.data('table-id'),
+                        nonce: rb_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else if (response.data && response.data.message) {
+                            alert(response.data.message);
+                        } else {
+                            alert(rb_ajax.error_text);
+                        }
+                    },
+                    error: function() {
+                        alert(rb_ajax.error_text);
+                    }
+                });
+            });
+
+            managerWrapper.on('click', '.rb-manager-set-vip', function(e) {
+                e.preventDefault();
+                if (!confirm(rb_ajax.confirm_set_vip || 'Upgrade this customer to VIP?')) {
+                    return;
+                }
+
+                var button = $(this);
+                $.ajax({
+                    url: rb_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_manager_set_customer_vip',
+                        customer_id: button.data('customer-id'),
+                        status: 1,
+                        nonce: rb_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else if (response.data && response.data.message) {
+                            alert(response.data.message);
+                        } else {
+                            alert(rb_ajax.error_text);
+                        }
+                    },
+                    error: function() {
+                        alert(rb_ajax.error_text);
+                    }
+                });
+            });
+
+            managerWrapper.on('click', '.rb-manager-blacklist, .rb-manager-unblacklist', function(e) {
+                e.preventDefault();
+                var button = $(this);
+                var status = button.hasClass('rb-manager-unblacklist') ? 0 : 1;
+                var confirmMessage = status ? (rb_ajax.confirm_blacklist || 'Blacklist this customer?') : (rb_ajax.confirm_unblacklist || 'Remove this customer from blacklist?');
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+
+                $.ajax({
+                    url: rb_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_manager_set_customer_blacklist',
+                        customer_id: button.data('customer-id'),
+                        status: status,
+                        nonce: rb_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else if (response.data && response.data.message) {
+                            alert(response.data.message);
+                        } else {
+                            alert(rb_ajax.error_text);
+                        }
+                    },
+                    error: function() {
+                        alert(rb_ajax.error_text);
+                    }
+                });
+            });
+
+            managerWrapper.on('click', '.rb-manager-view-history', function(e) {
+                e.preventDefault();
+                var phone = $(this).data('phone');
+                var historyModal = $('#rb-manager-history');
+                var historyContent = $('#rb-manager-history-content');
+                var nonceField = $('#rb-manager-customers-nonce');
+                var nonceValue = nonceField.length ? nonceField.val() : rb_ajax.nonce;
+
+                historyContent.html('<p>' + (rb_ajax.loading_text || 'Loading...') + '</p>');
+                historyModal.removeAttr('hidden');
+
+                $.ajax({
+                    url: rb_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_manager_customer_history',
+                        phone: phone,
+                        nonce: nonceValue
+                    },
+                    success: function(response) {
+                        if (response.success && response.data.history) {
+                            if (!response.data.history.length) {
+                                historyContent.html('<p>' + (rb_ajax.no_history_text || 'No history found.') + '</p>');
+                                return;
+                            }
+
+                            var table = $('<table class="rb-manager-history-table"></table>');
+                            var thead = $('<thead><tr><th>Date</th><th>Time</th><th>Guests</th><th>Table</th><th>Status</th></tr></thead>');
+                            table.append(thead);
+                            var tbody = $('<tbody></tbody>');
+                            response.data.history.forEach(function(item) {
+                                var row = $('<tr></tr>');
+                                row.append('<td>' + item.booking_date + '</td>');
+                                row.append('<td>' + item.booking_time + '</td>');
+                                row.append('<td>' + item.guest_count + '</td>');
+                                row.append('<td>' + (item.table_number || '-') + '</td>');
+                                row.append('<td>' + item.status + '</td>');
+                                tbody.append(row);
+                            });
+                            table.append(tbody);
+                            historyContent.html(table);
+                        } else if (response.data && response.data.message) {
+                            historyContent.html('<p>' + response.data.message + '</p>');
+                        } else {
+                            historyContent.html('<p>' + rb_ajax.error_text + '</p>');
+                        }
+                    },
+                    error: function() {
+                        historyContent.html('<p>' + rb_ajax.error_text + '</p>');
+                    }
+                });
+            });
+
+            managerWrapper.on('click', '.rb-manager-history-close', function() {
+                $('#rb-manager-history').attr('hidden', true);
+            });
+
+            $('#rb-manager-history').on('click', function(e) {
+                if ($(e.target).is('#rb-manager-history')) {
+                    $('#rb-manager-history').attr('hidden', true);
+                }
+            });
+
+            var settingsForm = $('#rb-manager-settings-form');
+            if (settingsForm.length) {
+                settingsForm.on('submit', function(e) {
+                    e.preventDefault();
+                    var form = $(this);
+                    var feedback = $('#rb-manager-settings-feedback');
+                    var submitBtn = form.find('button[type="submit"]');
+
+                    submitBtn.prop('disabled', true);
+                    feedback.hide();
+
+                    $.ajax({
+                        url: rb_ajax.ajax_url,
+                        type: 'POST',
+                        data: form.serialize() + '&action=rb_manager_update_settings',
+                        success: function(response) {
+                            if (response.success) {
+                                showManagerFeedback(feedback, 'success', response.data.message);
+                            } else if (response.data && response.data.message) {
+                                showManagerFeedback(feedback, 'error', response.data.message);
+                            } else {
+                                showManagerFeedback(feedback, 'error', rb_ajax.error_text);
+                            }
+                        },
+                        error: function() {
+                            showManagerFeedback(feedback, 'error', rb_ajax.error_text);
+                        },
+                        complete: function() {
+                            submitBtn.prop('disabled', false);
+                        }
+                    });
+                });
+            }
         }
 
         // Auto-hide messages after 10 seconds
