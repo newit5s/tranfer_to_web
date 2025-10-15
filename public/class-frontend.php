@@ -1107,6 +1107,11 @@ class RB_Frontend {
             wp_die();
         }
 
+        if (!$this->is_booking_allowed_on_date($date, $location_id)) {
+            wp_send_json_error(array('message' => __('This date is not available for reservations. Please choose another day.', 'restaurant-booking')));
+            wp_die();
+        }
+
         global $rb_booking;
         if (!$rb_booking) {
             require_once RB_PLUGIN_DIR . 'includes/class-booking.php';
