@@ -8,9 +8,12 @@ class RB_Customer {
     }
 
     /**
-     * Tự động cập nhật thông tin khách khi có booking mới
+     * Tự động cập nhật thông tin khách khi có booking mới hoặc chỉnh sửa.
+     *
+     * @param int  $booking_id
+     * @param bool $is_update  Khi true sẽ không tăng bộ đếm đặt bàn.
      */
-    public function update_customer_from_booking($booking_id) {
+    public function update_customer_from_booking($booking_id, $is_update = false) {
         $booking_table = $this->wpdb->prefix . 'rb_bookings';
         $customer_table = $this->wpdb->prefix . 'rb_customers';
 
@@ -23,6 +26,7 @@ class RB_Customer {
             return false;
         }
 
+        $is_update = (bool) $is_update;
         $location_id = isset($booking->location_id) ? (int) $booking->location_id : 1;
 
         // Check if customer exists in the same location
@@ -33,20 +37,39 @@ class RB_Customer {
         ));
 
         if ($customer) {
-            $this->wpdb->query($this->wpdb->prepare(
-                "UPDATE $customer_table SET
-                total_bookings = total_bookings + 1,
-                last_visit = %s,
-                name = %s,
-                email = %s,
-                updated_at = NOW()
-                WHERE phone = %s AND location_id = %d",
-                $booking->booking_date,
-                $booking->customer_name,
-                $booking->customer_email,
-                $booking->customer_phone,
-                $location_id
-            ));
+            if ($is_update) {
+                $this->wpdb->update(
+                    $customer_table,
+                    array(
+                        'last_visit' => $booking->booking_date,
+                        'name' => $booking->customer_name,
+                        'email' => $booking->customer_email,
+                        'preferred_source' => $booking->booking_source,
+                        'updated_at' => current_time('mysql')
+                    ),
+                    array(
+                        'phone' => $booking->customer_phone,
+                        'location_id' => $location_id
+                    )
+                );
+            } else {
+                $this->wpdb->query($this->wpdb->prepare(
+                    "UPDATE $customer_table SET
+                    total_bookings = total_bookings + 1,
+                    last_visit = %s,
+                    name = %s,
+                    email = %s,
+                    preferred_source = %s,
+                    updated_at = NOW()
+                    WHERE phone = %s AND location_id = %d",
+                    $booking->booking_date,
+                    $booking->customer_name,
+                    $booking->customer_email,
+                    $booking->booking_source,
+                    $booking->customer_phone,
+                    $location_id
+                ));
+            }
         } else {
             $this->wpdb->insert($customer_table, array(
                 'location_id' => $location_id,
@@ -57,7 +80,8 @@ class RB_Customer {
                 'first_visit' => $booking->booking_date,
                 'last_visit' => $booking->booking_date,
                 'preferred_source' => $booking->booking_source,
-                'created_at' => current_time('mysql')
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
             ));
         }
 
@@ -131,6 +155,16 @@ class RB_Customer {
         return $this->wpdb->update(
             $customer_table,
             array('blacklisted' => $status ? 1 : 0),
+            array('id' => $customer_id)
+        );
+    }
+
+    public function update_customer_notes($customer_id, $notes) {
+        $customer_table = $this->wpdb->prefix . 'rb_customers';
+
+        return $this->wpdb->update(
+            $customer_table,
+            array('customer_notes' => $notes),
             array('id' => $customer_id)
         );
     }
@@ -300,14 +334,20 @@ class RB_Customer {
         }
 
         $where_sql = implode(' AND ', $where);
-        $orderby = sanitize_sql_orderby($args['orderby'] . ' ' . $args['order']);
 
-        $limit_sql = '';
-        if ($args['limit'] > 0) {
-            $limit_sql = $this->wpdb->prepare('LIMIT %d', $args['limit']);
+        $allowed_orderby = array('total_bookings', 'completed_bookings', 'cancelled_bookings', 'last_visit', 'name', 'created_at');
+        $orderby_field = in_array($args['orderby'], $allowed_orderby, true) ? $args['orderby'] : 'total_bookings';
+        $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
+        $orderby = sanitize_sql_orderby($orderby_field . ' ' . $order);
+        if (!$orderby) {
+            $orderby = 'total_bookings DESC';
         }
 
-        $sql = "SELECT * FROM $customer_table WHERE $where_sql ORDER BY $orderby $limit_sql";
+        $sql = "SELECT * FROM $customer_table WHERE $where_sql ORDER BY $orderby";
+
+        if ($args['limit'] > 0) {
+            $sql .= $this->wpdb->prepare(' LIMIT %d', $args['limit']);
+        }
 
         return $this->prepare_and_get_results($sql, $params);
     }
