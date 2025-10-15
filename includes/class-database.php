@@ -25,6 +25,8 @@ class RB_Database {
         $this->create_tables_table();
         $this->create_bookings_table();
         $this->create_customers_table();
+        $this->create_portal_accounts_table();
+        $this->create_portal_account_locations_table();
 
         $this->add_location_columns();
         $this->insert_default_locations();
@@ -136,6 +138,41 @@ class RB_Database {
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY slug (slug)
+        ) $this->charset_collate;";
+
+        dbDelta($sql);
+    }
+
+    private function create_portal_accounts_table() {
+        $table_name = $this->wpdb->prefix . 'rb_portal_accounts';
+
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            username varchar(60) NOT NULL,
+            password_hash varchar(255) NOT NULL,
+            display_name varchar(100) DEFAULT '',
+            email varchar(100) DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            last_location_id bigint(20) UNSIGNED DEFAULT 0,
+            last_login_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY username (username),
+            UNIQUE KEY email (email)
+        ) $this->charset_collate;";
+
+        dbDelta($sql);
+    }
+
+    private function create_portal_account_locations_table() {
+        $table_name = $this->wpdb->prefix . 'rb_portal_account_locations';
+
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            account_id bigint(20) UNSIGNED NOT NULL,
+            location_id bigint(20) UNSIGNED NOT NULL,
+            PRIMARY KEY (account_id, location_id),
+            KEY location_id (location_id)
         ) $this->charset_collate;";
 
         dbDelta($sql);

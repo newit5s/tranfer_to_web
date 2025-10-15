@@ -8,11 +8,220 @@ if (!defined('ABSPATH')) {
 }
 
 class RB_Admin {
-    
+
+    private $portal_account_manager;
+
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'handle_admin_actions'));
         add_action('admin_notices', array($this, 'display_admin_notices'));
+
+        add_action('show_user_profile', array($this, 'render_manager_user_locations_section'));
+        add_action('edit_user_profile', array($this, 'render_manager_user_locations_section'));
+        add_action('personal_options_update', array($this, 'save_manager_user_locations'));
+        add_action('edit_user_profile_update', array($this, 'save_manager_user_locations'));
+    }
+
+    private function get_portal_account_manager() {
+        if (!$this->portal_account_manager) {
+            $this->portal_account_manager = RB_Portal_Account_Manager::get_instance();
+        }
+
+        return $this->portal_account_manager;
+    }
+
+    public function render_manager_user_locations_section($user) {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $locations = $rb_location ? $rb_location->all() : array();
+
+        if (empty($locations)) {
+            return;
+        }
+
+        $assigned_locations = get_user_meta($user->ID, 'rb_manager_locations', true);
+
+        if (!is_array($assigned_locations)) {
+            $assigned_locations = empty($assigned_locations) ? array() : array((int) $assigned_locations);
+        }
+
+        $assigned_locations = array_map('intval', $assigned_locations);
+
+        ?>
+        <h2><?php esc_html_e('Location Manager Permissions', 'restaurant-booking'); ?></h2>
+        <table class="form-table" role="presentation">
+            <tr>
+                <th scope="row"><?php esc_html_e('Managed locations', 'restaurant-booking'); ?></th>
+                <td>
+                    <p class="description"><?php esc_html_e('Select the locations this user can manage in the booking portal.', 'restaurant-booking'); ?></p>
+                    <?php foreach ($locations as $location) : ?>
+                        <label style="display: block; margin-bottom: 4px;">
+                            <input type="checkbox" name="rb_manager_locations[]" value="<?php echo esc_attr((int) $location->id); ?>" <?php checked(in_array((int) $location->id, $assigned_locations, true)); ?> />
+                            <?php echo esc_html($location->name); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </td>
+            </tr>
+        </table>
+        <?php
+    }
+
+    public function save_manager_user_locations($user_id) {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        $selected_locations = isset($_POST['rb_manager_locations']) ? wp_unslash((array) $_POST['rb_manager_locations']) : array();
+        $selected_locations = array_map('intval', $selected_locations);
+        $selected_locations = array_values(array_unique(array_filter($selected_locations)));
+
+        if (!empty($selected_locations)) {
+            update_user_meta($user_id, 'rb_manager_locations', $selected_locations);
+        } else {
+            delete_user_meta($user_id, 'rb_manager_locations');
+        }
+
+        $active_location = (int) get_user_meta($user_id, 'rb_active_location', true);
+
+        if ($active_location && !in_array($active_location, $selected_locations, true)) {
+            if (!empty($selected_locations)) {
+                update_user_meta($user_id, 'rb_active_location', (int) $selected_locations[0]);
+            } else {
+                delete_user_meta($user_id, 'rb_active_location');
+            }
+        }
+    }
+
+    private function get_all_locations_for_portal_accounts() {
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        if (!$rb_location) {
+            return array();
+        }
+
+        $locations = $rb_location->all();
+        if (empty($locations)) {
+            return array();
+        }
+
+        $formatted = array();
+        foreach ($locations as $location) {
+            $formatted[] = array(
+                'id' => (int) $location->id,
+                'name' => $location->name,
+            );
+        }
+
+        return $formatted;
+    }
+
+    private function save_portal_account() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You are not allowed to manage portal accounts.', 'restaurant-booking'));
+        }
+
+        $account_id = isset($_POST['portal_account_id']) ? intval($_POST['portal_account_id']) : 0;
+        $username = isset($_POST['portal_username']) ? sanitize_user(wp_unslash($_POST['portal_username']), true) : '';
+        $display_name = isset($_POST['portal_display_name']) ? sanitize_text_field(wp_unslash($_POST['portal_display_name'])) : '';
+        $email = isset($_POST['portal_email']) ? sanitize_email(wp_unslash($_POST['portal_email'])) : '';
+        $status = isset($_POST['portal_status']) ? sanitize_text_field(wp_unslash($_POST['portal_status'])) : 'active';
+        $password = isset($_POST['portal_password']) ? (string) wp_unslash($_POST['portal_password']) : '';
+        $locations = isset($_POST['portal_locations']) ? array_map('intval', (array) wp_unslash($_POST['portal_locations'])) : array();
+        $locations = array_values(array_unique(array_filter($locations)));
+
+        $error = null;
+
+        if (empty($locations)) {
+            $error = new WP_Error('rb_missing_locations', __('Please assign at least one location to the portal account.', 'restaurant-booking'));
+        } else {
+            $manager = $this->get_portal_account_manager();
+            $data = array(
+                'username' => $username,
+                'display_name' => $display_name,
+                'email' => $email,
+                'status' => $status === 'inactive' ? 'inactive' : 'active',
+                'last_location_id' => !empty($locations) ? (int) $locations[0] : 0,
+            );
+
+            if (!empty($password)) {
+                $data['password'] = $password;
+            }
+
+            if ($account_id) {
+                $result = $manager->update_account($account_id, $data, $locations);
+            } else {
+                if (empty($password)) {
+                    $result = new WP_Error('rb_missing_password', __('Password is required for new accounts.', 'restaurant-booking'));
+                } else {
+                    $result = $manager->create_account($data, $locations);
+                }
+            }
+
+            if (is_wp_error($result)) {
+                $error = $result;
+            }
+        }
+
+        $redirect_args = array(
+            'page' => 'rb-settings',
+            'rb_tab' => 'portal-accounts',
+        );
+
+        if (!empty($error) && is_wp_error($error)) {
+            $redirect_args['message'] = 'portal_account_error';
+            $redirect_args['error'] = rawurlencode($error->get_error_message());
+            if ($account_id) {
+                $redirect_args['portal_account'] = $account_id;
+            }
+        } else {
+            $redirect_args['message'] = 'portal_account_saved';
+        }
+
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+        exit;
+    }
+
+    private function delete_portal_account($account_id) {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You are not allowed to manage portal accounts.', 'restaurant-booking'));
+        }
+
+        $account_id = (int) $account_id;
+
+        $manager = $this->get_portal_account_manager();
+        $deleted = false;
+        if ($account_id) {
+            $deleted = $manager->delete_account($account_id);
+        }
+
+        $redirect_args = array(
+            'page' => 'rb-settings',
+            'rb_tab' => 'portal-accounts',
+        );
+
+        if ($deleted) {
+            $redirect_args['message'] = 'portal_account_deleted';
+        } else {
+            $redirect_args['message'] = 'portal_account_error';
+            $redirect_args['error'] = rawurlencode(__('Portal account could not be deleted.', 'restaurant-booking'));
+        }
+
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+        exit;
     }
     
     public function add_admin_menu() {
@@ -1386,6 +1595,28 @@ class RB_Admin {
         );
         
         $settings = wp_parse_args($settings, $defaults);
+
+        $active_tab = isset($_GET['rb_tab']) ? sanitize_key($_GET['rb_tab']) : 'language';
+        $allowed_tabs = array('language', 'hours', 'booking', 'notifications', 'policies', 'advanced', 'portal-accounts');
+        if (!in_array($active_tab, $allowed_tabs, true)) {
+            $active_tab = 'language';
+        }
+
+        $portal_manager = $this->get_portal_account_manager();
+        $portal_accounts = $portal_manager->get_accounts();
+        $editing_account = null;
+        if (isset($_GET['portal_account'])) {
+            $editing_account = $portal_manager->get_account((int) $_GET['portal_account']);
+            if ($editing_account) {
+                $active_tab = 'portal-accounts';
+            }
+        }
+
+        $portal_locations = $this->get_all_locations_for_portal_accounts();
+        $portal_location_map = array();
+        foreach ($portal_locations as $portal_location) {
+            $portal_location_map[$portal_location['id']] = $portal_location['name'];
+        }
         ?>
         <div class="wrap">
             <h1>⚙️ <?php rb_e('settings'); ?> - <?php rb_e('restaurant_booking'); ?></h1>
@@ -1396,16 +1627,17 @@ class RB_Admin {
 
                 <!-- Tab Navigation -->
                 <h2 class="nav-tab-wrapper">
-                    <a href="#tab-language" class="nav-tab nav-tab-active">🌐 <?php rb_e('language'); ?></a>
-                    <a href="#tab-hours" class="nav-tab">🕐 <?php rb_e('working_hours'); ?></a>
-                    <a href="#tab-booking" class="nav-tab">📅 <?php rb_e('booking_settings'); ?></a>
-                    <a href="#tab-notifications" class="nav-tab">🔔 <?php rb_e('notifications'); ?></a>
-                    <a href="#tab-policies" class="nav-tab">📋 <?php rb_e('policies'); ?></a>
-                    <a href="#tab-advanced" class="nav-tab">🔧 <?php rb_e('advanced'); ?></a>
+                    <a href="#tab-language" class="nav-tab <?php echo $active_tab === 'language' ? 'nav-tab-active' : ''; ?>">🌐 <?php rb_e('language'); ?></a>
+                    <a href="#tab-hours" class="nav-tab <?php echo $active_tab === 'hours' ? 'nav-tab-active' : ''; ?>">🕐 <?php rb_e('working_hours'); ?></a>
+                    <a href="#tab-booking" class="nav-tab <?php echo $active_tab === 'booking' ? 'nav-tab-active' : ''; ?>">📅 <?php rb_e('booking_settings'); ?></a>
+                    <a href="#tab-notifications" class="nav-tab <?php echo $active_tab === 'notifications' ? 'nav-tab-active' : ''; ?>">🔔 <?php rb_e('notifications'); ?></a>
+                    <a href="#tab-policies" class="nav-tab <?php echo $active_tab === 'policies' ? 'nav-tab-active' : ''; ?>">📋 <?php rb_e('policies'); ?></a>
+                    <a href="#tab-advanced" class="nav-tab <?php echo $active_tab === 'advanced' ? 'nav-tab-active' : ''; ?>">🔧 <?php rb_e('advanced'); ?></a>
+                    <a href="#tab-portal-accounts" class="nav-tab <?php echo $active_tab === 'portal-accounts' ? 'nav-tab-active' : ''; ?>">🧑‍💼 <?php esc_html_e('Portal Accounts', 'restaurant-booking'); ?></a>
                 </h2>
                             
                 <!-- ✅ NEW TAB: Language Settings -->
-                <div id="tab-language" class="rb-tab-content">
+                <div id="tab-language" class="rb-tab-content" style="display: <?php echo $active_tab === 'language' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('language_settings'); ?></h2>
 
                     <div class="rb-language-status-card">
@@ -1491,7 +1723,7 @@ class RB_Admin {
                     </table>
                 </div>
                 <!-- Tab 1: Working Hours -->
-                <div id="tab-hours" class="rb-tab-content">
+                <div id="tab-hours" class="rb-tab-content" style="display: <?php echo $active_tab === 'hours' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('restaurant_working_hours'); ?></h2>
                     
                     <table class="form-table">
@@ -1633,7 +1865,7 @@ class RB_Admin {
                 </div>
                 
                 <!-- Tab 2: Booking Settings -->
-                <div id="tab-booking" class="rb-tab-content" style="display: none;">
+                <div id="tab-booking" class="rb-tab-content" style="display: <?php echo $active_tab === 'booking' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('booking_settings'); ?></h2>
                     
                     <table class="form-table">
@@ -1716,7 +1948,7 @@ class RB_Admin {
                 </div>
                 
                 <!-- Tab 3: Notifications -->
-                <div id="tab-notifications" class="rb-tab-content" style="display: none;">
+                <div id="tab-notifications" class="rb-tab-content" style="display: <?php echo $active_tab === 'notifications' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('notification_settings'); ?></h2>
                     
                     <table class="form-table">
@@ -1770,7 +2002,7 @@ class RB_Admin {
                 </div>
                 
                 <!-- Tab 4: Policies -->
-                <div id="tab-policies" class="rb-tab-content" style="display: none;">
+                <div id="tab-policies" class="rb-tab-content" style="display: <?php echo $active_tab === 'policies' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('policies_and_rules'); ?></h2>
                     
                     <table class="form-table">
@@ -1840,7 +2072,7 @@ class RB_Admin {
                 </div>
                 
                 <!-- Tab 5: Advanced -->
-                <div id="tab-advanced" class="rb-tab-content" style="display: none;">
+                <div id="tab-advanced" class="rb-tab-content" style="display: <?php echo $active_tab === 'advanced' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('advanced_settings'); ?></h2>
                     
                     <table class="form-table">
@@ -1878,12 +2110,168 @@ class RB_Admin {
                     </table>
                 </div>
                 
-                <p class="submit">
-                    <button type="submit" class="button button-primary button-large">💾 <?php rb_e('save_all_settings'); ?></button>
-                </p>
+                <div class="rb-settings-submit-wrapper">
+                    <p class="submit">
+                        <button type="submit" class="button button-primary button-large">💾 <?php rb_e('save_all_settings'); ?></button>
+                    </p>
+                </div>
             </form>
+
+            <div id="tab-portal-accounts" class="rb-tab-content" style="display: <?php echo $active_tab === 'portal-accounts' ? 'block' : 'none'; ?>;">
+                <h2><?php esc_html_e('Portal Accounts', 'restaurant-booking'); ?></h2>
+                <p class="description"><?php esc_html_e('Create dedicated logins for branch managers without giving access to the WordPress dashboard.', 'restaurant-booking'); ?></p>
+
+                <?php if (empty($portal_locations)) : ?>
+                    <div class="notice notice-warning">
+                    <p><?php esc_html_e('Please create at least one location before adding portal accounts.', 'restaurant-booking'); ?></p>
+                </div>
+            <?php else : ?>
+                <form method="post" action="">
+                    <?php wp_nonce_field('rb_save_portal_account', 'rb_nonce'); ?>
+                    <input type="hidden" name="action" value="save_portal_account">
+                    <input type="hidden" name="portal_account_id" value="<?php echo esc_attr($editing_account ? $editing_account->id : 0); ?>">
+
+                    <h3>
+                        <?php echo $editing_account ? esc_html__('Update account', 'restaurant-booking') : esc_html__('Create new account', 'restaurant-booking'); ?>
+                    </h3>
+
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="portal_username"><?php esc_html_e('Username', 'restaurant-booking'); ?></label></th>
+                            <td>
+                                <input type="text" name="portal_username" id="portal_username" class="regular-text" value="<?php echo esc_attr($editing_account ? $editing_account->username : ''); ?>" required>
+                                <p class="description"><?php esc_html_e('Usernames must be unique across portal accounts.', 'restaurant-booking'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="portal_display_name"><?php esc_html_e('Display name', 'restaurant-booking'); ?></label></th>
+                            <td>
+                                <input type="text" name="portal_display_name" id="portal_display_name" class="regular-text" value="<?php echo esc_attr($editing_account ? $editing_account->display_name : ''); ?>">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="portal_email"><?php esc_html_e('Email (optional)', 'restaurant-booking'); ?></label></th>
+                            <td>
+                                <input type="email" name="portal_email" id="portal_email" class="regular-text" value="<?php echo esc_attr($editing_account ? $editing_account->email : ''); ?>">
+                                <p class="description"><?php esc_html_e('Use the email to allow sign-in with email address and send password resets in the future.', 'restaurant-booking'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="portal_password"><?php esc_html_e('Password', 'restaurant-booking'); ?></label></th>
+                            <td>
+                                <input type="password" name="portal_password" id="portal_password" class="regular-text" <?php echo $editing_account ? '' : 'required'; ?>>
+                                <p class="description"><?php echo $editing_account ? esc_html__('Leave blank to keep the current password.', 'restaurant-booking') : esc_html__('Set an initial password for the new account.', 'restaurant-booking'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="portal_status"><?php esc_html_e('Status', 'restaurant-booking'); ?></label></th>
+                            <td>
+                                <select name="portal_status" id="portal_status">
+                                    <option value="active" <?php selected(!$editing_account || $editing_account->status === 'active'); ?>><?php esc_html_e('Active', 'restaurant-booking'); ?></option>
+                                    <option value="inactive" <?php selected($editing_account && $editing_account->status === 'inactive'); ?>><?php esc_html_e('Inactive', 'restaurant-booking'); ?></option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="portal_locations"><?php esc_html_e('Allowed locations', 'restaurant-booking'); ?></label></th>
+                            <td>
+                                <select name="portal_locations[]" id="portal_locations" multiple size="<?php echo esc_attr(min(8, max(3, count($portal_locations)))); ?>" style="min-width: 260px;">
+                                    <?php
+                                    $selected_locations = $editing_account ? (array) $editing_account->locations : array();
+                                    foreach ($portal_locations as $location) :
+                                        ?>
+                                        <option value="<?php echo esc_attr($location['id']); ?>" <?php selected(in_array($location['id'], $selected_locations, true)); ?>><?php echo esc_html($location['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="description"><?php esc_html_e('Select the branches this account can manage. Hold Ctrl (Windows) or Command (macOS) to select multiple locations.', 'restaurant-booking'); ?></p>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <p class="submit">
+                        <button type="submit" class="button button-primary">
+                            <?php echo $editing_account ? esc_html__('Save changes', 'restaurant-booking') : esc_html__('Create account', 'restaurant-booking'); ?>
+                        </button>
+                    </p>
+                </form>
+            <?php endif; ?>
+
+            <hr>
+
+            <h3><?php esc_html_e('Existing accounts', 'restaurant-booking'); ?></h3>
+
+            <?php if (empty($portal_accounts)) : ?>
+                <p><?php esc_html_e('No portal accounts have been created yet.', 'restaurant-booking'); ?></p>
+            <?php else : ?>
+                <table class="widefat striped">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e('Username', 'restaurant-booking'); ?></th>
+                            <th><?php esc_html_e('Display name', 'restaurant-booking'); ?></th>
+                            <th><?php esc_html_e('Email', 'restaurant-booking'); ?></th>
+                            <th><?php esc_html_e('Locations', 'restaurant-booking'); ?></th>
+                            <th><?php esc_html_e('Status', 'restaurant-booking'); ?></th>
+                            <th><?php esc_html_e('Last login', 'restaurant-booking'); ?></th>
+                            <th><?php esc_html_e('Actions', 'restaurant-booking'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($portal_accounts as $account) : ?>
+                            <?php
+                            $account_locations = array();
+                            if (!empty($account->locations)) {
+                                foreach ($account->locations as $location_id) {
+                                    $account_locations[] = isset($portal_location_map[$location_id]) ? $portal_location_map[$location_id] : sprintf(__('Location #%d', 'restaurant-booking'), $location_id);
+                                }
+                            }
+                            $edit_url = add_query_arg(
+                                array(
+                                    'page' => 'rb-settings',
+                                    'rb_tab' => 'portal-accounts',
+                                    'portal_account' => $account->id,
+                                ),
+                                admin_url('admin.php')
+                            );
+                            $delete_url = wp_nonce_url(
+                                add_query_arg(
+                                    array(
+                                        'page' => 'rb-settings',
+                                        'action' => 'delete_portal_account',
+                                        'id' => $account->id,
+                                        'rb_tab' => 'portal-accounts',
+                                    ),
+                                    admin_url('admin.php')
+                                ),
+                                'rb_action'
+                            );
+                            ?>
+                            <tr>
+                                <td><?php echo esc_html($account->username); ?></td>
+                                <td><?php echo esc_html($account->display_name); ?></td>
+                                <td><?php echo esc_html($account->email); ?></td>
+                                <td><?php echo !empty($account_locations) ? esc_html(implode(', ', $account_locations)) : '—'; ?></td>
+                                <td>
+                                    <?php if ($account->status === 'active') : ?>
+                                        <span class="rb-badge" style="background:#d4edda;color:#155724;"><?php esc_html_e('Active', 'restaurant-booking'); ?></span>
+                                    <?php else : ?>
+                                        <span class="rb-badge" style="background:#f8d7da;color:#721c24;"><?php esc_html_e('Inactive', 'restaurant-booking'); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php echo !empty($account->last_login_at) ? esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($account->last_login_at))) : '—'; ?>
+                                </td>
+                                <td>
+                                    <a href="<?php echo esc_url($edit_url); ?>" class="button button-small"><?php esc_html_e('Edit', 'restaurant-booking'); ?></a>
+                                    <a href="<?php echo esc_url($delete_url); ?>" class="button button-small delete" onclick="return confirm('<?php echo esc_js(__('Are you sure you want to delete this portal account?', 'restaurant-booking')); ?>');"><?php esc_html_e('Delete', 'restaurant-booking'); ?></a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php endif; ?>
+            </div>
         </div>
-        
+
         <style>
             .rb-tab-content {
                 background: white;
@@ -1992,18 +2380,27 @@ class RB_Admin {
         
         <script>
         jQuery(document).ready(function($) {
+            function rbShowTab(target) {
+                $('.nav-tab').removeClass('nav-tab-active');
+                $('.nav-tab[href="' + target + '"]').addClass('nav-tab-active');
+                $('.rb-tab-content').hide();
+                $(target).show();
+
+                if (target === '#tab-portal-accounts') {
+                    $('.rb-settings-submit-wrapper').hide();
+                } else {
+                    $('.rb-settings-submit-wrapper').show();
+                }
+            }
+
             // Tab switching
             $('.nav-tab').on('click', function(e) {
                 e.preventDefault();
-                var target = $(this).attr('href');
-                
-                $('.nav-tab').removeClass('nav-tab-active');
-                $(this).addClass('nav-tab-active');
-                
-                $('.rb-tab-content').hide();
-                $(target).show();
+                rbShowTab($(this).attr('href'));
             });
-            
+
+            rbShowTab('#tab-<?php echo esc_js($active_tab); ?>');
+
             // Toggle working hours mode
             $('input[name="rb_settings[working_hours_mode]"]').on('change', function() {
                 if ($(this).val() === 'simple') {
@@ -2155,6 +2552,9 @@ class RB_Admin {
                 case 'delete_table':
                     $this->delete_table($id);
                     break;
+                case 'delete_portal_account':
+                    $this->delete_portal_account($id);
+                    break;
             }
         }
 
@@ -2165,6 +2565,11 @@ class RB_Admin {
                 case 'save_settings':
                     if (wp_verify_nonce($_POST['rb_nonce'], 'rb_save_settings')) {
                         $this->save_settings();
+                    }
+                    break;
+                case 'save_portal_account':
+                    if (wp_verify_nonce($_POST['rb_nonce'], 'rb_save_portal_account')) {
+                        $this->save_portal_account();
                     }
                     break;
                 case 'add_table':
@@ -2534,6 +2939,16 @@ class RB_Admin {
             case 'no_tables':
                 $error_detail = isset($_GET['error']) ? urldecode($_GET['error']) : rb_t('no_tables_available');
                 $text = rb_t('cannot_confirm') . ': ' . $error_detail;
+                $type = 'error';
+                break;
+            case 'portal_account_saved':
+                $text = __('Portal account saved successfully.', 'restaurant-booking');
+                break;
+            case 'portal_account_deleted':
+                $text = __('Portal account deleted.', 'restaurant-booking');
+                break;
+            case 'portal_account_error':
+                $text = isset($_GET['error']) ? esc_html(urldecode($_GET['error'])) : __('Unable to process the portal account request.', 'restaurant-booking');
                 $type = 'error';
                 break;
         }
