@@ -322,6 +322,14 @@
             var locationsData = rb_ajax.locations || [];
             var selectedLanguage = rb_ajax.current_language || '';
 
+            function supportsSessionStorage() {
+                try {
+                    return typeof window.sessionStorage !== 'undefined';
+                } catch (error) {
+                    return false;
+                }
+            }
+
             function findLocation(id) {
                 id = parseInt(id, 10);
                 for (var i = 0; i < locationsData.length; i++) {
@@ -353,18 +361,105 @@
                 $('#rb-portal-location-address').text(location.address || '');
             }
 
-            function setLanguage(language) {
-                selectedLanguage = language;
+            function setLanguage(language, options) {
+                options = options || {};
+
                 var availabilityLanguageField = $('#rb-portal-language-selected');
                 var detailsLanguageField = $('#rb-portal-language-hidden');
+                var currentLanguage = rb_ajax.current_language || '';
+                var targetLanguage = language || selectedLanguage ||
+                    (availabilityLanguageField.length ? availabilityLanguageField.val() : '') ||
+                    (detailsLanguageField.length ? detailsLanguageField.val() : '') ||
+                    currentLanguage;
+
+                if (!targetLanguage) {
+                    return false;
+                }
+
+                selectedLanguage = targetLanguage;
 
                 if (availabilityLanguageField.length) {
-                    availabilityLanguageField.val(language);
+                    availabilityLanguageField.val(targetLanguage);
                 }
 
                 if (detailsLanguageField.length) {
-                    detailsLanguageField.val(language);
+                    detailsLanguageField.val(targetLanguage);
                 }
+
+                var needsPersist = !!options.persist;
+                var resumeStep = options.resumeStep || null;
+
+                if (needsPersist && targetLanguage !== currentLanguage) {
+                    var storeState = function() {
+                        if (!supportsSessionStorage()) {
+                            return;
+                        }
+
+                        try {
+                            sessionStorage.setItem('rbPortalSelectedLanguage', targetLanguage);
+
+                            if (resumeStep) {
+                                sessionStorage.setItem('rbPortalResumeStep', resumeStep);
+                            } else {
+                                sessionStorage.removeItem('rbPortalResumeStep');
+                            }
+                        } catch (storageError) {
+                            // Ignore storage errors (e.g. private mode)
+                        }
+                    };
+
+                    var fallbackNavigation = function() {
+                        storeState();
+
+                        try {
+                            var fallbackUrl = new URL(window.location.href);
+                            fallbackUrl.searchParams.set('rb_lang', targetLanguage);
+                            window.location.href = fallbackUrl.toString();
+                        } catch (urlError) {
+                            var baseUrl = window.location.href.split('?')[0];
+                            window.location.href = baseUrl + '?rb_lang=' + encodeURIComponent(targetLanguage);
+                        }
+                    };
+
+                    storeState();
+
+                    if (rb_ajax.language_nonce) {
+                        $.ajax({
+                            url: rb_ajax.ajax_url,
+                            type: 'POST',
+                            data: {
+                                action: 'rb_switch_language',
+                                language: targetLanguage,
+                                nonce: rb_ajax.language_nonce
+                            },
+                            success: function(response) {
+                                if (response && response.success) {
+                                    window.location.reload();
+                                } else {
+                                    fallbackNavigation();
+                                }
+                            },
+                            error: fallbackNavigation
+                        });
+                    } else {
+                        fallbackNavigation();
+                    }
+
+                    return true;
+                }
+
+                if (needsPersist && supportsSessionStorage()) {
+                    try {
+                        sessionStorage.removeItem('rbPortalResumeStep');
+                        sessionStorage.removeItem('rbPortalSelectedLanguage');
+                    } catch (clearError) {
+                        // Ignore storage errors
+                    }
+                }
+
+                rb_ajax.current_language = targetLanguage;
+
+                return false;
             }
 
             function applyLocationConstraints(locationId) {
@@ -416,7 +511,12 @@
                     return;
                 }
 
-                setLanguage(language);
+                var willReload = setLanguage(language, { persist: true, resumeStep: '2' });
+
+                if (willReload) {
+                    return;
+                }
+
                 resetAvailabilityState();
 
                 var currentLocation = $('#rb-portal-location').val();
@@ -530,6 +630,24 @@
                 applyLocationConstraints($('#rb-portal-location').val() || locationsData[0].id);
             }
             setLanguage(selectedLanguage || $('#rb-portal-language-selected').val());
+
+            if (supportsSessionStorage()) {
+                try {
+                    var resumeStep = sessionStorage.getItem('rbPortalResumeStep');
+                    var resumeLanguage = sessionStorage.getItem('rbPortalSelectedLanguage');
+
+                    if (resumeStep && resumeLanguage) {
+                        if (resumeLanguage === rb_ajax.current_language) {
+                            showPortalStep(resumeStep);
+                        }
+
+                        sessionStorage.removeItem('rbPortalResumeStep');
+                        sessionStorage.removeItem('rbPortalSelectedLanguage');
+                    }
+                } catch (resumeError) {
+                    // Ignore storage errors
+                }
+            }
         }
 
         // Manager dashboard actions

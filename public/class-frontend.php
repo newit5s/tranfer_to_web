@@ -502,11 +502,41 @@ class RB_Frontend {
         }
 
         $default_location = $locations[0];
-        $languages = array(
-            'vi' => rb_t('language_vietnamese', __('Vietnamese', 'restaurant-booking')),
-            'en' => rb_t('language_english', __('English', 'restaurant-booking')),
-            'ja' => rb_t('language_japanese', __('Japanese', 'restaurant-booking')),
-        );
+        $languages = array();
+        $available_languages = rb_get_available_languages();
+
+        foreach ($available_languages as $locale => $info) {
+            $fallback_label = isset($info['name']) ? $info['name'] : $locale;
+
+            switch ($locale) {
+                case 'vi_VN':
+                    $label = rb_t('language_vietnamese', __('Vietnamese', 'restaurant-booking'));
+                    break;
+                case 'en_US':
+                    $label = rb_t('language_english', __('English', 'restaurant-booking'));
+                    break;
+                case 'ja_JP':
+                    $label = rb_t('language_japanese', __('Japanese', 'restaurant-booking'));
+                    break;
+                default:
+                    $label = $fallback_label;
+                    break;
+            }
+
+            if (!empty($info['flag'])) {
+                $label = trim($info['flag'] . ' ' . $label);
+            }
+
+            $languages[$locale] = $label;
+        }
+
+        if (empty($languages)) {
+            $languages = array(
+                'vi_VN' => rb_t('language_vietnamese', __('Vietnamese', 'restaurant-booking')),
+                'en_US' => rb_t('language_english', __('English', 'restaurant-booking')),
+                'ja_JP' => rb_t('language_japanese', __('Japanese', 'restaurant-booking')),
+            );
+        }
 
         $confirmation_state = isset($_GET['rb_confirmation']) ? sanitize_text_field(wp_unslash($_GET['rb_confirmation'])) : '';
         $confirmation_message = '';
