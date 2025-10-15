@@ -24,7 +24,7 @@ This document outlines how to introduce standalone booking manager accounts that
 - Reuse WordPress nonces and capability checks so only administrators can manage these records.
 
 ## Authentication Flow Adjustments
-1. Extend the login handler in `public/class-frontend.php`:
+1. Extend the login handler in `public/class-frontend-manager.php`:
    - Chuẩn hóa input username/email và tìm portal account tương ứng.
    - Xác thực mật khẩu bằng `wp_check_password()` và đảm bảo trạng thái tài khoản là active.
    - Khi thành công, tạo token phiên (cookie + transient) chỉ dùng cho portal.
