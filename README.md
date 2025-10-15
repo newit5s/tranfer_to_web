@@ -88,8 +88,8 @@ Shortcode mới hiển thị flow đặt bàn 3 bước, hỗ trợ đa ngôn ng
    - Chọn một hoặc nhiều chi nhánh để giới hạn quyền truy cập của từng tài khoản.
 
 3. **Portal quản lý đặt bàn:**
-   - Shortcode `[restaurant_booking_manager]` hiển thị portal quản lý cho tài khoản portal và người dùng có quyền `rb_manage_location`.
-   - Portal chỉ load danh sách chi nhánh đã gán và lưu lựa chọn vào hồ sơ người vận hành.
+   - Shortcode `[restaurant_booking_manager]` hiển thị portal quản lý dành riêng cho các tài khoản nội bộ được tạo trong tab **Portal Accounts**.
+   - Portal chỉ load danh sách chi nhánh đã gán và lưu lựa chọn vào hồ sơ tài khoản portal.
 
 4. **Xác nhận đặt bàn:**
    - Click "Xác nhận" trên đặt bàn pending

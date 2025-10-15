@@ -16,10 +16,6 @@ class RB_Admin {
         add_action('admin_init', array($this, 'handle_admin_actions'));
         add_action('admin_notices', array($this, 'display_admin_notices'));
 
-        add_action('show_user_profile', array($this, 'render_manager_user_locations_section'));
-        add_action('edit_user_profile', array($this, 'render_manager_user_locations_section'));
-        add_action('personal_options_update', array($this, 'save_manager_user_locations'));
-        add_action('edit_user_profile_update', array($this, 'save_manager_user_locations'));
     }
 
     private function get_portal_account_manager() {
@@ -28,77 +24,6 @@ class RB_Admin {
         }
 
         return $this->portal_account_manager;
-    }
-
-    public function render_manager_user_locations_section($user) {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-
-        global $rb_location;
-
-        if (!$rb_location) {
-            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
-            $rb_location = new RB_Location();
-        }
-
-        $locations = $rb_location ? $rb_location->all() : array();
-
-        if (empty($locations)) {
-            return;
-        }
-
-        $assigned_locations = get_user_meta($user->ID, 'rb_manager_locations', true);
-
-        if (!is_array($assigned_locations)) {
-            $assigned_locations = empty($assigned_locations) ? array() : array((int) $assigned_locations);
-        }
-
-        $assigned_locations = array_map('intval', $assigned_locations);
-
-        ?>
-        <h2><?php esc_html_e('Location Manager Permissions', 'restaurant-booking'); ?></h2>
-        <table class="form-table" role="presentation">
-            <tr>
-                <th scope="row"><?php esc_html_e('Managed locations', 'restaurant-booking'); ?></th>
-                <td>
-                    <p class="description"><?php esc_html_e('Select the locations this user can manage in the booking portal.', 'restaurant-booking'); ?></p>
-                    <?php foreach ($locations as $location) : ?>
-                        <label style="display: block; margin-bottom: 4px;">
-                            <input type="checkbox" name="rb_manager_locations[]" value="<?php echo esc_attr((int) $location->id); ?>" <?php checked(in_array((int) $location->id, $assigned_locations, true)); ?> />
-                            <?php echo esc_html($location->name); ?>
-                        </label>
-                    <?php endforeach; ?>
-                </td>
-            </tr>
-        </table>
-        <?php
-    }
-
-    public function save_manager_user_locations($user_id) {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-
-        $selected_locations = isset($_POST['rb_manager_locations']) ? wp_unslash((array) $_POST['rb_manager_locations']) : array();
-        $selected_locations = array_map('intval', $selected_locations);
-        $selected_locations = array_values(array_unique(array_filter($selected_locations)));
-
-        if (!empty($selected_locations)) {
-            update_user_meta($user_id, 'rb_manager_locations', $selected_locations);
-        } else {
-            delete_user_meta($user_id, 'rb_manager_locations');
-        }
-
-        $active_location = (int) get_user_meta($user_id, 'rb_active_location', true);
-
-        if ($active_location && !in_array($active_location, $selected_locations, true)) {
-            if (!empty($selected_locations)) {
-                update_user_meta($user_id, 'rb_active_location', (int) $selected_locations[0]);
-            } else {
-                delete_user_meta($user_id, 'rb_active_location');
-            }
-        }
     }
 
     private function get_all_locations_for_portal_accounts() {

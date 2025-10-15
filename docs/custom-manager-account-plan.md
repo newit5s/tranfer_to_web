@@ -6,7 +6,7 @@ This document outlines how to introduce standalone booking manager accounts that
 - Allow administrators to create credentials per location directly from the plugin settings screen.
 - Prevent access to WordPress admin for these accounts.
 - Restrict each account to the locations assigned in plugin settings.
-- Ensure the existing shortcode `[restaurant_booking_manager]` authenticates and authorizes these accounts alongside WordPress users who still hold the `rb_manage_location` capability.
+- Ensure the existing shortcode `[restaurant_booking_manager]` chỉ cần xác thực và phân quyền cho các tài khoản portal nội bộ, không phụ thuộc vào vai trò WordPress.
 
 ## Data Model
 1. **Custom table:** Add a table (e.g., `{$wpdb->prefix}rb_portal_accounts`) during plugin activation to store:
@@ -25,19 +25,14 @@ This document outlines how to introduce standalone booking manager accounts that
 
 ## Authentication Flow Adjustments
 1. Extend the login handler in `public/class-frontend.php`:
-   - Attempt WordPress `wp_signon()` as today.
-   - If that fails, normalize the username/email input and look up a matching portal account.
-   - Validate the password with `wp_check_password()` against the stored hash and ensure account status is active.
-   - On success, set a session cookie (e.g., custom JWT or WP cookie) scoped to the shortcode experience; alternatively, leverage WP transients keyed to a generated token stored in `$_COOKIE`.
-   - Persist the active portal account ID in `$_SESSION`/cookie and use it to enforce location restrictions.
-2. Update capability checks so the shortcode accepts either:
-   - Logged-in WP user with `rb_manage_location` capability, or
-   - Active portal session referencing a stored account.
+   - Chuẩn hóa input username/email và tìm portal account tương ứng.
+   - Xác thực mật khẩu bằng `wp_check_password()` và đảm bảo trạng thái tài khoản là active.
+   - Khi thành công, tạo token phiên (cookie + transient) chỉ dùng cho portal.
+   - Lưu location đang hoạt động vào cột `last_location_id` của tài khoản.
+2. Toàn bộ kiểm tra phân quyền của shortcode dựa vào portal session đang hoạt động.
 
 ## Authorization & Session Handling
-- Replace the current `get_allowed_locations()` logic with:
-  - For WP users: read assigned locations from user meta (as introduced previously).
-  - For portal accounts: query the mapping table.
+- Replace the current `get_allowed_locations()` logic để chỉ lấy từ bảng mapping của portal accounts.
 - Store the last selected location per account (custom table column) instead of `user_meta`.
 - Implement logout endpoint that clears custom cookies/transients.
 

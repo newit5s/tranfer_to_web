@@ -41,19 +41,6 @@ function rb_activate_plugin() {
         'enable_email' => 'yes'
     ));
 
-    add_role(
-        'rb_location_manager',
-        __('Location Manager', 'restaurant-booking'),
-        array(
-            'read' => true,
-            'rb_manage_location' => true
-        )
-    );
-
-    if ($administrator = get_role('administrator')) {
-        $administrator->add_cap('rb_manage_location');
-    }
-
     flush_rewrite_rules();
 }
 
@@ -98,6 +85,7 @@ function rb_init_plugin() {
     // Initialize globals
     global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
     $rb_database = new RB_Database();
+    $rb_database->ensure_portal_schema();
     $rb_booking = new RB_Booking();
     $rb_customer = new RB_Customer();
     $rb_email = new RB_Email();
@@ -118,6 +106,19 @@ function rb_init_plugin() {
             require_once RB_PLUGIN_DIR . 'public/class-frontend.php';
         }
         new RB_Frontend();
+    }
+}
+
+add_action('init', 'rb_disable_wp_location_manager_role');
+
+/**
+ * Remove legacy WordPress-based location manager role/capabilities.
+ */
+function rb_disable_wp_location_manager_role() {
+    remove_role('rb_location_manager');
+
+    if ($administrator = get_role('administrator')) {
+        $administrator->remove_cap('rb_manage_location');
     }
 }
 

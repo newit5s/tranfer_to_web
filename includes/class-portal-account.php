@@ -163,7 +163,14 @@ class RB_Portal_Account_Manager {
         );
 
         if (false === $inserted) {
-            return new WP_Error('rb_db_error', __('Unable to create portal account.', 'restaurant-booking'));
+            $message = __('Unable to create portal account.', 'restaurant-booking');
+
+            if (!empty($this->wpdb->last_error)) {
+                /* translators: %s: database error message */
+                $message .= ' ' . sprintf(__('Database error: %s', 'restaurant-booking'), $this->wpdb->last_error);
+            }
+
+            return new WP_Error('rb_db_error', $message);
         }
 
         $account_id = (int) $this->wpdb->insert_id;
@@ -223,7 +230,14 @@ class RB_Portal_Account_Manager {
         );
 
         if (false === $updated) {
-            return new WP_Error('rb_db_error', __('Unable to update portal account.', 'restaurant-booking'));
+            $message = __('Unable to update portal account.', 'restaurant-booking');
+
+            if (!empty($this->wpdb->last_error)) {
+                /* translators: %s: database error message */
+                $message .= ' ' . sprintf(__('Database error: %s', 'restaurant-booking'), $this->wpdb->last_error);
+            }
+
+            return new WP_Error('rb_db_error', $message);
         }
 
         $this->set_account_locations($account_id, $location_ids);
