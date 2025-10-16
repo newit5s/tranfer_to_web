@@ -587,7 +587,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     <td><?php echo !empty($booking->table_number) ? esc_html($booking->table_number) : '—'; ?></td>
                                     <td><?php echo esc_html($created); ?></td>
                                     <td class="rb-manager-actions">
-                                        <div class="rb-manager-action-stack">
+                                        <div class="rb-manager-action-stack" role="group" aria-label="<?php echo esc_attr($this->t('booking_actions', __('Booking actions', 'restaurant-booking'))); ?>">
                                             <?php if ($booking->status === 'pending') : ?>
                                                 <button class="rb-btn-success rb-manager-action" data-action="confirm" data-id="<?php echo esc_attr($booking->id); ?>"><?php echo esc_html($this->t('confirm', __('Confirm', 'restaurant-booking'))); ?></button>
                                             <?php endif; ?>
@@ -1181,24 +1181,26 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                             <span class="rb-status rb-status-warning"><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <button class="rb-btn-secondary rb-manager-view-history" data-phone="<?php echo esc_attr($customer->phone); ?>">
-                                            <?php echo esc_html($this->t('history', __('History', 'restaurant-booking'))); ?>
-                                        </button>
-                                        <?php if (empty($customer->vip_status) && (int) $customer->completed_bookings >= 3) : ?>
-                                            <button class="rb-btn-primary rb-manager-set-vip" data-customer-id="<?php echo esc_attr($customer->id); ?>">
-                                                <?php echo esc_html($this->t('set_vip', __('Set VIP', 'restaurant-booking'))); ?>
+                                    <td class="rb-manager-actions">
+                                        <div class="rb-manager-action-stack" role="group" aria-label="<?php echo esc_attr($this->t('customer_actions', __('Customer actions', 'restaurant-booking'))); ?>">
+                                            <button class="rb-btn-secondary rb-manager-view-history" data-phone="<?php echo esc_attr($customer->phone); ?>">
+                                                <?php echo esc_html($this->t('history', __('History', 'restaurant-booking'))); ?>
                                             </button>
-                                        <?php endif; ?>
-                                        <?php if (empty($customer->blacklisted) && $problem_rate > 50) : ?>
-                                            <button class="rb-btn-danger rb-manager-blacklist" data-customer-id="<?php echo esc_attr($customer->id); ?>">
-                                                <?php echo esc_html($this->t('blacklist', __('Blacklist', 'restaurant-booking'))); ?>
-                                            </button>
-                                        <?php elseif (!empty($customer->blacklisted)) : ?>
-                                            <button class="rb-btn-secondary rb-manager-unblacklist" data-customer-id="<?php echo esc_attr($customer->id); ?>">
-                                                <?php echo esc_html($this->t('remove_blacklist', __('Remove blacklist', 'restaurant-booking'))); ?>
-                                            </button>
-                                        <?php endif; ?>
+                                            <?php if (empty($customer->vip_status) && (int) $customer->completed_bookings >= 3) : ?>
+                                                <button class="rb-btn-primary rb-manager-set-vip" data-customer-id="<?php echo esc_attr($customer->id); ?>">
+                                                    <?php echo esc_html($this->t('set_vip', __('Set VIP', 'restaurant-booking'))); ?>
+                                                </button>
+                                            <?php endif; ?>
+                                            <?php if (empty($customer->blacklisted) && $problem_rate > 50) : ?>
+                                                <button class="rb-btn-danger rb-manager-blacklist" data-customer-id="<?php echo esc_attr($customer->id); ?>">
+                                                    <?php echo esc_html($this->t('blacklist', __('Blacklist', 'restaurant-booking'))); ?>
+                                                </button>
+                                            <?php elseif (!empty($customer->blacklisted)) : ?>
+                                                <button class="rb-btn-secondary rb-manager-unblacklist" data-customer-id="<?php echo esc_attr($customer->id); ?>">
+                                                    <?php echo esc_html($this->t('remove_blacklist', __('Remove blacklist', 'restaurant-booking'))); ?>
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
