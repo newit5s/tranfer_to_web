@@ -824,30 +824,32 @@ class RB_Admin {
                                     </span>
                                 </td>
                                 <td>
-                                    <?php if ($booking->status == 'pending') : ?>
-                                        <a href="?page=restaurant-booking&action=confirm&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>" 
-                                        class="button button-primary button-small">
-                                            <?php rb_e('confirm'); ?>
+                                    <div class="rb-table-actions">
+                                        <?php if ($booking->status == 'pending') : ?>
+                                            <a href="?page=restaurant-booking&action=confirm&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>"
+                                            class="button button-primary button-small">
+                                                <?php rb_e('confirm'); ?>
+                                            </a>
+                                            <a href="?page=restaurant-booking&action=cancel&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>"
+                                            class="button button-small">
+                                                <?php rb_e('cancel'); ?>
+                                            </a>
+                                        <?php elseif ($booking->status == 'confirmed') : ?>
+                                            <a href="?page=restaurant-booking&action=complete&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>"
+                                            class="button button-small">
+                                                <?php rb_e('complete'); ?>
+                                            </a>
+                                            <a href="?page=restaurant-booking&action=cancel&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>"
+                                            class="button button-small">
+                                                <?php rb_e('cancel'); ?>
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="?page=restaurant-booking&action=delete&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>"
+                                        class="button button-small"
+                                        onclick="return confirm('<?php echo esc_js(rb_t('delete_confirm')); ?>')">
+                                            <?php rb_e('delete'); ?>
                                         </a>
-                                        <a href="?page=restaurant-booking&action=cancel&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>" 
-                                        class="button button-small">
-                                            <?php rb_e('cancel'); ?>
-                                        </a>
-                                    <?php elseif ($booking->status == 'confirmed') : ?>
-                                        <a href="?page=restaurant-booking&action=complete&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>" 
-                                        class="button button-small">
-                                            <?php rb_e('complete'); ?>
-                                        </a>
-                                        <a href="?page=restaurant-booking&action=cancel&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>" 
-                                        class="button button-small">
-                                            <?php rb_e('cancel'); ?>
-                                        </a>
-                                    <?php endif; ?>
-                                    <a href="?page=restaurant-booking&action=delete&id=<?php echo $booking->id; ?>&_wpnonce=<?php echo wp_create_nonce('rb_action'); ?>" 
-                                    class="button button-small" 
-                                    onclick="return confirm('<?php echo esc_js(rb_t('delete_confirm')); ?>')">
-                                        <?php rb_e('delete'); ?>
-                                    </a>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1320,30 +1322,32 @@ class RB_Admin {
                                     </div>
                                 </td>
                                 <td>
-                                    <button class="button button-small rb-view-history"
-                                            data-customer-id="<?php echo $customer->id; ?>"
-                                            data-customer-phone="<?php echo esc_attr($customer->phone); ?>">
-                                        <?php rb_e('history'); ?>
-                                    </button>
-                                    
-                                    <?php if (!$customer->vip_status && $customer->completed_bookings >= 3) : ?>
-                                        <button class="button button-small rb-set-vip" 
-                                                data-customer-id="<?php echo $customer->id; ?>">
-                                            <?php rb_e('set_vip'); ?>
+                                    <div class="rb-table-actions">
+                                        <button class="button button-small rb-view-history"
+                                                data-customer-id="<?php echo $customer->id; ?>"
+                                                data-customer-phone="<?php echo esc_attr($customer->phone); ?>">
+                                            <?php rb_e('history'); ?>
                                         </button>
-                                    <?php endif; ?>
-                                    
-                                    <?php if (!$customer->blacklisted && $problem_rate > 50) : ?>
-                                        <button class="button button-small rb-blacklist" 
-                                                data-customer-id="<?php echo $customer->id; ?>">
-                                            <?php rb_e('blacklist'); ?>
-                                        </button>
-                                    <?php elseif ($customer->blacklisted) : ?>
-                                        <button class="button button-small rb-unblacklist" 
-                                                data-customer-id="<?php echo $customer->id; ?>">
-                                            <?php rb_e('unblacklist'); ?>
-                                        </button>
-                                    <?php endif; ?>
+
+                                        <?php if (!$customer->vip_status && $customer->completed_bookings >= 3) : ?>
+                                            <button class="button button-small rb-set-vip"
+                                                    data-customer-id="<?php echo $customer->id; ?>">
+                                                <?php rb_e('set_vip'); ?>
+                                            </button>
+                                        <?php endif; ?>
+
+                                        <?php if (!$customer->blacklisted && $problem_rate > 50) : ?>
+                                            <button class="button button-small rb-blacklist"
+                                                    data-customer-id="<?php echo $customer->id; ?>">
+                                                <?php rb_e('blacklist'); ?>
+                                            </button>
+                                        <?php elseif ($customer->blacklisted) : ?>
+                                            <button class="button button-small rb-unblacklist"
+                                                    data-customer-id="<?php echo $customer->id; ?>">
+                                                <?php rb_e('unblacklist'); ?>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
