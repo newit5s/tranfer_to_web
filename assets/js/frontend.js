@@ -670,6 +670,14 @@
         // Manager dashboard actions
         var managerWrapper = $('.rb-manager');
         if (managerWrapper.length) {
+            function escapeAttribute(value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
             function showManagerFeedback(container, type, message) {
                 container
                     .removeClass('success error warning')
@@ -686,7 +694,8 @@
             }
 
             function buildActionButtons(status, bookingId) {
-                var buttons = ['<div class="rb-manager-action-stack">'];
+                var label = escapeAttribute(rb_ajax.booking_actions_label || 'Booking actions');
+                var buttons = ['<div class="rb-manager-action-stack" role="group" aria-label="' + label + '">'];
                 if (status === 'pending') {
                     buttons.push('<button class="rb-btn-success rb-manager-action" data-action="confirm" data-id="' + bookingId + '">' + (rb_ajax.confirm_text || 'Confirm') + '</button>');
                     buttons.push('<button class="rb-btn-danger rb-manager-action" data-action="cancel" data-id="' + bookingId + '">' + (rb_ajax.cancel_text || 'Cancel') + '</button>');
