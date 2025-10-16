@@ -81,6 +81,7 @@ function rb_init_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-email.php';
     require_once RB_PLUGIN_DIR . 'includes/class-location.php';
     require_once RB_PLUGIN_DIR . 'includes/class-portal-account.php';
+    require_once RB_PLUGIN_DIR . 'includes/class-assets-manager.php';
 
     // Initialize globals
     global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
@@ -146,6 +147,47 @@ function rb_admin_enqueue_scripts($hook) {
  */
 add_action('wp_enqueue_scripts', 'rb_frontend_enqueue_scripts');
 function rb_frontend_enqueue_scripts() {
+    if (is_admin()) {
+        return;
+    }
+
+    $should_enqueue = apply_filters('rb_enqueue_legacy_frontend_assets', false);
+
+    if (!$should_enqueue) {
+        $legacy_shortcodes = array('restaurant_booking_manager');
+
+        if (is_singular()) {
+            global $post;
+            if ($post && isset($post->post_content)) {
+                foreach ($legacy_shortcodes as $shortcode) {
+                    if (has_shortcode($post->post_content, $shortcode)) {
+                        $should_enqueue = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$should_enqueue && (is_front_page() || is_home())) {
+            $queried_id = get_queried_object_id();
+            if ($queried_id) {
+                $content = get_post_field('post_content', $queried_id);
+                if ($content) {
+                    foreach ($legacy_shortcodes as $shortcode) {
+                        if (has_shortcode($content, $shortcode)) {
+                            $should_enqueue = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!$should_enqueue) {
+        return;
+    }
+
     $style_path = RB_PLUGIN_DIR . 'assets/css/frontend.css';
     $script_path = RB_PLUGIN_DIR . 'assets/js/frontend.js';
 
@@ -218,13 +260,14 @@ function rb_frontend_enqueue_scripts() {
  * Register shortcode
  */
 add_shortcode('restaurant_booking', 'rb_booking_shortcode');
+add_shortcode('restaurant_booking_portal', 'rb_booking_shortcode');
 function rb_booking_shortcode($atts) {
     if (!class_exists('RB_Frontend')) {
         require_once RB_PLUGIN_DIR . 'public/class-frontend.php';
     }
 
     $frontend = new RB_Frontend();
-    return $frontend->render_booking_portal($atts);
+    return $frontend->render_booking_form($atts);
 }
 
 add_shortcode('restaurant_booking_manager', 'rb_booking_manager_shortcode');
