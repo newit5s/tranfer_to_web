@@ -202,7 +202,9 @@ function rb_frontend_enqueue_scripts() {
         'confirm_delete_table' => __('Are you sure you want to delete this table?', 'restaurant-booking'),
         'confirm_set_vip' => __('Upgrade this customer to VIP?', 'restaurant-booking'),
         'confirm_blacklist' => __('Blacklist this customer?', 'restaurant-booking'),
-        'confirm_unblacklist' => __('Remove this customer from blacklist?', 'restaurant-booking')
+        'confirm_unblacklist' => __('Remove this customer from blacklist?', 'restaurant-booking'),
+        'booking_actions_label' => rb_t('booking_actions', __('Booking actions', 'restaurant-booking')),
+        'customer_actions_label' => rb_t('customer_actions', __('Customer actions', 'restaurant-booking'))
     ));
 }
 

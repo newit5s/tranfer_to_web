@@ -907,6 +907,7 @@
 
 .rb-manager-bookings-table td {
     color: #f6f3ee;
+    vertical-align: top;
 }
 
 .rb-manager-bookings-table th {
@@ -1091,10 +1092,24 @@
     margin-top: 20px;
 }
 
+.rb-manager-actions {
+    min-width: 260px;
+}
+
 .rb-manager-action-stack {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    width: 100%;
+    align-items: stretch;
+}
+
+.rb-manager-action-stack .rb-btn-primary,
+.rb-manager-action-stack .rb-btn-secondary,
+.rb-manager-action-stack .rb-btn-danger,
+.rb-manager-action-stack .rb-btn-success {
+    width: 100%;
+    justify-content: center;
 }
 
 .rb-manager-settings {
@@ -1439,6 +1454,10 @@
     .rb-manager-filter-actions {
         justify-content: flex-start;
     }
+
+    .rb-manager-actions {
+        min-width: 220px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1474,6 +1493,14 @@
 
     .rb-manager-modal-dialog {
         padding: 22px;
+    }
+
+    .rb-manager-action-stack {
+        grid-template-columns: 1fr;
+    }
+
+    .rb-manager-actions {
+        min-width: 0;
     }
 }
 
