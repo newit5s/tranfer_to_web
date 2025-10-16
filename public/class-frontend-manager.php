@@ -17,6 +17,14 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
     private $manager_login_error = '';
     private $active_location_id = 0;
 
+    private function t($key, $fallback, $context = '') {
+        if (function_exists('rb_t')) {
+            return rb_t($key, $fallback, $context);
+        }
+
+        return $fallback;
+    }
+
     /**
      * @return self
      */
@@ -152,12 +160,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
     public function render_location_manager($atts) {
         $atts = shortcode_atts(array(
-            'title' => __('Location Manager', 'restaurant-booking')
+            'title' => $this->t('location_manager_title', __('Location Manager', 'restaurant-booking'))
         ), $atts, 'restaurant_booking_manager');
 
         $locations = $this->get_locations_data();
         if (empty($locations)) {
-            return '<div class="rb-manager rb-alert">' . esc_html__('Locations are not configured yet.', 'restaurant-booking') . '</div>';
+            return '<div class="rb-manager rb-alert">' . esc_html($this->t('locations_not_configured', __('Locations are not configured yet.', 'restaurant-booking'))) . '</div>';
         }
 
         if (isset($_POST['rb_manager_logout'])) {
@@ -187,7 +195,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         if (empty($filtered_locations)) {
-            return '<div class="rb-manager rb-alert">' . esc_html__('No locations have been assigned to your account. Please contact an administrator.', 'restaurant-booking') . '</div>';
+            return '<div class="rb-manager rb-alert">' . esc_html($this->t('no_assigned_locations', __('No locations have been assigned to your account. Please contact an administrator.', 'restaurant-booking'))) . '</div>';
         }
 
         $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
@@ -259,11 +267,11 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         $ajax_nonce = wp_create_nonce('rb_frontend_nonce');
 
         $nav_items = array(
-            'dashboard' => array('icon' => '📊', 'label' => __('Dashboard', 'restaurant-booking')),
-            'create' => array('icon' => '📝', 'label' => __('Create Booking', 'restaurant-booking')),
-            'tables' => array('icon' => '🍽️', 'label' => __('Manage Tables', 'restaurant-booking')),
-            'customers' => array('icon' => '👥', 'label' => __('Customers', 'restaurant-booking')),
-            'settings' => array('icon' => '⚙️', 'label' => __('Location Settings', 'restaurant-booking')),
+            'dashboard' => array('icon' => '📊', 'label' => $this->t('dashboard', __('Dashboard', 'restaurant-booking'))),
+            'create' => array('icon' => '📝', 'label' => $this->t('create_booking', __('Create Booking', 'restaurant-booking'))),
+            'tables' => array('icon' => '🍽️', 'label' => $this->t('manage_tables', __('Manage Tables', 'restaurant-booking'))),
+            'customers' => array('icon' => '👥', 'label' => $this->t('customers', __('Customers', 'restaurant-booking'))),
+            'settings' => array('icon' => '⚙️', 'label' => $this->t('location_settings', __('Location Settings', 'restaurant-booking'))),
         );
 
         $available_languages = isset($location_settings['languages']) ? (array) $location_settings['languages'] : array();
@@ -295,7 +303,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 <input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr($value); ?>" />
                             <?php endforeach; ?>
                         <?php endif; ?>
-                        <label for="rb-manager-location-select"><?php esc_html_e('Location', 'restaurant-booking'); ?></label>
+                        <label for="rb-manager-location-select"><?php echo esc_html($this->t('location', __('Location', 'restaurant-booking'))); ?></label>
                         <select name="location_id" id="rb-manager-location-select" onchange="this.form.submit();">
                             <?php foreach ($locations as $location) : ?>
                                 <option value="<?php echo esc_attr($location['id']); ?>" <?php selected($selected_location_id, $location['id']); ?>>
@@ -316,12 +324,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     <?php endif; ?>
                     <?php if (!empty($manager_name)) : ?>
                         <div class="rb-manager-user">
-                            <?php printf(esc_html__('Logged in as %s', 'restaurant-booking'), esc_html($manager_name)); ?>
+                            <?php printf(esc_html($this->t('logged_in_as', __('Logged in as %s', 'restaurant-booking'))), esc_html($manager_name)); ?>
                         </div>
                     <?php endif; ?>
                     <form method="post" class="rb-manager-logout">
                         <?php wp_nonce_field('rb_manager_logout', 'rb_manager_logout_nonce'); ?>
-                        <button type="submit" name="rb_manager_logout" class="rb-btn-secondary"><?php esc_html_e('Log out', 'restaurant-booking'); ?></button>
+                        <button type="submit" name="rb_manager_logout" class="rb-btn-secondary"><?php echo esc_html($this->t('logout', __('Log out', 'restaurant-booking'))); ?></button>
                     </form>
                 </div>
             </div>
@@ -344,7 +352,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         <?php endif; ?>
                         <?php if (!empty($location_settings['shift_notes'])) : ?>
                             <div class="rb-manager-location-notes">
-                                <strong><?php esc_html_e('Shift notes', 'restaurant-booking'); ?>:</strong>
+                                <strong><?php echo esc_html($this->t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>:</strong>
                                 <p><?php echo esc_html($location_settings['shift_notes']); ?></p>
                             </div>
                         <?php endif; ?>
@@ -399,36 +407,36 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
     private function render_section_dashboard($bookings, $ajax_nonce, $filters, $stats, $source_stats, $location_id) {
         $status_options = array(
-            '' => __('All statuses', 'restaurant-booking'),
-            'pending' => __('Pending', 'restaurant-booking'),
-            'confirmed' => __('Confirmed', 'restaurant-booking'),
-            'completed' => __('Completed', 'restaurant-booking'),
-            'cancelled' => __('Cancelled', 'restaurant-booking'),
+            '' => $this->t('all_statuses', __('All statuses', 'restaurant-booking')),
+            'pending' => $this->t('pending', __('Pending', 'restaurant-booking')),
+            'confirmed' => $this->t('confirmed', __('Confirmed', 'restaurant-booking')),
+            'completed' => $this->t('completed', __('Completed', 'restaurant-booking')),
+            'cancelled' => $this->t('cancelled', __('Cancelled', 'restaurant-booking')),
         );
 
         $source_options = array(
-            '' => __('All sources', 'restaurant-booking'),
-            'website' => '🌐 ' . __('Website', 'restaurant-booking'),
-            'phone' => '📞 ' . __('Phone', 'restaurant-booking'),
+            '' => $this->t('all_sources', __('All sources', 'restaurant-booking')),
+            'website' => '🌐 ' . $this->t('website', __('Website', 'restaurant-booking')),
+            'phone' => '📞 ' . $this->t('phone', __('Phone', 'restaurant-booking')),
             'facebook' => '📘 Facebook',
             'zalo' => '💬 Zalo',
             'instagram' => '📷 Instagram',
-            'walk-in' => '🚶 ' . __('Walk-in', 'restaurant-booking'),
-            'email' => '✉️ ' . __('Email', 'restaurant-booking'),
-            'other' => '❓ ' . __('Other', 'restaurant-booking'),
+            'walk-in' => '🚶 ' . $this->t('walk_in', __('Walk-in', 'restaurant-booking')),
+            'email' => '✉️ ' . $this->t('email', __('Email', 'restaurant-booking')),
+            'other' => '❓ ' . $this->t('other', __('Other', 'restaurant-booking')),
         );
 
         $sort_options = array(
-            'created_at' => __('Created time', 'restaurant-booking'),
-            'booking_date' => __('Booking date', 'restaurant-booking'),
-            'booking_time' => __('Booking time', 'restaurant-booking'),
-            'guest_count' => __('Guest count', 'restaurant-booking'),
-            'status' => __('Status', 'restaurant-booking'),
+            'created_at' => $this->t('created_time', __('Created time', 'restaurant-booking')),
+            'booking_date' => $this->t('booking_date', __('Booking date', 'restaurant-booking')),
+            'booking_time' => $this->t('booking_time', __('Booking time', 'restaurant-booking')),
+            'guest_count' => $this->t('guest_count', __('Guest count', 'restaurant-booking')),
+            'status' => $this->t('status', __('Status', 'restaurant-booking')),
         );
 
         $order_options = array(
-            'DESC' => __('Newest first', 'restaurant-booking'),
-            'ASC' => __('Oldest first', 'restaurant-booking'),
+            'DESC' => $this->t('newest_first', __('Newest first', 'restaurant-booking')),
+            'ASC' => $this->t('oldest_first', __('Oldest first', 'restaurant-booking')),
         );
 
         $reset_url = add_query_arg(array(
@@ -444,11 +452,11 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 <input type="hidden" name="rb_section" value="dashboard">
                 <div class="rb-manager-filter-grid">
                     <label>
-                        <?php esc_html_e('Search', 'restaurant-booking'); ?>
-                        <input type="text" name="search" value="<?php echo esc_attr($filters['search_term']); ?>" placeholder="<?php esc_attr_e('Name, phone, email or booking ID', 'restaurant-booking'); ?>">
+                        <?php echo esc_html($this->t('search', __('Search', 'restaurant-booking'))); ?>
+                        <input type="text" name="search" value="<?php echo esc_attr($filters['search_term']); ?>" placeholder="<?php echo esc_attr($this->t('name_phone_email_or_booking_id', __('Name, phone, email or booking ID', 'restaurant-booking'))); ?>">
                     </label>
                     <label>
-                        <?php esc_html_e('Status', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('status', __('Status', 'restaurant-booking'))); ?>
                         <select name="filter_status">
                             <?php foreach ($status_options as $value => $label) : ?>
                                 <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['filter_status'], $value); ?>><?php echo esc_html($label); ?></option>
@@ -456,7 +464,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('Source', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?>
                         <select name="filter_source">
                             <?php foreach ($source_options as $value => $label) : ?>
                                 <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['filter_source'], $value); ?>><?php echo esc_html($label); ?></option>
@@ -464,15 +472,15 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('From date', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('from_date', __('From date', 'restaurant-booking'))); ?>
                         <input type="date" name="filter_date_from" value="<?php echo esc_attr($filters['filter_date_from']); ?>">
                     </label>
                     <label>
-                        <?php esc_html_e('To date', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('to_date', __('To date', 'restaurant-booking'))); ?>
                         <input type="date" name="filter_date_to" value="<?php echo esc_attr($filters['filter_date_to']); ?>">
                     </label>
                     <label>
-                        <?php esc_html_e('Sort by', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('sort_by', __('Sort by', 'restaurant-booking'))); ?>
                         <select name="sort_by">
                             <?php foreach ($sort_options as $value => $label) : ?>
                                 <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['sort_by'], $value); ?>><?php echo esc_html($label); ?></option>
@@ -480,7 +488,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('Order', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('order', __('Order', 'restaurant-booking'))); ?>
                         <select name="sort_order">
                             <?php foreach ($order_options as $value => $label) : ?>
                                 <option value="<?php echo esc_attr($value); ?>" <?php selected(strtoupper($filters['sort_order']), $value); ?>><?php echo esc_html($label); ?></option>
@@ -489,19 +497,19 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     </label>
                 </div>
                 <div class="rb-manager-filter-actions">
-                    <button type="submit" class="rb-btn-primary"><?php esc_html_e('Apply filters', 'restaurant-booking'); ?></button>
-                    <a class="rb-btn-secondary" href="<?php echo esc_url($reset_url); ?>"><?php esc_html_e('Reset', 'restaurant-booking'); ?></a>
+                    <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('apply_filters', __('Apply filters', 'restaurant-booking'))); ?></button>
+                    <a class="rb-btn-secondary" href="<?php echo esc_url($reset_url); ?>"><?php echo esc_html($this->t('reset', __('Reset', 'restaurant-booking'))); ?></a>
                 </div>
             </form>
 
             <?php if (!empty($stats)) : ?>
                 <div class="rb-manager-dashboard-stats">
-                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php esc_html_e('Total', 'restaurant-booking'); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['total']); ?></span></div>
-                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php esc_html_e('Pending', 'restaurant-booking'); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['pending']); ?></span></div>
-                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php esc_html_e('Confirmed', 'restaurant-booking'); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['confirmed']); ?></span></div>
-                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php esc_html_e('Completed', 'restaurant-booking'); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['completed']); ?></span></div>
-                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php esc_html_e('Cancelled', 'restaurant-booking'); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['cancelled']); ?></span></div>
-                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php esc_html_e('Today', 'restaurant-booking'); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['today']); ?></span></div>
+                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php echo esc_html($this->t('total', __('Total', 'restaurant-booking'))); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['total']); ?></span></div>
+                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php echo esc_html($this->t('pending', __('Pending', 'restaurant-booking'))); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['pending']); ?></span></div>
+                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php echo esc_html($this->t('confirmed', __('Confirmed', 'restaurant-booking'))); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['confirmed']); ?></span></div>
+                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php echo esc_html($this->t('completed', __('Completed', 'restaurant-booking'))); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['completed']); ?></span></div>
+                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php echo esc_html($this->t('cancelled', __('Cancelled', 'restaurant-booking'))); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['cancelled']); ?></span></div>
+                    <div class="rb-manager-stat-card"><span class="rb-manager-stat-label"><?php echo esc_html($this->t('today', __('Today', 'restaurant-booking'))); ?></span><span class="rb-manager-stat-value"><?php echo esc_html($stats['today']); ?></span></div>
                 </div>
             <?php endif; ?>
 
@@ -520,17 +528,17 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 <table class="rb-manager-bookings-table">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('ID', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Guest', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Contact', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Date', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Time', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Guests', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Source', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Status', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Table', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Created', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Actions', 'restaurant-booking'); ?></th>
+                            <th><?php echo esc_html($this->t('id', __('ID', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('guest', __('Guest', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('contact', __('Contact', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('date', __('Date', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('time', __('Time', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('guests', __('Guests', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('status', __('Status', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('table', __('Table', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('created', __('Created', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('actions', __('Actions', 'restaurant-booking'))); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -581,23 +589,23 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     <td class="rb-manager-actions">
                                         <div class="rb-manager-action-stack">
                                             <?php if ($booking->status === 'pending') : ?>
-                                                <button class="rb-btn-success rb-manager-action" data-action="confirm" data-id="<?php echo esc_attr($booking->id); ?>"><?php esc_html_e('Confirm', 'restaurant-booking'); ?></button>
+                                                <button class="rb-btn-success rb-manager-action" data-action="confirm" data-id="<?php echo esc_attr($booking->id); ?>"><?php echo esc_html($this->t('confirm', __('Confirm', 'restaurant-booking'))); ?></button>
                                             <?php endif; ?>
                                             <?php if (in_array($booking->status, array('pending', 'confirmed'), true)) : ?>
-                                                <button class="rb-btn-danger rb-manager-action" data-action="cancel" data-id="<?php echo esc_attr($booking->id); ?>"><?php esc_html_e('Cancel', 'restaurant-booking'); ?></button>
+                                                <button class="rb-btn-danger rb-manager-action" data-action="cancel" data-id="<?php echo esc_attr($booking->id); ?>"><?php echo esc_html($this->t('cancel', __('Cancel', 'restaurant-booking'))); ?></button>
                                             <?php endif; ?>
                                             <?php if (in_array($booking->status, array('confirmed'), true)) : ?>
-                                                <button class="rb-btn-secondary rb-manager-action" data-action="complete" data-id="<?php echo esc_attr($booking->id); ?>"><?php esc_html_e('Complete', 'restaurant-booking'); ?></button>
+                                                <button class="rb-btn-secondary rb-manager-action" data-action="complete" data-id="<?php echo esc_attr($booking->id); ?>"><?php echo esc_html($this->t('complete', __('Complete', 'restaurant-booking'))); ?></button>
                                             <?php endif; ?>
-                                            <button class="rb-btn-secondary rb-manager-edit-booking" data-id="<?php echo esc_attr($booking->id); ?>"><?php esc_html_e('Edit', 'restaurant-booking'); ?></button>
-                                            <button class="rb-btn-danger rb-manager-action" data-action="delete" data-id="<?php echo esc_attr($booking->id); ?>"><?php esc_html_e('Delete', 'restaurant-booking'); ?></button>
+                                            <button class="rb-btn-secondary rb-manager-edit-booking" data-id="<?php echo esc_attr($booking->id); ?>"><?php echo esc_html($this->t('edit', __('Edit', 'restaurant-booking'))); ?></button>
+                                            <button class="rb-btn-danger rb-manager-action" data-action="delete" data-id="<?php echo esc_attr($booking->id); ?>"><?php echo esc_html($this->t('delete', __('Delete', 'restaurant-booking'))); ?></button>
                                         </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else : ?>
                             <tr>
-                                <td colspan="11" class="rb-manager-empty"><?php esc_html_e('No reservations found for this location.', 'restaurant-booking'); ?></td>
+                                <td colspan="11" class="rb-manager-empty"><?php echo esc_html($this->t('no_reservations_location', __('No reservations found for this location.', 'restaurant-booking'))); ?></td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -608,39 +616,39 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
             <div id="rb-manager-edit-modal" class="rb-manager-modal" hidden>
                 <div class="rb-manager-modal-dialog">
-                    <button type="button" class="rb-manager-modal-close" aria-label="<?php esc_attr_e('Close', 'restaurant-booking'); ?>">&times;</button>
-                    <h3><?php esc_html_e('Edit booking', 'restaurant-booking'); ?></h3>
+                    <button type="button" class="rb-manager-modal-close" aria-label="<?php echo esc_attr($this->t('close', __('Close', 'restaurant-booking'))); ?>">&times;</button>
+                    <h3><?php echo esc_html($this->t('edit_booking', __('Edit booking', 'restaurant-booking'))); ?></h3>
                     <form id="rb-manager-edit-booking-form">
                         <input type="hidden" name="booking_id" value="">
                         <input type="hidden" name="nonce" value="<?php echo esc_attr($ajax_nonce); ?>">
                         <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
                         <div class="rb-manager-form-grid">
                             <label>
-                                <?php esc_html_e('Customer name', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('customer_name', __('Customer name', 'restaurant-booking'))); ?>
                                 <input type="text" name="customer_name" required>
                             </label>
                             <label>
-                                <?php esc_html_e('Phone number', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('phone_number', __('Phone number', 'restaurant-booking'))); ?>
                                 <input type="tel" name="customer_phone" required pattern="[0-9]{8,15}">
                             </label>
                             <label>
-                                <?php esc_html_e('Email', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('email', __('Email', 'restaurant-booking'))); ?>
                                 <input type="email" name="customer_email" required>
                             </label>
                             <label>
-                                <?php esc_html_e('Guests', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('guests', __('Guests', 'restaurant-booking'))); ?>
                                 <input type="number" name="guest_count" min="1" max="50" required>
                             </label>
                             <label>
-                                <?php esc_html_e('Date', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('date', __('Date', 'restaurant-booking'))); ?>
                                 <input type="date" name="booking_date" required>
                             </label>
                             <label>
-                                <?php esc_html_e('Time', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('time', __('Time', 'restaurant-booking'))); ?>
                                 <input type="time" name="booking_time" required>
                             </label>
                             <label>
-                                <?php esc_html_e('Source', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?>
                                 <select name="booking_source">
                                     <?php foreach ($source_options as $value => $label) : ?>
                                         <?php if ($value === '') { continue; } ?>
@@ -650,16 +658,16 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                             </label>
                         </div>
                         <label class="rb-manager-wide">
-                            <?php esc_html_e('Special requests', 'restaurant-booking'); ?>
+                            <?php echo esc_html($this->t('special_requests', __('Special requests', 'restaurant-booking'))); ?>
                             <textarea name="special_requests" rows="3"></textarea>
                         </label>
                         <label class="rb-manager-wide">
-                            <?php esc_html_e('Internal notes', 'restaurant-booking'); ?>
+                            <?php echo esc_html($this->t('internal_notes', __('Internal notes', 'restaurant-booking'))); ?>
                             <textarea name="admin_notes" rows="3"></textarea>
                         </label>
                         <div class="rb-manager-actions-row">
-                            <button type="submit" class="rb-btn-primary"><?php esc_html_e('Save changes', 'restaurant-booking'); ?></button>
-                            <button type="button" class="rb-btn-secondary rb-manager-modal-cancel"><?php esc_html_e('Cancel', 'restaurant-booking'); ?></button>
+                            <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('save_changes', __('Save changes', 'restaurant-booking'))); ?></button>
+                            <button type="button" class="rb-btn-secondary rb-manager-modal-cancel"><?php echo esc_html($this->t('cancel', __('Cancel', 'restaurant-booking'))); ?></button>
                         </div>
                     </form>
                     <div id="rb-manager-edit-feedback" class="rb-portal-result" hidden></div>
@@ -851,25 +859,25 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         ob_start();
         ?>
         <div class="rb-manager-create">
-            <h3><?php esc_html_e('Create a new reservation', 'restaurant-booking'); ?></h3>
+            <h3><?php echo esc_html($this->t('create_a_new_reservation', __('Create a new reservation', 'restaurant-booking'))); ?></h3>
             <form id="rb-manager-create-booking" method="post">
                 <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
                 <input type="hidden" name="nonce" value="<?php echo esc_attr($ajax_nonce); ?>">
                 <div class="rb-form-grid">
                     <label>
-                        <?php esc_html_e('Customer name', 'restaurant-booking'); ?> *
+                        <?php echo esc_html($this->t('customer_name', __('Customer name', 'restaurant-booking'))); ?> *
                         <input type="text" name="customer_name" required>
                     </label>
                     <label>
-                        <?php esc_html_e('Phone number', 'restaurant-booking'); ?> *
+                        <?php echo esc_html($this->t('phone_number', __('Phone number', 'restaurant-booking'))); ?> *
                         <input type="tel" name="customer_phone" required pattern="[0-9]{8,15}">
                     </label>
                     <label>
-                        <?php esc_html_e('Email', 'restaurant-booking'); ?> *
+                        <?php echo esc_html($this->t('email', __('Email', 'restaurant-booking'))); ?> *
                         <input type="email" name="customer_email" required>
                     </label>
                     <label>
-                        <?php esc_html_e('Guests', 'restaurant-booking'); ?> *
+                        <?php echo esc_html($this->t('guests', __('Guests', 'restaurant-booking'))); ?> *
                         <select name="guest_count" required>
                             <?php for ($i = 1; $i <= 20; $i++) : ?>
                                 <option value="<?php echo esc_attr($i); ?>"><?php echo esc_html($i); ?></option>
@@ -877,49 +885,49 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('Date', 'restaurant-booking'); ?> *
+                        <?php echo esc_html($this->t('date', __('Date', 'restaurant-booking'))); ?> *
                         <input type="date" name="booking_date" min="<?php echo esc_attr($min_date); ?>" max="<?php echo esc_attr($max_date); ?>" required>
                     </label>
                     <label>
-                        <?php esc_html_e('Time', 'restaurant-booking'); ?> *
+                        <?php echo esc_html($this->t('time', __('Time', 'restaurant-booking'))); ?> *
                         <select name="booking_time" required>
-                            <option value=""><?php esc_html_e('Select a time', 'restaurant-booking'); ?></option>
+                            <option value=""><?php echo esc_html($this->t('select_a_time', __('Select a time', 'restaurant-booking'))); ?></option>
                             <?php foreach ($time_slots as $slot) : ?>
                                 <option value="<?php echo esc_attr($slot); ?>"><?php echo esc_html($slot); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('Source', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?>
                         <select name="booking_source">
-                            <option value="phone">📞 <?php esc_html_e('Phone', 'restaurant-booking'); ?></option>
+                            <option value="phone">📞 <?php echo esc_html($this->t('phone', __('Phone', 'restaurant-booking'))); ?></option>
                             <option value="facebook">📘 Facebook</option>
                             <option value="zalo">💬 Zalo</option>
                             <option value="instagram">📷 Instagram</option>
-                            <option value="walk-in">🚶 <?php esc_html_e('Walk-in', 'restaurant-booking'); ?></option>
+                            <option value="walk-in">🚶 <?php echo esc_html($this->t('walk_in', __('Walk-in', 'restaurant-booking'))); ?></option>
                             <option value="email">✉️ Email</option>
-                            <option value="other">❓ <?php esc_html_e('Other', 'restaurant-booking'); ?></option>
+                            <option value="other">❓ <?php echo esc_html($this->t('other', __('Other', 'restaurant-booking'))); ?></option>
                         </select>
                     </label>
                 </div>
 
                 <label class="rb-manager-wide">
-                    <?php esc_html_e('Special requests', 'restaurant-booking'); ?>
+                    <?php echo esc_html($this->t('special_requests', __('Special requests', 'restaurant-booking'))); ?>
                     <textarea name="special_requests" rows="3"></textarea>
                 </label>
 
                 <label class="rb-manager-wide">
-                    <?php esc_html_e('Internal notes', 'restaurant-booking'); ?>
+                    <?php echo esc_html($this->t('internal_notes', __('Internal notes', 'restaurant-booking'))); ?>
                     <textarea name="admin_notes" rows="3"></textarea>
                 </label>
 
                 <label class="rb-manager-checkbox">
                     <input type="checkbox" name="auto_confirm" value="1">
-                    <?php esc_html_e('Confirm immediately if a table is available', 'restaurant-booking'); ?>
+                    <?php echo esc_html($this->t('confirm_immediately_if_a_table_is_available', __('Confirm immediately if a table is available', 'restaurant-booking'))); ?>
                 </label>
 
                 <div class="rb-manager-actions-row">
-                    <button type="submit" class="rb-btn-primary"><?php esc_html_e('Create booking', 'restaurant-booking'); ?></button>
+                    <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('create_booking', __('Create booking', 'restaurant-booking'))); ?></button>
                 </div>
             </form>
             <div id="rb-manager-create-feedback" class="rb-portal-result" hidden></div>
@@ -939,19 +947,19 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         ob_start();
         ?>
         <div class="rb-manager-tables">
-            <h3><?php esc_html_e('Table management', 'restaurant-booking'); ?></h3>
+            <h3><?php echo esc_html($this->t('table_management', __('Table management', 'restaurant-booking'))); ?></h3>
             <form id="rb-manager-add-table" class="rb-manager-add-table" method="post">
                 <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
                 <input type="hidden" name="nonce" value="<?php echo esc_attr($ajax_nonce); ?>">
                 <label>
-                    <?php esc_html_e('Table number', 'restaurant-booking'); ?>
+                    <?php echo esc_html($this->t('table_number', __('Table number', 'restaurant-booking'))); ?>
                     <input type="number" name="table_number" min="1" required>
                 </label>
                 <label>
-                    <?php esc_html_e('Capacity', 'restaurant-booking'); ?>
+                    <?php echo esc_html($this->t('capacity', __('Capacity', 'restaurant-booking'))); ?>
                     <input type="number" name="capacity" min="1" required>
                 </label>
-                <button type="submit" class="rb-btn-primary"><?php esc_html_e('Add table', 'restaurant-booking'); ?></button>
+                <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('add_table', __('Add table', 'restaurant-booking'))); ?></button>
             </form>
             <div id="rb-manager-table-feedback" class="rb-portal-result" hidden></div>
 
@@ -959,10 +967,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 <table class="rb-manager-bookings-table">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('Table', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Capacity', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Status', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Actions', 'restaurant-booking'); ?></th>
+                            <th><?php echo esc_html($this->t('table', __('Table', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('capacity', __('Capacity', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('status', __('Status', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('actions', __('Actions', 'restaurant-booking'))); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -976,9 +984,9 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     <td><?php echo esc_html($table->capacity); ?></td>
                                     <td>
                                         <?php if ($is_available) : ?>
-                                            <span class="rb-status rb-status-available"><?php esc_html_e('Available', 'restaurant-booking'); ?></span>
+                                            <span class="rb-status rb-status-available"><?php echo esc_html($this->t('available', __('Available', 'restaurant-booking'))); ?></span>
                                         <?php else : ?>
-                                            <span class="rb-status rb-status-unavailable"><?php esc_html_e('Unavailable', 'restaurant-booking'); ?></span>
+                                            <span class="rb-status rb-status-unavailable"><?php echo esc_html($this->t('unavailable', __('Unavailable', 'restaurant-booking'))); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -986,14 +994,14 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                             <?php echo $is_available ? esc_html__('Deactivate', 'restaurant-booking') : esc_html__('Activate', 'restaurant-booking'); ?>
                                         </button>
                                         <button class="rb-btn-danger rb-manager-delete-table" data-table-id="<?php echo esc_attr($table->id); ?>">
-                                            <?php esc_html_e('Delete', 'restaurant-booking'); ?>
+                                            <?php echo esc_html($this->t('delete', __('Delete', 'restaurant-booking'))); ?>
                                         </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else : ?>
                             <tr>
-                                <td colspan="4" class="rb-manager-empty"><?php esc_html_e('No tables configured for this location.', 'restaurant-booking'); ?></td>
+                                <td colspan="4" class="rb-manager-empty"><?php echo esc_html($this->t('no_tables_configured_for_this_location', __('No tables configured for this location.', 'restaurant-booking'))); ?></td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -1045,84 +1053,84 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         ob_start();
         ?>
         <div class="rb-manager-customers">
-            <h3><?php esc_html_e('Customer management', 'restaurant-booking'); ?></h3>
+            <h3><?php echo esc_html($this->t('customer_management', __('Customer management', 'restaurant-booking'))); ?></h3>
 
             <form class="rb-manager-filters" method="get">
                 <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
                 <input type="hidden" name="rb_section" value="customers">
                 <div class="rb-manager-filter-grid">
                     <label>
-                        <?php esc_html_e('Search', 'restaurant-booking'); ?>
-                        <input type="text" name="customer_search" value="<?php echo esc_attr($filters['search']); ?>" placeholder="<?php esc_attr_e('Name, phone or email', 'restaurant-booking'); ?>">
+                        <?php echo esc_html($this->t('search', __('Search', 'restaurant-booking'))); ?>
+                        <input type="text" name="customer_search" value="<?php echo esc_attr($filters['search']); ?>" placeholder="<?php echo esc_attr($this->t('name_phone_or_email', __('Name, phone or email', 'restaurant-booking'))); ?>">
                     </label>
                     <label>
-                        <?php esc_html_e('VIP filter', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('vip_filter', __('VIP filter', 'restaurant-booking'))); ?>
                         <select name="filter_vip">
-                            <option value="all" <?php selected($filters['vip'], 'all'); ?>><?php esc_html_e('All customers', 'restaurant-booking'); ?></option>
-                            <option value="yes" <?php selected($filters['vip'], 'yes'); ?>><?php esc_html_e('VIP only', 'restaurant-booking'); ?></option>
+                            <option value="all" <?php selected($filters['vip'], 'all'); ?>><?php echo esc_html($this->t('all_customers', __('All customers', 'restaurant-booking'))); ?></option>
+                            <option value="yes" <?php selected($filters['vip'], 'yes'); ?>><?php echo esc_html($this->t('vip_only', __('VIP only', 'restaurant-booking'))); ?></option>
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('Blacklist', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('blacklist', __('Blacklist', 'restaurant-booking'))); ?>
                         <select name="filter_blacklist">
-                            <option value="" <?php selected($filters['blacklist'], ''); ?>><?php esc_html_e('All', 'restaurant-booking'); ?></option>
-                            <option value="yes" <?php selected($filters['blacklist'], 'yes'); ?>><?php esc_html_e('Blacklisted', 'restaurant-booking'); ?></option>
-                            <option value="no" <?php selected($filters['blacklist'], 'no'); ?>><?php esc_html_e('Not blacklisted', 'restaurant-booking'); ?></option>
+                            <option value="" <?php selected($filters['blacklist'], ''); ?>><?php echo esc_html($this->t('all', __('All', 'restaurant-booking'))); ?></option>
+                            <option value="yes" <?php selected($filters['blacklist'], 'yes'); ?>><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></option>
+                            <option value="no" <?php selected($filters['blacklist'], 'no'); ?>><?php echo esc_html($this->t('not_blacklisted', __('Not blacklisted', 'restaurant-booking'))); ?></option>
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('Sort by', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('sort_by', __('Sort by', 'restaurant-booking'))); ?>
                         <select name="customer_orderby">
-                            <option value="total_bookings" <?php selected($filters['orderby'], 'total_bookings'); ?>><?php esc_html_e('Total bookings', 'restaurant-booking'); ?></option>
-                            <option value="completed_bookings" <?php selected($filters['orderby'], 'completed_bookings'); ?>><?php esc_html_e('Completed bookings', 'restaurant-booking'); ?></option>
-                            <option value="cancelled_bookings" <?php selected($filters['orderby'], 'cancelled_bookings'); ?>><?php esc_html_e('Cancelled bookings', 'restaurant-booking'); ?></option>
-                            <option value="last_visit" <?php selected($filters['orderby'], 'last_visit'); ?>><?php esc_html_e('Last visit', 'restaurant-booking'); ?></option>
-                            <option value="name" <?php selected($filters['orderby'], 'name'); ?>><?php esc_html_e('Name', 'restaurant-booking'); ?></option>
+                            <option value="total_bookings" <?php selected($filters['orderby'], 'total_bookings'); ?>><?php echo esc_html($this->t('total_bookings', __('Total bookings', 'restaurant-booking'))); ?></option>
+                            <option value="completed_bookings" <?php selected($filters['orderby'], 'completed_bookings'); ?>><?php echo esc_html($this->t('completed_bookings', __('Completed bookings', 'restaurant-booking'))); ?></option>
+                            <option value="cancelled_bookings" <?php selected($filters['orderby'], 'cancelled_bookings'); ?>><?php echo esc_html($this->t('cancelled_bookings', __('Cancelled bookings', 'restaurant-booking'))); ?></option>
+                            <option value="last_visit" <?php selected($filters['orderby'], 'last_visit'); ?>><?php echo esc_html($this->t('last_visit', __('Last visit', 'restaurant-booking'))); ?></option>
+                            <option value="name" <?php selected($filters['orderby'], 'name'); ?>><?php echo esc_html($this->t('name', __('Name', 'restaurant-booking'))); ?></option>
                         </select>
                     </label>
                     <label>
-                        <?php esc_html_e('Order', 'restaurant-booking'); ?>
+                        <?php echo esc_html($this->t('order', __('Order', 'restaurant-booking'))); ?>
                         <select name="customer_order">
-                            <option value="DESC" <?php selected($filters['order'], 'DESC'); ?>><?php esc_html_e('Descending', 'restaurant-booking'); ?></option>
-                            <option value="ASC" <?php selected($filters['order'], 'ASC'); ?>><?php esc_html_e('Ascending', 'restaurant-booking'); ?></option>
+                            <option value="DESC" <?php selected($filters['order'], 'DESC'); ?>><?php echo esc_html($this->t('descending', __('Descending', 'restaurant-booking'))); ?></option>
+                            <option value="ASC" <?php selected($filters['order'], 'ASC'); ?>><?php echo esc_html($this->t('ascending', __('Ascending', 'restaurant-booking'))); ?></option>
                         </select>
                     </label>
                 </div>
                 <div class="rb-manager-filter-actions">
-                    <button type="submit" class="rb-btn-primary"><?php esc_html_e('Apply filters', 'restaurant-booking'); ?></button>
-                    <a class="rb-btn-secondary" href="<?php echo esc_url($reset_url); ?>"><?php esc_html_e('Reset', 'restaurant-booking'); ?></a>
+                    <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('apply_filters', __('Apply filters', 'restaurant-booking'))); ?></button>
+                    <a class="rb-btn-secondary" href="<?php echo esc_url($reset_url); ?>"><?php echo esc_html($this->t('reset', __('Reset', 'restaurant-booking'))); ?></a>
                 </div>
             </form>
 
             <div class="rb-manager-stats">
                 <div class="rb-manager-stat-card">
-                    <span class="rb-manager-stat-label"><?php esc_html_e('Total customers', 'restaurant-booking'); ?></span>
+                    <span class="rb-manager-stat-label"><?php echo esc_html($this->t('total_customers', __('Total customers', 'restaurant-booking'))); ?></span>
                     <span class="rb-manager-stat-value"><?php echo esc_html($stats['total']); ?></span>
                 </div>
                 <div class="rb-manager-stat-card">
-                    <span class="rb-manager-stat-label"><?php esc_html_e('VIP', 'restaurant-booking'); ?></span>
+                    <span class="rb-manager-stat-label"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
                     <span class="rb-manager-stat-value">⭐ <?php echo esc_html($stats['vip']); ?></span>
                 </div>
                 <div class="rb-manager-stat-card">
-                    <span class="rb-manager-stat-label"><?php esc_html_e('Blacklisted', 'restaurant-booking'); ?></span>
+                    <span class="rb-manager-stat-label"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
                     <span class="rb-manager-stat-value">🚫 <?php echo esc_html($stats['blacklisted']); ?></span>
                 </div>
                 <div class="rb-manager-stat-card">
-                    <span class="rb-manager-stat-label"><?php esc_html_e('New this month', 'restaurant-booking'); ?></span>
+                    <span class="rb-manager-stat-label"><?php echo esc_html($this->t('new_this_month', __('New this month', 'restaurant-booking'))); ?></span>
                     <span class="rb-manager-stat-value">✨ <?php echo esc_html($stats['new_this_month']); ?></span>
                 </div>
             </div>
 
             <?php if (!empty($vip_suggestions)) : ?>
                 <div class="rb-manager-tip">
-                    <strong><?php esc_html_e('VIP suggestions:', 'restaurant-booking'); ?></strong>
+                    <strong><?php echo esc_html($this->t('vip_suggestions', __('VIP suggestions:', 'restaurant-booking'))); ?></strong>
                     <?php printf(esc_html__('%d customers are close to VIP status.', 'restaurant-booking'), count($vip_suggestions)); ?>
                 </div>
             <?php endif; ?>
 
             <?php if (!empty($problematic)) : ?>
                 <div class="rb-manager-warning">
-                    <strong><?php esc_html_e('Attention:', 'restaurant-booking'); ?></strong>
+                    <strong><?php echo esc_html($this->t('attention', __('Attention:', 'restaurant-booking'))); ?></strong>
                     <?php printf(esc_html__('%d customers frequently cancel or no-show.', 'restaurant-booking'), count($problematic)); ?>
                 </div>
             <?php endif; ?>
@@ -1133,15 +1141,15 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 <table class="rb-manager-bookings-table">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('Name', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Phone', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Email', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Bookings', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Completed', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Cancelled', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Notes', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Tags', 'restaurant-booking'); ?></th>
-                            <th><?php esc_html_e('Actions', 'restaurant-booking'); ?></th>
+                            <th><?php echo esc_html($this->t('name', __('Name', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('phone', __('Phone', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('email', __('Email', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('bookings', __('Bookings', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('completed', __('Completed', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('cancelled', __('Cancelled', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('notes', __('Notes', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('tags', __('Tags', 'restaurant-booking'))); ?></th>
+                            <th><?php echo esc_html($this->t('actions', __('Actions', 'restaurant-booking'))); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1161,34 +1169,34 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     <td><?php echo esc_html($customer->cancelled_bookings); ?></td>
                                     <td>
                                         <textarea class="rb-manager-customer-note" data-customer-id="<?php echo esc_attr($customer->id); ?>" rows="2"><?php echo esc_textarea($customer->customer_notes); ?></textarea>
-                                        <button class="rb-btn-secondary rb-manager-save-note" data-customer-id="<?php echo esc_attr($customer->id); ?>"><?php esc_html_e('Save note', 'restaurant-booking'); ?></button>
+                                        <button class="rb-btn-secondary rb-manager-save-note" data-customer-id="<?php echo esc_attr($customer->id); ?>"><?php echo esc_html($this->t('save_note', __('Save note', 'restaurant-booking'))); ?></button>
                                     </td>
                                     <td>
                                         <?php if (!empty($customer->vip_status)) : ?>
-                                            <span class="rb-status rb-status-vip"><?php esc_html_e('VIP', 'restaurant-booking'); ?></span>
+                                            <span class="rb-status rb-status-vip"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
                                         <?php endif; ?>
                                         <?php if (!empty($customer->blacklisted)) : ?>
-                                            <span class="rb-status rb-status-blacklist"><?php esc_html_e('Blacklisted', 'restaurant-booking'); ?></span>
+                                            <span class="rb-status rb-status-blacklist"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
                                         <?php elseif ($problem_rate > 50) : ?>
-                                            <span class="rb-status rb-status-warning"><?php esc_html_e('Risk', 'restaurant-booking'); ?></span>
+                                            <span class="rb-status rb-status-warning"><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
                                         <button class="rb-btn-secondary rb-manager-view-history" data-phone="<?php echo esc_attr($customer->phone); ?>">
-                                            <?php esc_html_e('History', 'restaurant-booking'); ?>
+                                            <?php echo esc_html($this->t('history', __('History', 'restaurant-booking'))); ?>
                                         </button>
                                         <?php if (empty($customer->vip_status) && (int) $customer->completed_bookings >= 3) : ?>
                                             <button class="rb-btn-primary rb-manager-set-vip" data-customer-id="<?php echo esc_attr($customer->id); ?>">
-                                                <?php esc_html_e('Set VIP', 'restaurant-booking'); ?>
+                                                <?php echo esc_html($this->t('set_vip', __('Set VIP', 'restaurant-booking'))); ?>
                                             </button>
                                         <?php endif; ?>
                                         <?php if (empty($customer->blacklisted) && $problem_rate > 50) : ?>
                                             <button class="rb-btn-danger rb-manager-blacklist" data-customer-id="<?php echo esc_attr($customer->id); ?>">
-                                                <?php esc_html_e('Blacklist', 'restaurant-booking'); ?>
+                                                <?php echo esc_html($this->t('blacklist', __('Blacklist', 'restaurant-booking'))); ?>
                                             </button>
                                         <?php elseif (!empty($customer->blacklisted)) : ?>
                                             <button class="rb-btn-secondary rb-manager-unblacklist" data-customer-id="<?php echo esc_attr($customer->id); ?>">
-                                                <?php esc_html_e('Remove blacklist', 'restaurant-booking'); ?>
+                                                <?php echo esc_html($this->t('remove_blacklist', __('Remove blacklist', 'restaurant-booking'))); ?>
                                             </button>
                                         <?php endif; ?>
                                     </td>
@@ -1196,7 +1204,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                             <?php endforeach; ?>
                         <?php else : ?>
                             <tr>
-                                <td colspan="9" class="rb-manager-empty"><?php esc_html_e('No customers found for this location.', 'restaurant-booking'); ?></td>
+                                <td colspan="9" class="rb-manager-empty"><?php echo esc_html($this->t('no_customers_found_for_this_location', __('No customers found for this location.', 'restaurant-booking'))); ?></td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -1275,7 +1283,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         ob_start();
         ?>
         <div class="rb-manager-settings">
-            <h3><?php esc_html_e('Location settings', 'restaurant-booking'); ?></h3>
+            <h3><?php echo esc_html($this->t('location_settings', __('Location settings', 'restaurant-booking'))); ?></h3>
             <form id="rb-manager-settings-form">
                 <input type="hidden" name="nonce" value="<?php echo esc_attr($ajax_nonce); ?>">
                 <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
@@ -1307,59 +1315,41 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                             </label>
                         </div>
 
-                        <?php if (!empty($language_options)) : ?>
-                            <div class="rb-manager-language-options">
-                                <p class="rb-manager-language-title"><?php echo esc_html(rb_t('supported_languages', __('Supported languages', 'restaurant-booking'))); ?></p>
-                                <div class="rb-manager-language-list">
-                                    <?php foreach ($language_options as $code => $info) :
-                                        $label = isset($info['flag']) ? $info['flag'] . ' ' : '';
-                                        $label .= isset($info['name']) ? $info['name'] : $code;
-                                        ?>
-                                        <label class="rb-manager-language-item">
-                                            <input type="checkbox" name="location_settings[languages][]" value="<?php echo esc_attr($code); ?>" <?php checked(in_array($code, $settings['languages'], true)); ?>>
-                                            <span class="rb-manager-language-flag"><?php echo esc_html(isset($info['flag']) ? $info['flag'] : '🌐'); ?></span>
-                                            <span class="rb-manager-language-name"><?php echo esc_html($label); ?></span>
-                                        </label>
-                                    <?php endforeach; ?>
-                                </div>
-                                <p class="description"><?php echo esc_html(rb_t('supported_languages_desc', __('Select the languages your staff can support at this location.', 'restaurant-booking'))); ?></p>
-                            </div>
-                        <?php endif; ?>
                     </section>
                     <section class="rb-manager-settings-panel" data-tab="hours" <?php echo $active_tab === 'hours' ? '' : 'hidden'; ?>>
                         <div class="rb-manager-toggle-group">
                             <label>
                                 <input type="radio" name="location_settings[working_hours_mode]" value="simple" <?php checked($settings['working_hours_mode'], 'simple'); ?>>
-                                <?php esc_html_e('Simple: one opening and closing time', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('simple_one_opening_and_closing_time', __('Simple: one opening and closing time', 'restaurant-booking'))); ?>
                             </label>
                             <label>
                                 <input type="radio" name="location_settings[working_hours_mode]" value="advanced" <?php checked($settings['working_hours_mode'], 'advanced'); ?>>
-                                <?php esc_html_e('Advanced: morning/evening shifts', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('advanced_morning_evening_shifts', __('Advanced: morning/evening shifts', 'restaurant-booking'))); ?>
                             </label>
                         </div>
                         <div class="rb-manager-settings-grid">
                             <label>
-                                <?php esc_html_e('Opening time', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('opening_time', __('Opening time', 'restaurant-booking'))); ?>
                                 <input type="time" name="location_settings[opening_time]" value="<?php echo esc_attr(substr($settings['opening_time'], 0, 5)); ?>">
                             </label>
                             <label>
-                                <?php esc_html_e('Closing time', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('closing_time', __('Closing time', 'restaurant-booking'))); ?>
                                 <input type="time" name="location_settings[closing_time]" value="<?php echo esc_attr(substr($settings['closing_time'], 0, 5)); ?>">
                             </label>
                             <label>
                                 <input type="checkbox" name="location_settings[lunch_break_enabled]" value="yes" <?php checked($settings['lunch_break_enabled'], 'yes'); ?>>
-                                <?php esc_html_e('Enable lunch break', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('enable_lunch_break', __('Enable lunch break', 'restaurant-booking'))); ?>
                             </label>
                             <label>
-                                <?php esc_html_e('Lunch break start', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('lunch_break_start', __('Lunch break start', 'restaurant-booking'))); ?>
                                 <input type="time" name="location_settings[lunch_break_start]" value="<?php echo esc_attr(substr($settings['lunch_break_start'], 0, 5)); ?>">
                             </label>
                             <label>
-                                <?php esc_html_e('Lunch break end', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('lunch_break_end', __('Lunch break end', 'restaurant-booking'))); ?>
                                 <input type="time" name="location_settings[lunch_break_end]" value="<?php echo esc_attr(substr($settings['lunch_break_end'], 0, 5)); ?>">
                             </label>
                             <label>
-                                <?php esc_html_e('Morning shift', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('morning_shift', __('Morning shift', 'restaurant-booking'))); ?>
                                 <div class="rb-manager-shift">
                                     <input type="time" name="location_settings[morning_shift_start]" value="<?php echo esc_attr(substr($settings['morning_shift_start'], 0, 5)); ?>">
                                     <span>→</span>
@@ -1367,7 +1357,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 </div>
                             </label>
                             <label>
-                                <?php esc_html_e('Evening shift', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('evening_shift', __('Evening shift', 'restaurant-booking'))); ?>
                                 <div class="rb-manager-shift">
                                     <input type="time" name="location_settings[evening_shift_start]" value="<?php echo esc_attr(substr($settings['evening_shift_start'], 0, 5)); ?>">
                                     <span>→</span>
@@ -1380,35 +1370,35 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     <section class="rb-manager-settings-panel" data-tab="booking" <?php echo $active_tab === 'booking' ? '' : 'hidden'; ?>>
                         <div class="rb-manager-settings-grid">
                             <label>
-                                <?php esc_html_e('Time slot interval (minutes)', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('time_slot_interval_minutes', __('Time slot interval (minutes)', 'restaurant-booking'))); ?>
                                 <input type="number" name="location_settings[time_slot_interval]" min="5" max="120" step="5" value="<?php echo esc_attr((int) $settings['time_slot_interval']); ?>">
                             </label>
                             <label>
-                                <?php esc_html_e('Buffer time (minutes)', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('buffer_time_minutes', __('Buffer time (minutes)', 'restaurant-booking'))); ?>
                                 <input type="number" name="location_settings[booking_buffer_time]" min="0" max="120" step="5" value="<?php echo esc_attr((int) $settings['booking_buffer_time']); ?>">
                             </label>
                             <label>
-                                <?php esc_html_e('Minimum hours in advance', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('minimum_hours_in_advance', __('Minimum hours in advance', 'restaurant-booking'))); ?>
                                 <input type="number" name="location_settings[min_advance_booking]" min="0" max="72" value="<?php echo esc_attr((int) $settings['min_advance_booking']); ?>">
                             </label>
                             <label>
-                                <?php esc_html_e('Maximum days in advance', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('maximum_days_in_advance', __('Maximum days in advance', 'restaurant-booking'))); ?>
                                 <input type="number" name="location_settings[max_advance_booking]" min="1" max="180" value="<?php echo esc_attr((int) $settings['max_advance_booking']); ?>">
                             </label>
                             <label>
-                                <?php esc_html_e('Max guests per booking', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('max_guests_per_booking', __('Max guests per booking', 'restaurant-booking'))); ?>
                                 <input type="number" name="location_settings[max_guests_per_booking]" min="1" max="100" value="<?php echo esc_attr((int) $settings['max_guests_per_booking']); ?>">
                             </label>
                             <label>
                                 <input type="checkbox" name="location_settings[auto_confirm_enabled]" value="yes" <?php checked($settings['auto_confirm_enabled'], 'yes'); ?>>
-                                <?php esc_html_e('Auto confirm when a table is available', 'restaurant-booking'); ?>
+                                <?php echo esc_html($this->t('auto_confirm_when_a_table_is_available', __('Auto confirm when a table is available', 'restaurant-booking'))); ?>
                             </label>
                         </div>
                     </section>
                 </div>
 
                 <div class="rb-manager-actions-row">
-                    <button type="submit" class="rb-btn-primary"><?php esc_html_e('Save settings', 'restaurant-booking'); ?></button>
+                    <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('save_settings', __('Save settings', 'restaurant-booking'))); ?></button>
                 </div>
             </form>
             <div id="rb-manager-settings-feedback" class="rb-portal-result" hidden></div>
@@ -1451,16 +1441,16 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             <form method="post" class="rb-manager-login-form">
                 <?php wp_nonce_field('rb_manager_login', 'rb_manager_login_nonce'); ?>
                 <div class="rb-form-group">
-                    <label for="rb-manager-username"><?php esc_html_e('Username or email', 'restaurant-booking'); ?></label>
+                    <label for="rb-manager-username"><?php echo esc_html($this->t('username_or_email', __('Username or email', 'restaurant-booking'))); ?></label>
                     <input type="text" id="rb-manager-username" name="rb_username" required />
                 </div>
                 <div class="rb-form-group">
-                    <label for="rb-manager-password"><?php esc_html_e('Password', 'restaurant-booking'); ?></label>
+                    <label for="rb-manager-password"><?php echo esc_html($this->t('password', __('Password', 'restaurant-booking'))); ?></label>
                     <input type="password" id="rb-manager-password" name="rb_password" required />
                 </div>
                 <?php if (!empty($languages)) : ?>
                     <div class="rb-form-group">
-                        <label for="rb-manager-language"><?php esc_html_e('Interface language', 'restaurant-booking'); ?></label>
+                        <label for="rb-manager-language"><?php echo esc_html($this->t('interface_language', __('Interface language', 'restaurant-booking'))); ?></label>
                         <select id="rb-manager-language" name="rb_language">
                             <?php foreach ($languages as $code => $info) :
                                 $label = isset($info['flag']) ? $info['flag'] . ' ' : '';
@@ -1472,7 +1462,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     </div>
                 <?php endif; ?>
                 <div class="rb-portal-actions">
-                    <button type="submit" class="rb-btn-primary"><?php esc_html_e('Log in', 'restaurant-booking'); ?></button>
+                    <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('log_in', __('Log in', 'restaurant-booking'))); ?></button>
                 </div>
             </form>
         </div>

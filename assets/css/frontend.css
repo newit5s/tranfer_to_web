@@ -780,9 +780,15 @@
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
+
+.rb-manager h3 {
+    color: #f8f4ea;
+    letter-spacing: 0.2px;
+}
+
 .rb-manager-filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
     margin-bottom: 16px;
 }
@@ -792,7 +798,9 @@
     flex-direction: column;
     gap: 6px;
     font-size: 13px;
-    color: #d8cfc0;
+    font-weight: 600;
+    color: #f6eddd;
+    white-space: nowrap;
 }
 
 .rb-manager-filter-grid input,
@@ -816,10 +824,42 @@
     gap: 12px;
 }
 
+.rb-manager-filter-actions .rb-btn-primary,
+.rb-manager-filter-actions .rb-btn-secondary {
+    flex: 1 1 160px;
+    max-width: 200px;
+    min-width: 150px;
+    padding: 10px 0 !important;
+    display: inline-flex;
+    justify-content: center;
+}
+
 .rb-manager-dashboard-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 16px;
+}
+
+.rb-manager-add-table {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    background: rgba(24, 24, 24, 0.92);
+    border: 1px solid rgba(181, 145, 106, 0.25);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+}
+
+.rb-manager-add-table label {
+    flex: 1 1 160px;
+    color: #f6eddd;
+    font-weight: 600;
+}
+
+.rb-manager-add-table input {
+    width: 100%;
 }
 
 .rb-manager-dashboard-sources {
@@ -920,7 +960,8 @@
     flex-direction: column;
     gap: 6px;
     font-size: 13px;
-    color: #d8cfc0;
+    font-weight: 600;
+    color: #f6eddd;
 }
 
 .rb-manager-create input,
@@ -1128,17 +1169,17 @@
 
 .rb-manager-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 15px;
-    margin: 20px 0;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+    margin: 16px 0;
 }
 
 .rb-manager-stat-card {
-    background: rgba(22, 22, 22, 0.9);
+    background: rgba(22, 22, 22, 0.92);
     border: 1px solid rgba(181, 145, 106, 0.25);
     border-radius: 12px;
-    padding: 16px 20px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+    padding: 14px 16px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
 }
 
 .rb-manager-stat-label {
