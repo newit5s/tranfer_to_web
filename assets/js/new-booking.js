@@ -296,17 +296,23 @@
         goToStep2: function() {
             this.updateBookingSummary();
             this.setHiddenFields();
-            
-            // Animate transition
-            $('.rb-new-step[data-step="1"]').fadeOut(300, () => {
-                $('.rb-new-step[data-step="2"]').fadeIn(300);
+
+            const $step1 = $('.rb-new-step[data-step="1"]');
+            const $step2 = $('.rb-new-step[data-step="2"]');
+
+            // Ensure the second step can be displayed by removing the hidden attribute
+            $step2.stop(true, true).hide().removeAttr('hidden');
+
+            $step1.stop(true, true).fadeOut(300, () => {
+                $step1.attr('hidden', true);
+                $step2.fadeIn(300);
             });
-            
+
             this.currentStep = 2;
-            
+
             // Focus first input in step 2
             setTimeout(() => {
-                $('#rb-new-customer-name').focus();
+                $('#rb-new-customer-name').trigger('focus');
             }, 350);
         },
 
@@ -329,20 +335,29 @@
 
         goBackToStep1: function(e) {
             e.preventDefault();
-            
-            $('.rb-new-step[data-step="2"]').fadeOut(300, () => {
-                $('.rb-new-step[data-step="1"]').fadeIn(300);
+
+            const $step1 = $('.rb-new-step[data-step="1"]');
+            const $step2 = $('.rb-new-step[data-step="2"]');
+
+            $step1.stop(true, true).hide().removeAttr('hidden');
+
+            $step2.stop(true, true).fadeOut(300, () => {
+                $step2.attr('hidden', true);
+                $step1.fadeIn(300);
             });
-            
+
             this.currentStep = 1;
-            
+
             // Clear any result messages
             $('#rb-new-booking-result').attr('hidden', true).hide();
         },
 
         resetToStep1: function() {
-            $('.rb-new-step[data-step="2"]').hide();
-            $('.rb-new-step[data-step="1"]').show();
+            const $step1 = $('.rb-new-step[data-step="1"]');
+            const $step2 = $('.rb-new-step[data-step="2"]');
+
+            $step2.stop(true, true).hide().attr('hidden', true);
+            $step1.stop(true, true).show().removeAttr('hidden');
             this.currentStep = 1;
             this.selectedData = {};
             this.clearAllMessages();
