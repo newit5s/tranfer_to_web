@@ -612,6 +612,39 @@
     min-width: 200px;
 }
 
+.rb-manager-language-switcher {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.rb-manager-language-switcher .rb-language-switcher-dropdown {
+    width: 100%;
+    max-width: 220px;
+}
+
+.rb-manager-language-switcher .rb-lang-select {
+    width: 100%;
+    background: rgba(20, 20, 20, 0.92);
+    color: #f5f3ef;
+    border: 1px solid rgba(181, 145, 106, 0.35);
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-height: 44px;
+    line-height: 1.45;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rb-manager-language-switcher .rb-lang-select:hover {
+    border-color: rgba(181, 145, 106, 0.55);
+}
+
+.rb-manager-language-switcher .rb-lang-select:focus {
+    outline: none;
+    border-color: #b5916a;
+    box-shadow: 0 0 0 2px rgba(181, 145, 106, 0.25);
+}
+
 .rb-manager-header h2 {
     margin: 0;
     font-size: 26px;
@@ -648,6 +681,11 @@
     outline: none;
     border-color: #b5916a;
     box-shadow: 0 0 0 2px rgba(181, 145, 106, 0.25);
+}
+
+.rb-manager-location-languages {
+    color: #d8cfc0;
+    margin: 0;
 }
 
 .rb-manager-nav a {
@@ -955,6 +993,51 @@
 .rb-manager-checkbox input {
     width: 18px;
     height: 18px;
+}
+
+.rb-manager-language-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.rb-manager-language-title {
+    font-weight: 600;
+    color: #f7f3e9;
+    margin: 0;
+}
+
+.rb-manager-language-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.rb-manager-language-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(181, 145, 106, 0.35);
+    background: rgba(19, 19, 19, 0.85);
+    color: #f7f3e9;
+    font-size: 14px;
+}
+
+.rb-manager-language-item input {
+    width: auto;
+    margin: 0;
+}
+
+.rb-manager-language-flag {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.rb-manager-language-name {
+    font-weight: 500;
 }
 
 .rb-manager-wide {

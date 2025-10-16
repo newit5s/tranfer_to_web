@@ -267,6 +267,20 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         );
 
         $available_languages = isset($location_settings['languages']) ? (array) $location_settings['languages'] : array();
+        $language_definitions = function_exists('rb_get_available_languages') ? rb_get_available_languages() : array();
+        $available_language_labels = array();
+
+        foreach ($available_languages as $code) {
+            $code = sanitize_text_field($code);
+            if (isset($language_definitions[$code])) {
+                $info = $language_definitions[$code];
+                $label = isset($info['flag']) ? $info['flag'] . ' ' : '';
+                $label .= isset($info['name']) ? $info['name'] : $code;
+                $available_language_labels[] = $label;
+            } elseif (!empty($code)) {
+                $available_language_labels[] = strtoupper($code);
+            }
+        }
 
         ob_start();
         ?>
@@ -292,6 +306,14 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     </form>
                 </div>
                 <div class="rb-manager-header-right">
+                    <?php if (class_exists('RB_Language_Switcher')) : ?>
+                        <div class="rb-manager-language-switcher">
+                            <?php
+                            $switcher = new RB_Language_Switcher();
+                            echo $switcher->render_dropdown(false);
+                            ?>
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($manager_name)) : ?>
                         <div class="rb-manager-user">
                             <?php printf(esc_html__('Logged in as %s', 'restaurant-booking'), esc_html($manager_name)); ?>
@@ -317,8 +339,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         <?php if (!empty($active_location['email'])) : ?>
                             <p>✉️ <?php echo esc_html($active_location['email']); ?></p>
                         <?php endif; ?>
-                        <?php if (!empty($available_languages)) : ?>
-                            <p>🌐 <?php echo esc_html(implode(', ', array_map('strtoupper', $available_languages))); ?></p>
+                        <?php if (!empty($available_language_labels)) : ?>
+                            <p class="rb-manager-location-languages">🌐 <?php echo esc_html(implode(', ', $available_language_labels)); ?></p>
                         <?php endif; ?>
                         <?php if (!empty($location_settings['shift_notes'])) : ?>
                             <div class="rb-manager-location-notes">
@@ -1195,10 +1217,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
     }
 
     private function render_section_settings($location_settings, $location_id, $ajax_nonce) {
-        $active_tab = isset($_GET['rb_settings_tab']) ? sanitize_key($_GET['rb_settings_tab']) : 'hours';
-        $allowed_tabs = array('hours', 'booking');
+        $active_tab = isset($_GET['rb_settings_tab']) ? sanitize_key($_GET['rb_settings_tab']) : 'general';
+        $allowed_tabs = array('general', 'hours', 'booking');
         if (!in_array($active_tab, $allowed_tabs, true)) {
-            $active_tab = 'hours';
+            $active_tab = 'general';
         }
 
         $defaults = array(
@@ -1243,9 +1265,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         $tabs = array(
+            'general' => rb_t('general_info', __('General information', 'restaurant-booking')),
             'hours' => __('Working hours', 'restaurant-booking'),
             'booking' => __('Booking rules', 'restaurant-booking'),
         );
+
+        $language_options = function_exists('rb_get_available_languages') ? rb_get_available_languages() : array();
 
         ob_start();
         ?>
@@ -1262,6 +1287,45 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 </div>
 
                 <div class="rb-manager-settings-panels">
+                    <section class="rb-manager-settings-panel" data-tab="general" <?php echo $active_tab === 'general' ? '' : 'hidden'; ?>>
+                        <div class="rb-manager-settings-grid">
+                            <label>
+                                <?php echo esc_html(rb_t('hotline', __('Hotline', 'restaurant-booking'))); ?>
+                                <input type="text" name="location_settings[hotline]" value="<?php echo esc_attr($settings['hotline']); ?>">
+                            </label>
+                            <label>
+                                <?php echo esc_html(rb_t('contact_email', __('Contact email', 'restaurant-booking'))); ?>
+                                <input type="email" name="location_settings[email]" value="<?php echo esc_attr($settings['email']); ?>">
+                            </label>
+                            <label class="rb-manager-wide">
+                                <?php echo esc_html(rb_t('location_address', __('Address', 'restaurant-booking'))); ?>
+                                <input type="text" name="location_settings[address]" value="<?php echo esc_attr($settings['address']); ?>">
+                            </label>
+                            <label class="rb-manager-wide">
+                                <?php echo esc_html(rb_t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>
+                                <textarea name="location_settings[shift_notes]" placeholder="<?php echo esc_attr(rb_t('shift_notes_placeholder', __('Important reminders for the team (optional)', 'restaurant-booking'))); ?>"><?php echo esc_textarea($settings['shift_notes']); ?></textarea>
+                            </label>
+                        </div>
+
+                        <?php if (!empty($language_options)) : ?>
+                            <div class="rb-manager-language-options">
+                                <p class="rb-manager-language-title"><?php echo esc_html(rb_t('supported_languages', __('Supported languages', 'restaurant-booking'))); ?></p>
+                                <div class="rb-manager-language-list">
+                                    <?php foreach ($language_options as $code => $info) :
+                                        $label = isset($info['flag']) ? $info['flag'] . ' ' : '';
+                                        $label .= isset($info['name']) ? $info['name'] : $code;
+                                        ?>
+                                        <label class="rb-manager-language-item">
+                                            <input type="checkbox" name="location_settings[languages][]" value="<?php echo esc_attr($code); ?>" <?php checked(in_array($code, $settings['languages'], true)); ?>>
+                                            <span class="rb-manager-language-flag"><?php echo esc_html(isset($info['flag']) ? $info['flag'] : '🌐'); ?></span>
+                                            <span class="rb-manager-language-name"><?php echo esc_html($label); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                                <p class="description"><?php echo esc_html(rb_t('supported_languages_desc', __('Select the languages your staff can support at this location.', 'restaurant-booking'))); ?></p>
+                            </div>
+                        <?php endif; ?>
+                    </section>
                     <section class="rb-manager-settings-panel" data-tab="hours" <?php echo $active_tab === 'hours' ? '' : 'hidden'; ?>>
                         <div class="rb-manager-toggle-group">
                             <label>
@@ -2258,6 +2322,18 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         $settings_input = isset($_POST['location_settings']) ? (array) wp_unslash($_POST['location_settings']) : array();
+        $languages_input = isset($settings_input['languages']) ? (array) $settings_input['languages'] : array();
+        $languages_allowed = function_exists('rb_get_available_languages') ? array_keys(rb_get_available_languages()) : array();
+        $language_codes = array();
+
+        foreach ($languages_input as $language_code) {
+            $language_code = sanitize_text_field($language_code);
+            if (empty($languages_allowed) || in_array($language_code, $languages_allowed, true)) {
+                $language_codes[] = $language_code;
+            }
+        }
+
+        $language_codes = array_values(array_unique($language_codes));
 
         $data = array(
             'hotline' => isset($settings_input['hotline']) ? sanitize_text_field($settings_input['hotline']) : '',
@@ -2292,7 +2368,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             'cancellation_hours' => isset($settings_input['cancellation_hours']) ? intval($settings_input['cancellation_hours']) : 2,
             'weekend_enabled' => !empty($settings_input['weekend_enabled']) ? 'yes' : 'no',
             'no_show_auto_blacklist' => isset($settings_input['no_show_auto_blacklist']) ? intval($settings_input['no_show_auto_blacklist']) : 0,
-            'languages' => isset($settings_input['languages']) ? array_map('sanitize_text_field', (array) $settings_input['languages']) : array(),
+            'languages' => $language_codes,
         );
 
         if (!empty($data['email']) && !is_email($data['email'])) {
