@@ -3,7 +3,7 @@
  * Plugin Name: Restaurant Booking Manager
  * Plugin URI: https://github.com/newit5s/wp_booking-table
  * Description: Plugin quản lý đặt bàn nhà hàng hoàn chỉnh với giao diện thân thiện
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: NewIT5S
  * Author URI: https://github.com/newit5s
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('RB_VERSION', '1.0.0');
+define('RB_VERSION', '1.0.1');
 define('RB_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('RB_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('RB_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -146,8 +146,14 @@ function rb_admin_enqueue_scripts($hook) {
  */
 add_action('wp_enqueue_scripts', 'rb_frontend_enqueue_scripts');
 function rb_frontend_enqueue_scripts() {
-    wp_enqueue_style('rb-frontend-css', RB_PLUGIN_URL . 'assets/css/frontend.css', array(), RB_VERSION);
-    wp_enqueue_script('rb-frontend-js', RB_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), RB_VERSION, true);
+    $style_path = RB_PLUGIN_DIR . 'assets/css/frontend.css';
+    $script_path = RB_PLUGIN_DIR . 'assets/js/frontend.js';
+
+    $style_version = file_exists($style_path) ? filemtime($style_path) : RB_VERSION;
+    $script_version = file_exists($script_path) ? filemtime($script_path) : RB_VERSION;
+
+    wp_enqueue_style('rb-frontend-css', RB_PLUGIN_URL . 'assets/css/frontend.css', array(), $style_version);
+    wp_enqueue_script('rb-frontend-js', RB_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), $script_version, true);
 
     global $rb_location;
     if (!$rb_location) {
