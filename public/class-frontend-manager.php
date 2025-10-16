@@ -1278,6 +1278,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             'booking' => __('Booking rules', 'restaurant-booking'),
         );
 
+        $language_options = function_exists('rb_get_available_languages') ? rb_get_available_languages() : array();
+
         ob_start();
         ?>
         <div class="rb-manager-settings">
