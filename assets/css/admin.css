@@ -63,6 +63,23 @@
     margin-bottom: 5px;
 }
 
+.rb-table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.rb-table-actions .button {
+    margin: 0;
+}
+
+.rb-table-actions .button.button-small {
+    min-width: 90px;
+    text-align: center;
+}
+
 .wp-list-table .button-small {
     padding: 0 8px;
     line-height: 26px;
@@ -338,16 +355,26 @@
         display: block;
         overflow-x: auto;
     }
-    
+
     .rb-stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .rb-filters form {
         flex-direction: column;
     }
-    
+
     .rb-quick-actions {
         flex-direction: column;
         align-items: stretch;
     }
+
+    .rb-table-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rb-table-actions .button {
+        width: 100%;
+    }
+}
