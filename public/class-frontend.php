@@ -1,6 +1,6 @@
 <?php
 /**
- * Facade for public and manager frontend surfaces.
+ * Facade for public and manager frontend surfaces - Updated for new design.
  */
 
 if (!defined('ABSPATH')) {
@@ -34,16 +34,21 @@ class RB_Frontend {
         }
     }
 
+    /**
+     * Render the new modern booking form
+     * This replaces both old shortcodes with a single, unified experience
+     */
     public function render_booking_form($atts) {
-        return self::$public_surface->render_booking_portal($atts);
+        return self::$public_surface->render_booking_form($atts);
     }
 
-    public function render_booking_portal($atts) {
-        return self::$public_surface->render_booking_portal($atts);
-    }
-
+    /**
+     * Legacy support - redirect to new booking form
+     * @deprecated Use render_booking_form() instead
+     */
     public function render_multi_location_portal($atts) {
-        return self::$public_surface->render_booking_portal($atts);
+        // For backward compatibility, redirect to the new unified booking form
+        return self::$public_surface->render_booking_form($atts);
     }
 
     public function render_location_manager($atts) {
