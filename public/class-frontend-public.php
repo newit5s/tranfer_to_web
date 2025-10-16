@@ -118,192 +118,290 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                 </button>
             <?php endif; ?>
 
-            <div id="rb-booking-modal" class="rb-modal">
-                <div class="rb-modal-content">
-                    <span class="rb-close">&times;</span>
+            <div id="rb-booking-modal" class="rb-modal" aria-hidden="true">
+                <div class="rb-modal-content" role="dialog" aria-modal="true">
+                    <button type="button" class="rb-close" aria-label="<?php esc_attr_e('Close booking form', 'restaurant-booking'); ?>">&times;</button>
 
-                    <div class="rb-modal-header">
-                        <h2><?php echo esc_html($atts['title']); ?></h2>
+                    <div class="rb-booking-layout">
+                        <aside class="rb-booking-sidebar">
+                            <div class="rb-booking-sidebar-inner">
+                                <?php if (!empty($default_location['name'])) : ?>
+                                    <h3 class="rb-sidebar-heading"><?php echo esc_html($default_location['name']); ?></h3>
+                                <?php endif; ?>
 
-                        <div class="rb-modal-language-switcher">
-                            <?php
-                            if (class_exists('RB_Language_Switcher')) {
-                                $switcher = new RB_Language_Switcher();
-                                $switcher->render_dropdown();
-                            }
-                            ?>
+                                <?php if (!empty($default_location['address'])) : ?>
+                                    <p class="rb-sidebar-text">
+                                        <?php echo esc_html($default_location['address']); ?>
+                                    </p>
+                                <?php endif; ?>
+
+                                <ul class="rb-sidebar-meta">
+                                    <li>
+                                        <span class="rb-meta-label"><?php esc_html_e('Opening hours', 'restaurant-booking'); ?></span>
+                                        <span class="rb-meta-value"><?php echo esc_html($opening_time . ' - ' . $closing_time); ?></span>
+                                    </li>
+                                    <?php if (!empty($default_location['hotline'])) : ?>
+                                        <li>
+                                            <span class="rb-meta-label"><?php esc_html_e('Hotline', 'restaurant-booking'); ?></span>
+                                            <span class="rb-meta-value"><?php echo esc_html($default_location['hotline']); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+                                    <?php if (!empty($default_location['email'])) : ?>
+                                        <li>
+                                            <span class="rb-meta-label"><?php esc_html_e('Email', 'restaurant-booking'); ?></span>
+                                            <span class="rb-meta-value"><?php echo esc_html($default_location['email']); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+
+                                <p class="rb-sidebar-note"><?php echo esc_html(rb_t('confirmation_email_note', __('A confirmation link will be sent to this email. If you do not have an email address, please call the hotline of your selected location to reserve.', 'restaurant-booking'))); ?></p>
+                            </div>
+                        </aside>
+
+                        <div class="rb-booking-main">
+                            <div class="rb-modal-header">
+                                <h2><?php echo esc_html($atts['title']); ?></h2>
+
+                                <div class="rb-modal-language-switcher">
+                                    <?php
+                                    if (class_exists('RB_Language_Switcher')) {
+                                        $switcher = new RB_Language_Switcher();
+                                        $switcher->render_dropdown();
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+
+                            <div class="rb-step-indicator" aria-hidden="true">
+                                <div class="rb-step-item active">
+                                    <span class="rb-step-number">1</span>
+                                    <span class="rb-step-label"><?php esc_html_e('Reservation', 'restaurant-booking'); ?></span>
+                                </div>
+                                <div class="rb-step-item active">
+                                    <span class="rb-step-number">2</span>
+                                    <span class="rb-step-label"><?php esc_html_e('Contact', 'restaurant-booking'); ?></span>
+                                </div>
+                                <div class="rb-step-item">
+                                    <span class="rb-step-number">3</span>
+                                    <span class="rb-step-label"><?php esc_html_e('Confirm', 'restaurant-booking'); ?></span>
+                                </div>
+                            </div>
+
+                            <form id="rb-booking-form" class="rb-form">
+                                <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce'); ?>
+                                <input type="hidden" name="location_id" value="<?php echo esc_attr($default_location_id); ?>">
+                                <input type="hidden" name="language" value="<?php echo esc_attr($current_language); ?>">
+
+                                <div class="rb-form-section">
+                                    <h3 class="rb-form-section-title"><?php esc_html_e('Reservation details', 'restaurant-booking'); ?></h3>
+                                    <div class="rb-form-grid">
+                                        <div class="rb-form-group">
+                                            <label for="rb_guest_count"><?php rb_e('number_of_guests'); ?> *</label>
+                                            <select id="rb_guest_count" name="guest_count" required>
+                                                <?php for ($i = 1; $i <= 20; $i++) : ?>
+                                                    <option value="<?php echo $i; ?>"><?php echo $i; ?> <?php rb_e('people'); ?></option>
+                                                <?php endfor; ?>
+                                            </select>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_booking_date"><?php rb_e('booking_date'); ?> *</label>
+                                            <input type="date" id="rb_booking_date" name="booking_date"
+                                                min="<?php echo $min_date; ?>"
+                                                max="<?php echo $max_date; ?>" required>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_booking_time"><?php rb_e('booking_time'); ?> *</label>
+                                            <select id="rb_booking_time" name="booking_time" required>
+                                                <option value=""><?php rb_e('select_time'); ?></option>
+                                                <?php if (!empty($time_slots)) : ?>
+                                                    <?php foreach ($time_slots as $slot) : ?>
+                                                        <option value="<?php echo esc_attr($slot); ?>"><?php echo esc_html($slot); ?></option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rb-form-section">
+                                    <h3 class="rb-form-section-title"><?php esc_html_e('Contact information', 'restaurant-booking'); ?></h3>
+                                    <div class="rb-form-grid">
+                                        <div class="rb-form-group">
+                                            <label for="rb_customer_name"><?php rb_e('full_name'); ?> *</label>
+                                            <input type="text" id="rb_customer_name" name="customer_name" required>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_customer_phone"><?php rb_e('phone_number'); ?> *</label>
+                                            <input type="tel" id="rb_customer_phone" name="customer_phone" required>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_customer_email"><?php rb_e('email'); ?> *</label>
+                                            <input type="email" id="rb_customer_email" name="customer_email" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rb-form-section">
+                                    <h3 class="rb-form-section-title"><?php rb_e('special_requests'); ?></h3>
+                                    <div class="rb-form-group">
+                                        <label class="screen-reader-text" for="rb_special_requests"><?php rb_e('special_requests'); ?></label>
+                                        <textarea id="rb_special_requests" name="special_requests" rows="3" placeholder="<?php esc_attr_e('Add a note for our team', 'restaurant-booking'); ?>"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="rb-form-actions">
+                                    <button type="button" class="rb-btn-secondary rb-close-modal"><?php rb_e('cancel'); ?></button>
+                                    <button type="submit" class="rb-btn-primary"><?php rb_e('confirm_booking'); ?></button>
+                                </div>
+
+                                <div id="rb-form-message" class="rb-form-message"></div>
+                            </form>
                         </div>
                     </div>
-
-                    <form id="rb-booking-form" class="rb-form">
-                        <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce'); ?>
-                        <input type="hidden" name="location_id" value="<?php echo esc_attr($default_location_id); ?>">
-                        <input type="hidden" name="language" value="<?php echo esc_attr($current_language); ?>">
-
-                        <div class="rb-form-row">
-                            <div class="rb-form-group">
-                                <label for="rb_customer_name">
-                                    <?php rb_e('full_name'); ?> *
-                                </label>
-                                <input type="text" id="rb_customer_name" name="customer_name" required>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_customer_phone">
-                                    <?php rb_e('phone_number'); ?> *
-                                </label>
-                                <input type="tel" id="rb_customer_phone" name="customer_phone" required>
-                            </div>
-                        </div>
-
-                        <div class="rb-form-row">
-                            <div class="rb-form-group">
-                                <label for="rb_customer_email">
-                                    <?php rb_e('email'); ?> *
-                                </label>
-                                <input type="email" id="rb_customer_email" name="customer_email" required>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_guest_count">
-                                    <?php rb_e('number_of_guests'); ?> *
-                                </label>
-                                <select id="rb_guest_count" name="guest_count" required>
-                                    <?php for ($i = 1; $i <= 20; $i++) : ?>
-                                        <option value="<?php echo $i; ?>">
-                                            <?php echo $i; ?> <?php rb_e('people'); ?>
-                                        </option>
-                                    <?php endfor; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="rb-form-row">
-                            <div class="rb-form-group">
-                                <label for="rb_booking_date">
-                                    <?php rb_e('booking_date'); ?> *
-                                </label>
-                                <input type="date" id="rb_booking_date" name="booking_date"
-                                    min="<?php echo $min_date; ?>"
-                                    max="<?php echo $max_date; ?>" required>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_booking_time">
-                                    <?php rb_e('booking_time'); ?> *
-                                </label>
-                                <select id="rb_booking_time" name="booking_time" required>
-                                    <option value=""><?php rb_e('select_time'); ?></option>
-                                    <?php if (!empty($time_slots)) : ?>
-                                        <?php foreach ($time_slots as $slot) : ?>
-                                            <option value="<?php echo esc_attr($slot); ?>">
-                                                <?php echo esc_html($slot); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="rb-form-group">
-                            <label for="rb_special_requests">
-                                <?php rb_e('special_requests'); ?>
-                            </label>
-                            <textarea id="rb_special_requests" name="special_requests" rows="3"></textarea>
-                        </div>
-
-                        <div class="rb-form-actions">
-                            <button type="submit" class="rb-btn-primary">
-                                <?php rb_e('confirm_booking'); ?>
-                            </button>
-                            <button type="button" class="rb-btn-cancel rb-close-modal">
-                                <?php rb_e('cancel'); ?>
-                            </button>
-                        </div>
-
-                        <div id="rb-form-message"></div>
-                    </form>
                 </div>
             </div>
 
             <?php if ($atts['show_button'] === 'no') : ?>
-                <div class="rb-inline-form">
-                    <div class="rb-inline-header">
-                        <h3><?php echo esc_html($atts['title']); ?></h3>
+                <div class="rb-inline-shell">
+                    <div class="rb-inline-layout">
+                        <aside class="rb-booking-sidebar">
+                            <div class="rb-booking-sidebar-inner">
+                                <?php if (!empty($default_location['name'])) : ?>
+                                    <h3 class="rb-sidebar-heading"><?php echo esc_html($default_location['name']); ?></h3>
+                                <?php endif; ?>
 
-                        <div class="rb-inline-language-switcher">
-                            <?php
-                            if (class_exists('RB_Language_Switcher')) {
-                                $switcher = new RB_Language_Switcher();
-                                $switcher->render_dropdown();
-                            }
-                            ?>
+                                <?php if (!empty($default_location['address'])) : ?>
+                                    <p class="rb-sidebar-text"><?php echo esc_html($default_location['address']); ?></p>
+                                <?php endif; ?>
+
+                                <ul class="rb-sidebar-meta">
+                                    <li>
+                                        <span class="rb-meta-label"><?php esc_html_e('Opening hours', 'restaurant-booking'); ?></span>
+                                        <span class="rb-meta-value"><?php echo esc_html($opening_time . ' - ' . $closing_time); ?></span>
+                                    </li>
+                                    <?php if (!empty($default_location['hotline'])) : ?>
+                                        <li>
+                                            <span class="rb-meta-label"><?php esc_html_e('Hotline', 'restaurant-booking'); ?></span>
+                                            <span class="rb-meta-value"><?php echo esc_html($default_location['hotline']); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+                                    <?php if (!empty($default_location['email'])) : ?>
+                                        <li>
+                                            <span class="rb-meta-label"><?php esc_html_e('Email', 'restaurant-booking'); ?></span>
+                                            <span class="rb-meta-value"><?php echo esc_html($default_location['email']); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        </aside>
+
+                        <div class="rb-inline-form-card">
+                            <div class="rb-inline-header">
+                                <h3><?php echo esc_html($atts['title']); ?></h3>
+
+                                <div class="rb-inline-language-switcher">
+                                    <?php
+                                    if (class_exists('RB_Language_Switcher')) {
+                                        $switcher = new RB_Language_Switcher();
+                                        $switcher->render_dropdown();
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+
+                            <div class="rb-step-indicator" aria-hidden="true">
+                                <div class="rb-step-item active">
+                                    <span class="rb-step-number">1</span>
+                                    <span class="rb-step-label"><?php esc_html_e('Reservation', 'restaurant-booking'); ?></span>
+                                </div>
+                                <div class="rb-step-item active">
+                                    <span class="rb-step-number">2</span>
+                                    <span class="rb-step-label"><?php esc_html_e('Contact', 'restaurant-booking'); ?></span>
+                                </div>
+                                <div class="rb-step-item">
+                                    <span class="rb-step-number">3</span>
+                                    <span class="rb-step-label"><?php esc_html_e('Confirm', 'restaurant-booking'); ?></span>
+                                </div>
+                            </div>
+
+                            <form id="rb-booking-form-inline" class="rb-form">
+                                <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce_inline'); ?>
+                                <input type="hidden" name="location_id" value="<?php echo esc_attr($default_location_id); ?>">
+                                <input type="hidden" name="language" value="<?php echo esc_attr($current_language); ?>">
+
+                                <div class="rb-form-section">
+                                    <h3 class="rb-form-section-title"><?php esc_html_e('Reservation details', 'restaurant-booking'); ?></h3>
+                                    <div class="rb-form-grid">
+                                        <div class="rb-form-group">
+                                            <label for="rb_guests_inline"><?php rb_e('number_of_guests'); ?> *</label>
+                                            <select id="rb_guests_inline" name="guest_count" required>
+                                                <?php for ($i = 1; $i <= 20; $i++) : ?>
+                                                    <option value="<?php echo $i; ?>"><?php echo $i; ?> <?php rb_e('people'); ?></option>
+                                                <?php endfor; ?>
+                                            </select>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_date_inline"><?php rb_e('booking_date'); ?> *</label>
+                                            <input type="date" id="rb_date_inline" name="booking_date"
+                                                min="<?php echo $min_date; ?>"
+                                                max="<?php echo $max_date; ?>" required>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_time_inline"><?php rb_e('booking_time'); ?> *</label>
+                                            <select id="rb_time_inline" name="booking_time" required>
+                                                <option value=""><?php rb_e('select_time'); ?></option>
+                                                <?php if (!empty($time_slots)) : ?>
+                                                    <?php foreach ($time_slots as $slot) : ?>
+                                                        <option value="<?php echo esc_attr($slot); ?>"><?php echo esc_html($slot); ?></option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rb-form-section">
+                                    <h3 class="rb-form-section-title"><?php esc_html_e('Contact information', 'restaurant-booking'); ?></h3>
+                                    <div class="rb-form-grid">
+                                        <div class="rb-form-group">
+                                            <label for="rb_name_inline"><?php rb_e('full_name'); ?> *</label>
+                                            <input type="text" id="rb_name_inline" name="customer_name" required>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_phone_inline"><?php rb_e('phone_number'); ?> *</label>
+                                            <input type="tel" id="rb_phone_inline" name="customer_phone" required>
+                                        </div>
+
+                                        <div class="rb-form-group">
+                                            <label for="rb_email_inline"><?php rb_e('email'); ?> *</label>
+                                            <input type="email" id="rb_email_inline" name="customer_email" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rb-form-section">
+                                    <h3 class="rb-form-section-title"><?php rb_e('special_requests'); ?></h3>
+                                    <div class="rb-form-group">
+                                        <label class="screen-reader-text" for="rb_requests_inline"><?php rb_e('special_requests'); ?></label>
+                                        <textarea id="rb_requests_inline" name="special_requests" rows="3" placeholder="<?php esc_attr_e('Add a note for our team', 'restaurant-booking'); ?>"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="rb-form-actions">
+                                    <button type="submit" class="rb-btn-primary"><?php rb_e('book_now'); ?></button>
+                                </div>
+
+                                <div id="rb-form-message-inline" class="rb-form-message"></div>
+                            </form>
                         </div>
                     </div>
-
-                    <form id="rb-booking-form-inline" class="rb-form">
-                        <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce_inline'); ?>
-                        <input type="hidden" name="location_id" value="<?php echo esc_attr($default_location_id); ?>">
-                        <input type="hidden" name="language" value="<?php echo esc_attr($current_language); ?>">
-
-                        <div class="rb-form-grid">
-                            <div class="rb-form-group">
-                                <label for="rb_name_inline"><?php rb_e('full_name'); ?> *</label>
-                                <input type="text" id="rb_name_inline" name="customer_name" required>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_phone_inline"><?php rb_e('phone_number'); ?> *</label>
-                                <input type="tel" id="rb_phone_inline" name="customer_phone" required>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_email_inline"><?php rb_e('email'); ?> *</label>
-                                <input type="email" id="rb_email_inline" name="customer_email" required>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_guests_inline"><?php rb_e('number_of_guests'); ?> *</label>
-                                <select id="rb_guests_inline" name="guest_count" required>
-                                    <?php for ($i = 1; $i <= 20; $i++) : ?>
-                                        <option value="<?php echo $i; ?>"><?php echo $i; ?> <?php rb_e('people'); ?></option>
-                                    <?php endfor; ?>
-                                </select>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_date_inline"><?php rb_e('booking_date'); ?> *</label>
-                                <input type="date" id="rb_date_inline" name="booking_date"
-                                    min="<?php echo $min_date; ?>"
-                                    max="<?php echo $max_date; ?>" required>
-                            </div>
-
-                            <div class="rb-form-group">
-                                <label for="rb_time_inline"><?php rb_e('booking_time'); ?> *</label>
-                                <select id="rb_time_inline" name="booking_time" required>
-                                    <option value=""><?php rb_e('select_time'); ?></option>
-                                    <?php if (!empty($time_slots)) : ?>
-                                        <?php foreach ($time_slots as $slot) : ?>
-                                            <option value="<?php echo esc_attr($slot); ?>">
-                                                <?php echo esc_html($slot); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="rb-form-group">
-                            <label for="rb_requests_inline"><?php rb_e('special_requests'); ?></label>
-                            <textarea id="rb_requests_inline" name="special_requests" rows="3"></textarea>
-                        </div>
-
-                        <button type="submit" class="rb-btn-primary">
-                            <?php rb_e('book_now'); ?>
-                        </button>
-
-                        <div id="rb-form-message-inline"></div>
-                    </form>
                 </div>
             <?php endif; ?>
         </div>

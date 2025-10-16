@@ -354,8 +354,8 @@ class RB_Booking {
 
         // Tính tổng số khách đã book (pending + confirmed)
         $exclude_sql = '';
-        if ($exclude_booking_id) {
-            $exclude_sql = $wpdb->prepare(' AND id != %d', (int)$exclude_booking_id);
+        if (null !== $exclude_booking_id) {
+            $exclude_sql = $wpdb->prepare(' AND id != %d', (int) $exclude_booking_id);
         }
 
         $booked_guests = (int) $wpdb->get_var($wpdb->prepare(
@@ -388,9 +388,9 @@ class RB_Booking {
         $exclude_sql = '';
         $params = array((int)$location_id, (int)$guest_count, $date, $time, (int)$location_id);
 
-        if ($exclude_booking_id) {
+        if (null !== $exclude_booking_id) {
             $exclude_sql = ' AND b.id != %d';
-            $params[] = (int)$exclude_booking_id;
+            $params[] = (int) $exclude_booking_id;
         }
 
         $sql = $wpdb->prepare(
