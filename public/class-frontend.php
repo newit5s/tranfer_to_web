@@ -35,11 +35,15 @@ class RB_Frontend {
     }
 
     public function render_booking_form($atts) {
-        return self::$public_surface->render_booking_form($atts);
+        return self::$public_surface->render_booking_portal($atts);
+    }
+
+    public function render_booking_portal($atts) {
+        return self::$public_surface->render_booking_portal($atts);
     }
 
     public function render_multi_location_portal($atts) {
-        return self::$public_surface->render_multi_location_portal($atts);
+        return self::$public_surface->render_booking_portal($atts);
     }
 
     public function render_location_manager($atts) {

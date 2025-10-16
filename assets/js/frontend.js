@@ -119,6 +119,7 @@
                         $(messageContainer)
                             .removeClass('error')
                             .addClass('success')
+                            .removeAttr('hidden')
                             .html(response.data.message)
                             .show();
                         
@@ -142,6 +143,7 @@
                         $(messageContainer)
                             .removeClass('success')
                             .addClass('error')
+                            .removeAttr('hidden')
                             .html(response.data.message)
                             .show();
                     }
@@ -150,6 +152,7 @@
                     $(messageContainer)
                         .removeClass('success')
                         .addClass('error')
+                        .removeAttr('hidden')
                         .html(rb_ajax.error_text)
                         .show();
                 },
@@ -357,6 +360,78 @@
                 return null;
             }
 
+            function parseTimeToMinutes(timeStr) {
+                if (!timeStr) {
+                    return null;
+                }
+
+                var parts = String(timeStr).split(':');
+                if (parts.length < 2) {
+                    return null;
+                }
+
+                var hours = parseInt(parts[0], 10);
+                var minutes = parseInt(parts[1], 10);
+
+                if (isNaN(hours) || isNaN(minutes)) {
+                    return null;
+                }
+
+                return (hours * 60) + minutes;
+            }
+
+            function generateTimeSlotsForLocation(location) {
+                if (!location) {
+                    return [];
+                }
+
+                var startMinutes = parseTimeToMinutes(location.opening_time);
+                var endMinutes = parseTimeToMinutes(location.closing_time);
+                var interval = parseInt(location.time_slot_interval, 10);
+
+                if (isNaN(interval) || interval <= 0) {
+                    interval = 30;
+                }
+
+                if (startMinutes === null || endMinutes === null) {
+                    return [];
+                }
+
+                var slots = [];
+                for (var current = startMinutes; current <= endMinutes; current += interval) {
+                    var hours = Math.floor(current / 60);
+                    var mins = current % 60;
+                    var hoursStr = hours < 10 ? '0' + hours : String(hours);
+                    var minsStr = mins < 10 ? '0' + mins : String(mins);
+                    slots.push(hoursStr + ':' + minsStr);
+                }
+
+                return slots;
+            }
+
+            function populateTimeOptions(locationId, selectedTime) {
+                var timeSelect = $('#rb-portal-time');
+                if (!timeSelect.length) {
+                    return;
+                }
+
+                var placeholder = rb_ajax.select_time_text || 'Select time';
+                var slots = generateTimeSlotsForLocation(findLocation(locationId));
+
+                timeSelect.empty();
+                timeSelect.append('<option value="">' + placeholder + '</option>');
+
+                if (!slots.length) {
+                    timeSelect.append('<option value="" disabled>' + (rb_ajax.no_slots_text || 'No available times') + '</option>');
+                    return;
+                }
+
+                slots.forEach(function(slot) {
+                    var selectedAttr = slot === selectedTime ? ' selected' : '';
+                    timeSelect.append('<option value="' + slot + '"' + selectedAttr + '>' + slot + '</option>');
+                });
+            }
+
             function formatDate(dateObj) {
                 var year = dateObj.getFullYear();
                 var month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -401,6 +476,11 @@
 
                 if (detailsLanguageField.length) {
                     detailsLanguageField.val(targetLanguage);
+                }
+
+                var languageSelector = $('#rb-portal-language-selector');
+                if (languageSelector.length) {
+                    languageSelector.val(targetLanguage);
                 }
 
                 var needsPersist = !!options.persist;
@@ -497,6 +577,7 @@
                 $('#rb-portal-date').attr('max', formatDate(maxDate));
 
                 updatePortalLocationSummary(location);
+                populateTimeOptions(locationId);
             }
 
             function resetAvailabilityState() {
@@ -512,28 +593,6 @@
             }
 
             $('#rb-portal-start').on('click', function() {
-                showPortalStep('1');
-            });
-
-            $('#rb-portal-back-to-start').on('click', function() {
-                showPortalStep('start');
-            });
-
-            $('#rb-portal-language-form').on('submit', function(e) {
-                e.preventDefault();
-                var language = $(this).find('input[name="language"]:checked').val();
-
-                if (!language) {
-                    alert(rb_ajax.choose_language_text || 'Please select a language.');
-                    return;
-                }
-
-                var willReload = setLanguage(language, { persist: true, resumeStep: '2' });
-
-                if (willReload) {
-                    return;
-                }
-
                 resetAvailabilityState();
 
                 var currentLocation = $('#rb-portal-location').val();
@@ -543,18 +602,32 @@
                 }
 
                 applyLocationConstraints(currentLocation);
+                populateTimeOptions(currentLocation);
                 showPortalStep('2');
             });
 
-            $('#rb-portal-back-to-language').on('click', function() {
+            $('#rb-portal-back-to-start').on('click', function() {
                 resetAvailabilityState();
-                showPortalStep('1');
+                showPortalStep('start');
+            });
+
+            $('#rb-portal-language-selector').on('change', function() {
+                var language = $(this).val();
+                if (!language) {
+                    return;
+                }
+
+                var willReload = setLanguage(language, { persist: true, resumeStep: '2' });
+                if (!willReload) {
+                    resetAvailabilityState();
+                }
             });
 
             $('#rb-portal-location').on('change', function() {
-                applyLocationConstraints($(this).val());
+                var selectedLocation = $(this).val();
+                applyLocationConstraints(selectedLocation);
                 resetAvailabilityState();
-                $('#rb-portal-time').val('');
+                populateTimeOptions(selectedLocation);
             });
 
             $('#rb-portal-availability-form').on('submit', function(e) {
@@ -644,7 +717,10 @@
 
             // Initialize default state
             if (locationsData.length) {
-                applyLocationConstraints($('#rb-portal-location').val() || locationsData[0].id);
+                var initialLocation = $('#rb-portal-location').val() || locationsData[0].id;
+                $('#rb-portal-location').val(initialLocation);
+                applyLocationConstraints(initialLocation);
+                populateTimeOptions(initialLocation, $('#rb-portal-time').val());
             }
             setLanguage(selectedLanguage || $('#rb-portal-language-selected').val());
 
@@ -653,14 +729,18 @@
                     var resumeStep = sessionStorage.getItem('rbPortalResumeStep');
                     var resumeLanguage = sessionStorage.getItem('rbPortalSelectedLanguage');
 
-                    if (resumeStep && resumeLanguage) {
-                        if (resumeLanguage === rb_ajax.current_language) {
-                            showPortalStep(resumeStep);
-                        }
+                        if (resumeStep && resumeLanguage) {
+                            if (resumeLanguage === rb_ajax.current_language) {
+                                if (resumeStep === '2') {
+                                    resetAvailabilityState();
+                                    populateTimeOptions($('#rb-portal-location').val());
+                                }
+                                showPortalStep(resumeStep);
+                            }
 
-                        sessionStorage.removeItem('rbPortalResumeStep');
-                        sessionStorage.removeItem('rbPortalSelectedLanguage');
-                    }
+                            sessionStorage.removeItem('rbPortalResumeStep');
+                            sessionStorage.removeItem('rbPortalSelectedLanguage');
+                        }
                 } catch (resumeError) {
                     // Ignore storage errors
                 }

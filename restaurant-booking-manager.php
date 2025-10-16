@@ -224,17 +224,7 @@ function rb_booking_shortcode($atts) {
     }
 
     $frontend = new RB_Frontend();
-    return $frontend->render_booking_form($atts);
-}
-
-add_shortcode('restaurant_booking_portal', 'rb_booking_portal_shortcode');
-function rb_booking_portal_shortcode($atts) {
-    if (!class_exists('RB_Frontend')) {
-        require_once RB_PLUGIN_DIR . 'public/class-frontend.php';
-    }
-
-    $frontend = new RB_Frontend();
-    return $frontend->render_multi_location_portal($atts);
+    return $frontend->render_booking_portal($atts);
 }
 
 add_shortcode('restaurant_booking_manager', 'rb_booking_manager_shortcode');

@@ -470,7 +470,7 @@ class RB_Booking {
         }
 
         $range_seconds = absint($range_minutes) * MINUTE_IN_SECONDS;
-        $suggestions = array();
+        $candidates = array();
 
         foreach ($all_slots as $slot) {
             $slot_timestamp = strtotime($date . ' ' . $slot);
@@ -478,14 +478,39 @@ class RB_Booking {
                 continue;
             }
 
-            if (abs($slot_timestamp - $target_timestamp) <= $range_seconds) {
+            $difference = abs($slot_timestamp - $target_timestamp);
+            if ($difference <= $range_seconds) {
                 if ($this->is_time_slot_available($date, $slot, $guest_count, null, $location_id)) {
-                    $suggestions[] = $slot;
+                    $candidates[] = array(
+                        'time' => $slot,
+                        'diff' => $difference,
+                        'is_after' => $slot_timestamp > $target_timestamp
+                    );
                 }
             }
         }
 
-        return $suggestions;
+        if (empty($candidates)) {
+            return array();
+        }
+
+        usort($candidates, function($a, $b) {
+            if ($a['diff'] === $b['diff']) {
+                if ($a['is_after'] === $b['is_after']) {
+                    return 0;
+                }
+
+                return $a['is_after'] ? 1 : -1;
+            }
+
+            return ($a['diff'] < $b['diff']) ? -1 : 1;
+        });
+
+        $limited = array_slice($candidates, 0, 2);
+
+        return array_map(function($candidate) {
+            return $candidate['time'];
+        }, $limited);
     }
 
     private function generate_time_slots_for_location($opening_time, $closing_time, $interval) {
