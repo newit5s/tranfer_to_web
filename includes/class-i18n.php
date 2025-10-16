@@ -64,18 +64,34 @@ class RB_I18n {
         // Priority 1: Session (persists across pages)
         if ($this->can_use_sessions()) {
             if (isset($_SESSION['rb_language'])) {
-                $this->current_language = sanitize_text_field($_SESSION['rb_language']);
-                return;
+                $session_lang = sanitize_text_field($_SESSION['rb_language']);
+                if ($this->is_valid_language($session_lang)) {
+                    $this->current_language = $session_lang;
+                    return;
+                }
+
+                // Session contains an invalid language code – clean it up so the
+                // rest of the detection chain can run without stale data.
+                unset($_SESSION['rb_language']);
             }
         }
 
         // Priority 2: Cookie
         if (isset($_COOKIE['rb_language'])) {
-            $this->current_language = sanitize_text_field($_COOKIE['rb_language']);
-            if ($this->can_use_sessions()) {
-                $_SESSION['rb_language'] = $this->current_language;
+            $cookie_lang = sanitize_text_field(wp_unslash($_COOKIE['rb_language']));
+
+            if ($this->is_valid_language($cookie_lang)) {
+                $this->current_language = $cookie_lang;
+                if ($this->can_use_sessions()) {
+                    $_SESSION['rb_language'] = $this->current_language;
+                }
+                return;
             }
-            return;
+
+            // Cookie value is invalid. Remove it to avoid language mismatch in the
+            // following requests.
+            setcookie('rb_language', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl());
+            unset($_COOKIE['rb_language']);
         }
         
         // Priority 3: URL parameter
@@ -189,6 +205,7 @@ class RB_I18n {
 
             // Save to cookie (30 days)
             setcookie('rb_language', $lang, time() + (86400 * 30), COOKIEPATH, COOKIE_DOMAIN, is_ssl());
+            $_COOKIE['rb_language'] = $lang;
             
             // Save to user meta if logged in
             if (is_user_logged_in()) {
