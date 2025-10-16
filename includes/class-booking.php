@@ -354,8 +354,8 @@ class RB_Booking {
 
         // Tính tổng số khách đã book (pending + confirmed)
         $exclude_sql = '';
-        if ($exclude_booking_id) {
-            $exclude_sql = $wpdb->prepare(' AND id != %d', (int)$exclude_booking_id);
+        if (null !== $exclude_booking_id) {
+            $exclude_sql = $wpdb->prepare(' AND id != %d', (int) $exclude_booking_id);
         }
 
         $booked_guests = (int) $wpdb->get_var($wpdb->prepare(
@@ -370,14 +370,28 @@ class RB_Booking {
         ));
 
         $remaining_capacity = $total_capacity - $booked_guests;
+        if ($remaining_capacity < $guest_count) {
+            return false;
+        }
 
-        return $remaining_capacity >= $guest_count;
+        // Đảm bảo còn bàn phù hợp với số lượng khách
+        $available_table = $this->get_smallest_available_table($date, $time, $guest_count, $location_id, $exclude_booking_id);
+
+        return !empty($available_table);
     }
 
-    public function get_smallest_available_table($date, $time, $guest_count, $location_id = 1) {
+    public function get_smallest_available_table($date, $time, $guest_count, $location_id = 1, $exclude_booking_id = null) {
         global $wpdb;
         $t = $wpdb->prefix . 'rb_tables';
         $b = $wpdb->prefix . 'rb_bookings';
+
+        $exclude_sql = '';
+        $params = array((int)$location_id, (int)$guest_count, $date, $time, (int)$location_id);
+
+        if (null !== $exclude_booking_id) {
+            $exclude_sql = ' AND b.id != %d';
+            $params[] = (int) $exclude_booking_id;
+        }
 
         $sql = $wpdb->prepare(
             "SELECT t.table_number, t.capacity
@@ -393,10 +407,11 @@ class RB_Booking {
                    AND b.location_id = %d
                    AND b.status IN ('confirmed', 'pending')
                    AND b.table_number IS NOT NULL
+                   {$exclude_sql}
                )
              ORDER BY t.capacity ASC, t.table_number ASC
              LIMIT 1",
-            (int)$location_id, (int)$guest_count, $date, $time, (int)$location_id
+            $params
         );
 
         return $wpdb->get_row($sql);
