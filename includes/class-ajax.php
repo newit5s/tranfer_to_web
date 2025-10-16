@@ -22,6 +22,7 @@ class RB_Ajax {
         add_action('wp_ajax_rb_set_customer_vip', array($this, 'set_customer_vip'));
         add_action('wp_ajax_rb_set_customer_blacklist', array($this, 'set_customer_blacklist'));
         add_action('wp_ajax_rb_get_customer_stats', array($this, 'get_customer_stats'));
+        add_action('wp_ajax_rb_update_customer_note', array($this, 'update_customer_note'));
         
         // NEW: Advanced features from Settings
         add_action('wp_ajax_rb_cleanup_old_bookings', array($this, 'cleanup_old_bookings'));
@@ -310,23 +311,60 @@ class RB_Ajax {
         if (!current_user_can('manage_options')) {
             wp_die(__('Unauthorized', 'restaurant-booking'));
         }
-        
+
         if (!check_ajax_referer('rb_admin_nonce', 'nonce', false)) {
             wp_send_json_error(array('message' => __('Security check failed', 'restaurant-booking')));
         }
-        
+
         $customer_id = intval($_POST['customer_id']);
         $status = intval($_POST['status']);
-        
+
         global $rb_customer;
         $result = $rb_customer->set_blacklist($customer_id, $status);
-        
+
         if ($result !== false) {
             $message = $status ? 'Đã blacklist khách hàng' : 'Đã bỏ blacklist';
             wp_send_json_success(array('message' => $message));
         } else {
             wp_send_json_error(array('message' => __('Failed to update blacklist status', 'restaurant-booking')));
         }
+    }
+
+    /**
+     * Update internal customer note from admin.
+     */
+    public function update_customer_note() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized', 'restaurant-booking'));
+        }
+
+        if (!check_ajax_referer('rb_admin_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => __('Security check failed', 'restaurant-booking')));
+        }
+
+        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+        $note = isset($_POST['note']) ? sanitize_textarea_field(wp_unslash($_POST['note'])) : '';
+
+        if (!$customer_id) {
+            wp_send_json_error(array('message' => __('Invalid customer.', 'restaurant-booking')));
+        }
+
+        if (!class_exists('RB_Customer')) {
+            require_once RB_PLUGIN_DIR . 'includes/class-customer.php';
+        }
+
+        global $rb_customer;
+        if (!$rb_customer) {
+            $rb_customer = new RB_Customer();
+        }
+
+        $updated = $rb_customer->update_customer_notes($customer_id, $note);
+
+        if ($updated === false) {
+            wp_send_json_error(array('message' => __('Could not save note. Please try again.', 'restaurant-booking')));
+        }
+
+        wp_send_json_success(array('message' => __('Customer note saved successfully.', 'restaurant-booking')));
     }
 
     /**

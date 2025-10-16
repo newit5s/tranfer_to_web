@@ -1254,6 +1254,7 @@ class RB_Admin {
                         <th style="width: 80px;"><?php rb_e('no_show'); ?></th>
                         <th style="width: 100px;"><?php rb_e('last_visit'); ?></th>
                         <th style="width: 100px;"><?php rb_e('status'); ?></th>
+                        <th style="width: 220px;"><?php esc_html_e('Notes', 'restaurant-booking'); ?></th>
                         <th style="width: 200px;"><?php rb_e('actions'); ?></th>
                     </tr>
                 </thead>
@@ -1312,7 +1313,14 @@ class RB_Admin {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <button class="button button-small rb-view-history" 
+                                    <textarea class="rb-admin-customer-note" data-customer-id="<?php echo esc_attr($customer->id); ?>" rows="3" placeholder="<?php echo esc_attr__('Add internal note...', 'restaurant-booking'); ?>"><?php echo esc_textarea($customer->customer_notes); ?></textarea>
+                                    <div class="rb-admin-note-actions">
+                                        <button type="button" class="button button-small rb-admin-save-note" data-customer-id="<?php echo esc_attr($customer->id); ?>"><?php esc_html_e('Save note', 'restaurant-booking'); ?></button>
+                                        <span class="rb-admin-note-status" aria-live="polite"></span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="button button-small rb-view-history"
                                             data-customer-id="<?php echo $customer->id; ?>"
                                             data-customer-phone="<?php echo esc_attr($customer->phone); ?>">
                                         <?php rb_e('history'); ?>
@@ -1341,7 +1349,7 @@ class RB_Admin {
                         <?php endforeach; ?>
                     <?php else : ?>
                         <tr>
-                            <td colspan="11" style="text-align: center; padding: 40px;">
+                            <td colspan="12" style="text-align: center; padding: 40px;">
                                 <p style="font-size: 16px; color: #666;"><?php rb_e('no_customers'); ?></p>
                             </td>
                         </tr>
@@ -1368,8 +1376,34 @@ class RB_Admin {
                 font-weight: 600;
                 text-transform: uppercase;
             }
+
+            .rb-admin-customer-note {
+                width: 100%;
+                min-height: 70px;
+                resize: vertical;
+                padding: 6px 8px;
+                border-radius: 4px;
+                border: 1px solid #d0d0d0;
+                background: #fff;
+            }
+
+            .rb-admin-note-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 6px;
+            }
+
+            .rb-admin-note-status {
+                font-size: 12px;
+                color: #2ecc71;
+            }
+
+            .rb-admin-note-status.is-error {
+                color: #e74c3c;
+            }
         </style>
-        
+
         <script>
         jQuery(document).ready(function($) {
             // View history
@@ -1478,6 +1512,45 @@ class RB_Admin {
                         }
                     });
                 }
+            });
+
+            // Save customer note
+            $('.rb-admin-save-note').on('click', function() {
+                var $button = $(this);
+                var customerId = $button.data('customer-id');
+                var $row = $button.closest('tr');
+                var $textarea = $row.find('.rb-admin-customer-note');
+                var $status = $row.find('.rb-admin-note-status');
+                var note = $textarea.val();
+
+                $status.removeClass('is-error').text('<?php echo esc_js(__('Saving...', 'restaurant-booking')); ?>');
+                $button.prop('disabled', true).text('<?php echo esc_js(__('Saving...', 'restaurant-booking')); ?>');
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'rb_update_customer_note',
+                        customer_id: customerId,
+                        note: note,
+                        nonce: '<?php echo wp_create_nonce("rb_admin_nonce"); ?>'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            var message = response.data && response.data.message ? response.data.message : '<?php echo esc_js(__('Customer note saved successfully.', 'restaurant-booking')); ?>';
+                            $status.removeClass('is-error').text(message);
+                        } else {
+                            var errorMessage = response.data && response.data.message ? response.data.message : '<?php echo esc_js(__('Could not save note. Please try again.', 'restaurant-booking')); ?>';
+                            $status.addClass('is-error').text(errorMessage);
+                        }
+                    },
+                    error: function() {
+                        $status.addClass('is-error').text('<?php echo esc_js(__('Could not save note. Please try again.', 'restaurant-booking')); ?>');
+                    },
+                    complete: function() {
+                        $button.prop('disabled', false).text('<?php echo esc_js(__('Save note', 'restaurant-booking')); ?>');
+                    }
+                });
             });
         });
         </script>
