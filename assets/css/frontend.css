@@ -525,13 +525,66 @@
 
 /* Manager Portal Styles */
 .rb-manager {
-    background: #121212;
-    border: 1px solid #2c2c2c;
-    border-radius: 12px;
-    padding: 24px;
-    color: #f0f0f0;
+    background: linear-gradient(145deg, #111111 0%, #1c1814 100%);
+    border: 1px solid rgba(120, 90, 60, 0.45);
+    border-radius: 16px;
+    padding: 28px;
+    color: #f5f3ef;
     margin: 30px auto;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    max-width: 1200px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.rb-manager-login {
+    max-width: 420px;
+    padding: 32px;
+    border-radius: 20px;
+    margin: 40px auto;
+    background: linear-gradient(160deg, #121212 0%, #1f1a17 100%);
+    border: 1px solid rgba(120, 90, 60, 0.35);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.rb-manager-login h2 {
+    font-size: 26px;
+    margin-bottom: 24px;
+    color: #f7f3e9;
+    text-align: center;
+}
+
+.rb-manager-login .rb-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.rb-manager-login label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #d9d2c7;
+}
+
+.rb-manager-login input,
+.rb-manager-login select {
+    width: 100%;
+    min-height: 46px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(18, 18, 18, 0.9);
+    color: #f5f3ef;
+    padding: 12px 14px;
+    font-size: 15px;
+    line-height: 1.45;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rb-manager-login .rb-portal-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
 }
 
 .rb-manager-header {
@@ -577,19 +630,46 @@
     align-items: center;
 }
 
-.rb-manager-location-switcher select,
+.rb-manager-location-switcher select {
+    flex: 1 1 200px;
+    min-width: 200px;
+    width: 100%;
+    background: rgba(20, 20, 20, 0.92);
+    color: #f5f3ef;
+    border: 1px solid rgba(181, 145, 106, 0.35);
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-height: 44px;
+    line-height: 1.45;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rb-manager-location-switcher select:focus {
+    outline: none;
+    border-color: #b5916a;
+    box-shadow: 0 0 0 2px rgba(181, 145, 106, 0.25);
+}
+
 .rb-manager-nav a {
-    background: #1e1e1e;
-    color: #f0f0f0;
-    border: 1px solid #363636;
-    border-radius: 6px;
-    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid rgba(181, 145, 106, 0.28);
+    background: rgba(22, 22, 22, 0.94);
+    color: #f8f6f2;
+    font-weight: 600;
+    letter-spacing: 0.3px;
 }
 
 .rb-manager-layout {
     display: flex;
     align-items: flex-start;
-    gap: 24px;
+    gap: 28px;
+    flex-wrap: wrap;
 }
 
 .rb-manager-sidebar {
@@ -597,19 +677,21 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    padding: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(181, 145, 106, 0.25);
+    border-radius: 14px;
+    padding: 22px;
+    flex: 1 1 260px;
 }
 
 .rb-manager-location-card {
-    background: rgba(20, 20, 20, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    padding: 18px;
+    background: linear-gradient(155deg, rgba(18, 18, 18, 0.95) 0%, rgba(33, 27, 22, 0.9) 100%);
+    border: 1px solid rgba(181, 145, 106, 0.3);
+    border-radius: 14px;
+    padding: 20px;
     font-size: 14px;
-    color: #d8d8d8;
+    color: #e4ded3;
+    line-height: 1.6;
 }
 
 .rb-manager-location-card h3 {
@@ -639,23 +721,11 @@
     margin: 0;
 }
 
-.rb-manager-nav li a {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: all 0.2s ease-in-out;
-    border: 1px solid #2f2f2f;
-    background: #1e1e1e;
-}
-
 .rb-manager-nav li.active a,
 .rb-manager-nav li a:hover {
-    background: linear-gradient(135deg, #8b6f47, #bfa678);
-    color: #111111;
-    border-color: rgba(255, 255, 255, 0.25);
+    background: linear-gradient(135deg, #8b6f47, #c7a97a);
+    color: #12110f;
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
 .rb-manager-dashboard {
@@ -665,10 +735,11 @@
 }
 
 .rb-manager-filters {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 20px;
+    background: rgba(20, 20, 20, 0.88);
+    border: 1px solid rgba(181, 145, 106, 0.25);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
 .rb-manager-filter-grid {
@@ -688,12 +759,16 @@
 
 .rb-manager-filter-grid input,
 .rb-manager-filter-grid select {
-    background: #1e1e1e;
-    border: 1px solid #333333;
-    border-radius: 6px;
-    padding: 10px;
-    color: #f0f0f0;
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(181, 145, 106, 0.3);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: #f6f4f1;
     font-size: 14px;
+    min-height: 44px;
+    line-height: 1.45;
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .rb-manager-filter-actions {
@@ -716,19 +791,19 @@
 }
 
 .rb-manager-source-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 12px 16px;
+    background: rgba(22, 22, 22, 0.92);
+    border: 1px solid rgba(181, 145, 106, 0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 13px;
-    color: #d8cfc0;
+    color: #e4dbd0;
 }
 
 .rb-manager-content {
-    flex: 1;
+    flex: 1 1 520px;
     min-width: 0;
 }
 
@@ -739,34 +814,39 @@
 .rb-manager-bookings-table {
     width: 100%;
     border-collapse: collapse;
-    background: rgba(20, 20, 20, 0.85);
-    border-radius: 8px;
+    background: rgba(18, 18, 18, 0.9);
+    border-radius: 14px;
     overflow: hidden;
+    border: 1px solid rgba(181, 145, 106, 0.25);
 }
 
 .rb-manager-bookings-table th,
 .rb-manager-bookings-table td {
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(181, 145, 106, 0.15);
     text-align: left;
 }
 
+.rb-manager-bookings-table td {
+    color: #f6f3ee;
+}
+
 .rb-manager-bookings-table th {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(181, 145, 106, 0.18);
     font-weight: 600;
-    color: #f7f3e9;
+    color: #1b1611;
     text-transform: uppercase;
     font-size: 12px;
 }
 
 .rb-manager-bookings-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(181, 145, 106, 0.12);
 }
 
 .rb-manager-note {
     margin-top: 6px;
     font-size: 13px;
-    color: #c7b79a;
+    color: #d9cbb6;
 }
 
 .rb-manager-note-internal {
@@ -775,8 +855,8 @@
 
 .rb-manager-empty {
     text-align: center;
-    padding: 30px !important;
-    color: #bbb;
+    padding: 32px !important;
+    color: #d1c6bb;
 }
 
 .rb-manager-bookings-table-wrapper {
@@ -817,12 +897,51 @@
 .rb-manager-settings input,
 .rb-manager-settings select,
 .rb-manager-settings textarea {
-    background: #1e1e1e;
-    border: 1px solid #333333;
-    border-radius: 6px;
-    padding: 10px;
-    color: #f0f0f0;
+    background: rgba(19, 19, 19, 0.92);
+    border: 1px solid rgba(181, 145, 106, 0.28);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: #f7f4ef;
     font-size: 14px;
+    min-height: 44px;
+    line-height: 1.45;
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rb-manager-create textarea,
+.rb-manager-form-grid textarea,
+.rb-manager-settings textarea {
+    min-height: 88px;
+    resize: vertical;
+}
+
+.rb-manager input::placeholder,
+.rb-manager textarea::placeholder,
+.rb-manager select::placeholder {
+    color: rgba(245, 243, 239, 0.6);
+}
+
+.rb-manager-create input:focus,
+.rb-manager-create select:focus,
+.rb-manager-create textarea:focus,
+.rb-manager-form-grid input:focus,
+.rb-manager-form-grid select:focus,
+.rb-manager-form-grid textarea:focus,
+.rb-manager-settings-grid input:focus,
+.rb-manager-settings-grid select:focus,
+.rb-manager-settings-grid textarea:focus,
+.rb-manager-settings input:focus,
+.rb-manager-settings select:focus,
+.rb-manager-settings textarea:focus,
+.rb-manager-filter-grid input:focus,
+.rb-manager-filter-grid select:focus,
+.rb-manager-login input:focus,
+.rb-manager-login select:focus,
+.rb-manager-location-switcher select:focus {
+    outline: none;
+    border-color: #b5916a;
+    box-shadow: 0 0 0 2px rgba(181, 145, 106, 0.25);
 }
 
 .rb-manager-checkbox {
@@ -921,7 +1040,7 @@
 
 .rb-manager-settings small {
     font-size: 12px;
-    color: #9a9a9a;
+    color: rgba(239, 234, 226, 0.7);
 }
 
 .rb-manager-stats {
@@ -932,10 +1051,11 @@
 }
 
 .rb-manager-stat-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 15px 18px;
+    background: rgba(22, 22, 22, 0.9);
+    border: 1px solid rgba(181, 145, 106, 0.25);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
 }
 
 .rb-manager-stat-label {
@@ -943,14 +1063,14 @@
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-    color: #c5bbac;
+    color: #d9ccb9;
     margin-bottom: 6px;
 }
 
 .rb-manager-stat-value {
     font-size: 22px;
     font-weight: 600;
-    color: #f7f3e9;
+    color: #fdfaf6;
 }
 
 .rb-manager-tip,
@@ -1032,13 +1152,15 @@
 
 .rb-manager-customer-note {
     width: 100%;
-    background: #1e1e1e;
-    border: 1px solid #333333;
-    border-radius: 6px;
-    padding: 8px 10px;
-    color: #f0f0f0;
-    font-size: 13px;
-    margin-bottom: 8px;
+    background: rgba(19, 19, 19, 0.92);
+    border: 1px solid rgba(181, 145, 106, 0.28);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: #f7f4ef;
+    font-size: 14px;
+    margin-bottom: 10px;
+    min-height: 80px;
+    resize: vertical;
 }
 
 .rb-manager-history {
@@ -1145,6 +1267,17 @@
     border-radius: 999px !important;
 }
 
+.rb-manager .rb-btn-primary {
+    background: linear-gradient(135deg, #a6784a, #d7bd8e) !important;
+    color: #12110f !important;
+    border: none !important;
+    box-shadow: 0 10px 24px rgba(163, 120, 73, 0.35) !important;
+}
+
+.rb-manager .rb-btn-primary:hover {
+    background: linear-gradient(135deg, #b9895a, #e5cca2) !important;
+}
+
 .rb-manager .rb-btn-danger {
     background: #c0392b !important;
     color: #fff !important;
@@ -1155,12 +1288,13 @@
 }
 
 .rb-manager .rb-btn-secondary {
-    background: #2a2a2a !important;
-    color: #e0e0e0 !important;
+    background: rgba(36, 36, 36, 0.9) !important;
+    color: #f2eeea !important;
+    border: 1px solid rgba(181, 145, 106, 0.28) !important;
 }
 
 .rb-manager .rb-btn-secondary:hover {
-    background: #3a3a3a !important;
+    background: rgba(55, 55, 55, 0.95) !important;
 }
 
 #rb-manager-table-feedback,
@@ -1185,7 +1319,7 @@
 
 @media (max-width: 768px) {
     .rb-manager {
-        padding: 20px;
+        padding: 22px;
     }
 
     .rb-manager-nav ul {
@@ -1216,5 +1350,39 @@
 
     .rb-manager-modal-dialog {
         padding: 22px;
+    }
+}
+
+@media (max-width: 600px) {
+    .rb-manager {
+        padding: 18px;
+        margin: 20px auto;
+    }
+
+    .rb-manager-login {
+        padding: 26px;
+        margin: 24px auto;
+    }
+
+    .rb-manager-location-switcher form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rb-manager-location-switcher select {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .rb-manager-nav li a {
+        justify-content: center;
+    }
+
+    .rb-manager .rb-btn-primary,
+    .rb-manager .rb-btn-secondary,
+    .rb-manager .rb-btn-danger {
+        width: 100%;
+        text-align: center;
     }
 }
