@@ -190,12 +190,13 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                             <div class="rb-new-language-switcher">
                                 <select id="rb-new-language-select" class="rb-new-lang-select">
                                     <?php foreach ($languages as $code => $label) : ?>
-                                        <option value="<?php echo esc_attr($code); ?>" 
+                                        <option value="<?php echo esc_attr($code); ?>"
                                             <?php selected($code, $current_language); ?>>
                                             <?php echo esc_html($label); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <p class="rb-new-language-status" role="status" aria-live="polite" hidden></p>
                             </div>
                         </div>
 
@@ -268,12 +269,13 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                             <div class="rb-new-language-switcher">
                                 <select class="rb-new-lang-select rb-new-lang-select-step2">
                                     <?php foreach ($languages as $code => $label) : ?>
-                                        <option value="<?php echo esc_attr($code); ?>" 
+                                        <option value="<?php echo esc_attr($code); ?>"
                                             <?php selected($code, $current_language); ?>>
                                             <?php echo esc_html($label); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <p class="rb-new-language-status" role="status" aria-live="polite" hidden></p>
                             </div>
                         </div>
 

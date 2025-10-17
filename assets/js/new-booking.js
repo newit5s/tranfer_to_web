@@ -11,6 +11,7 @@
         isInline: false,
         currentStep: 1,
         selectedData: {},
+        currentLanguage: '',
         
         // Localized strings (will be populated by WordPress)
         strings: window.rbBookingStrings || {
@@ -27,7 +28,10 @@
             checkingAvailability: 'Check Availability',
             confirmBooking: 'Confirm Booking',
             invalidEmail: 'Please enter a valid email address',
-            invalidPhone: 'Please enter a valid phone number'
+            invalidPhone: 'Please enter a valid phone number',
+            languageSwitching: 'Switching language…',
+            languageSwitched: 'Language switched',
+            languageSwitchFailed: 'Unable to switch language. Please try again.'
         },
 
         init: function() {
@@ -38,6 +42,10 @@
             }
 
             this.isInline = this.modal.data('inline-mode') === 1 || this.modal.hasClass('rb-new-modal-inline');
+            this.currentLanguage = $('#rb-new-hidden-language').val() || (window.rbBookingAjax && window.rbBookingAjax.currentLanguage) || '';
+            if (!this.currentLanguage) {
+                this.currentLanguage = $('.rb-new-lang-select').first().val() || '';
+            }
             this.bindEvents();
             this.setInitialValues();
             this.preventBodyScroll();
@@ -150,20 +158,110 @@
         },
 
         changeLanguage: function(e) {
-            const newLang = $(e.target).val();
-            $('#rb-new-hidden-language').val(newLang);
-            
-            // Sync all language selects
-            $('.rb-new-lang-select').val(newLang);
+            const $select = $(e.target);
+            const newLang = $select.val();
+            const previousLanguage = this.currentLanguage || (window.rbBookingAjax && window.rbBookingAjax.currentLanguage) || '';
 
-            // Optional: Reload content with new language via AJAX
-            this.reloadContentForLanguage(newLang);
+            if (!newLang || newLang === previousLanguage) {
+                return;
+            }
+
+            const $status = this.getLanguageStatusElement($select);
+            this.updateLanguageStatus($status, this.strings.languageSwitching || 'Switching language…', 'loading');
+
+            if (!window.rbBookingAjax || !rbBookingAjax.languageAction || !rbBookingAjax.languageNonce) {
+                this.currentLanguage = newLang;
+                $('#rb-new-hidden-language').val(newLang);
+                $('.rb-new-lang-select').val(newLang);
+                this.updateLanguageStatus($status, this.strings.languageSwitched || 'Language switched', 'success');
+                setTimeout(() => this.updateLanguageStatus($status, '', ''), 2500);
+                return;
+            }
+
+            this.toggleLanguageLoading(true);
+
+            $.ajax({
+                url: rbBookingAjax.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: rbBookingAjax.languageAction,
+                    language: newLang,
+                    nonce: rbBookingAjax.languageNonce
+                }
+            }).done((response) => {
+                if (response && response.success) {
+                    this.currentLanguage = newLang;
+                    $('#rb-new-hidden-language').val(newLang);
+                    $('.rb-new-lang-select').val(newLang);
+
+                    if (rbBookingAjax.shouldReloadOnLanguageChange) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    const successMessage = this.strings.languageSwitched || 'Language switched';
+                    this.updateLanguageStatus($status, successMessage, 'success');
+                    setTimeout(() => this.updateLanguageStatus($status, '', ''), 2500);
+                } else {
+                    this.currentLanguage = previousLanguage;
+                    $('#rb-new-hidden-language').val(previousLanguage);
+                    $('.rb-new-lang-select').val(previousLanguage);
+
+                    const errorMessage = response && response.data && response.data.message;
+                    this.updateLanguageStatus($status, errorMessage || this.strings.languageSwitchFailed || this.strings.connectionError, 'error');
+                }
+            }).fail(() => {
+                this.currentLanguage = previousLanguage;
+                $('#rb-new-hidden-language').val(previousLanguage);
+                $('.rb-new-lang-select').val(previousLanguage);
+                this.updateLanguageStatus($status, this.strings.languageSwitchFailed || this.strings.connectionError, 'error');
+            }).always(() => {
+                this.toggleLanguageLoading(false);
+            });
         },
 
-        reloadContentForLanguage: function(language) {
-            // This could make an AJAX call to reload form content in the new language
-            // For now, we'll just update the hidden field
-            console.log('Language changed to:', language);
+        getLanguageStatusElement: function($select) {
+            const $container = $select.closest('.rb-new-language-switcher');
+            if ($container.length) {
+                const $status = $container.find('.rb-new-language-status');
+                if ($status.length) {
+                    return $status;
+                }
+            }
+            return $('.rb-new-language-status').first();
+        },
+
+        toggleLanguageLoading: function(isLoading) {
+            const $selects = $('.rb-new-lang-select');
+            if (isLoading) {
+                $selects.prop('disabled', true).addClass('rb-new-lang-loading');
+            } else {
+                $selects.prop('disabled', false).removeClass('rb-new-lang-loading');
+            }
+        },
+
+        updateLanguageStatus: function($status, message, state) {
+            if (!$status || !$status.length) {
+                return;
+            }
+
+            $status.removeClass('is-success is-error is-loading');
+
+            if (!message) {
+                $status.text('').attr('hidden', true);
+                return;
+            }
+
+            if (state === 'success') {
+                $status.addClass('is-success');
+            } else if (state === 'error') {
+                $status.addClass('is-error');
+            } else if (state === 'loading') {
+                $status.addClass('is-loading');
+            }
+
+            $status.text(message).attr('hidden', false);
         },
 
         checkAvailability: function(e) {
@@ -326,11 +424,14 @@
 
         setHiddenFields: function() {
             const { locationId, date, time, guests } = this.selectedData;
-            
+
             $('#rb-new-hidden-location').val(locationId);
             $('#rb-new-hidden-date').val(date);
             $('#rb-new-hidden-time').val(time);
             $('#rb-new-hidden-guests').val(guests);
+            if (this.currentLanguage) {
+                $('#rb-new-hidden-language').val(this.currentLanguage);
+            }
         },
 
         goBackToStep1: function(e) {

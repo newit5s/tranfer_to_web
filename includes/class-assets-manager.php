@@ -71,6 +71,10 @@ class RB_Assets_Manager {
         wp_localize_script('rb-new-booking', 'rbBookingAjax', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('rb_frontend_nonce'),
+            'languageNonce' => wp_create_nonce('rb_language_nonce'),
+            'languageAction' => 'rb_switch_language',
+            'shouldReloadOnLanguageChange' => true,
+            'currentLanguage' => rb_get_current_language(),
         ));
 
         wp_localize_script('rb-new-booking', 'rbBookingStrings', array(
@@ -88,6 +92,9 @@ class RB_Assets_Manager {
             'confirmBooking' => rb_t('confirm_booking', __('Confirm Booking', 'restaurant-booking')),
             'invalidEmail' => rb_t('invalid_email', __('Please enter a valid email address', 'restaurant-booking')),
             'invalidPhone' => rb_t('invalid_phone', __('Please enter a valid phone number', 'restaurant-booking')),
+            'languageSwitching' => rb_t('language_switching', __('Switching language…', 'restaurant-booking')),
+            'languageSwitched' => rb_t('language_switched', __('Language switched', 'restaurant-booking')),
+            'languageSwitchFailed' => rb_t('language_switch_failed', __('Could not change language. Please try again.', 'restaurant-booking')),
         ));
     }
 
@@ -106,9 +113,9 @@ class RB_Assets_Manager {
             }
 
             .rb-new-suggestion-btn.selected {
-                background: #ff6b6b !important;
+                background: #5c4033 !important;
                 color: #ffffff !important;
-                border-color: #ff6b6b !important;
+                border-color: #5c4033 !important;
                 transform: translateY(-1px);
             }
 
@@ -139,8 +146,8 @@ class RB_Assets_Manager {
             .rb-new-form-group input.error,
             .rb-new-form-group select.error,
             .rb-new-form-group textarea.error {
-                border-color: #fc8181 !important;
-                box-shadow: 0 0 0 3px rgba(252, 129, 129, 0.1) !important;
+                border-color: #d6a39b !important;
+                box-shadow: 0 0 0 3px rgba(214, 163, 155, 0.18) !important;
             }
 
             .rb-new-result.success {
