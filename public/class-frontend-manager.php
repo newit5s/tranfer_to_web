@@ -17,6 +17,20 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
     private $manager_login_error = '';
     private $active_location_id = 0;
 
+    private function ensure_manager_assets() {
+        if (is_admin()) {
+            return;
+        }
+
+        if (!function_exists('rb_frontend_enqueue_scripts')) {
+            return;
+        }
+
+        add_filter('rb_enqueue_legacy_frontend_assets', '__return_true', 10, 0);
+        rb_frontend_enqueue_scripts();
+        remove_filter('rb_enqueue_legacy_frontend_assets', '__return_true', 10);
+    }
+
     private function t($key, $fallback, $context = '') {
         if (function_exists('rb_t')) {
             return rb_t($key, $fallback, $context);
@@ -184,6 +198,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         if (!$manager_permissions) {
             return $this->render_manager_login($atts, $locations);
         }
+
+        $this->ensure_manager_assets();
 
         $allowed_location_ids = $manager_permissions['allowed_locations'];
         $filtered_locations = $locations;
