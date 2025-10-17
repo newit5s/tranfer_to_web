@@ -851,6 +851,252 @@
                 cells.eq(10).html(buildActionButtons(booking.status, booking.id));
             }
 
+            var customerDetail = $('#rb-customer-detail');
+            var customerLists = $('.rb-customer-list');
+            var customerNumberFormatter = null;
+
+            function formatCustomerNumber(value) {
+                var numeric = parseFloat(value);
+                if (isNaN(numeric)) {
+                    numeric = 0;
+                }
+
+                if (!customerNumberFormatter) {
+                    try {
+                        var intlFormatter = new Intl.NumberFormat(rb_ajax.locale || undefined);
+                        customerNumberFormatter = function(num) {
+                            return intlFormatter.format(num);
+                        };
+                    } catch (error) {
+                        customerNumberFormatter = function(num) {
+                            return String(num);
+                        };
+                    }
+                }
+
+                return customerNumberFormatter(numeric);
+            }
+
+            function decodeCustomerField(value) {
+                if (!value) {
+                    return '';
+                }
+
+                try {
+                    return decodeURIComponent(value);
+                } catch (error) {
+                    return value;
+                }
+            }
+
+            function truncateCustomerNote(note) {
+                if (!note) {
+                    return '';
+                }
+
+                var trimmed = String(note).trim();
+                if (trimmed.length > 120) {
+                    return trimmed.substring(0, 117).trim() + '…';
+                }
+
+                return trimmed;
+            }
+
+            function updateCustomerNotePreview(customerId, note) {
+                if (!customerLists.length) {
+                    return;
+                }
+
+                var $item = customerLists.find('.rb-inbox-item[data-customer-id="' + customerId + '"]').first();
+                if (!$item.length) {
+                    return;
+                }
+
+                var encoded = note ? encodeURIComponent(note) : '';
+                $item.attr('data-notes', encoded);
+
+                var $noteRow = $item.find('[data-note-preview]');
+                var $noteText = $noteRow.find('[data-note-text]');
+
+                if (note && note.trim().length) {
+                    $noteRow.removeAttr('hidden');
+                    $noteText.text(truncateCustomerNote(note));
+                } else {
+                    $noteRow.attr('hidden', 'hidden');
+                    $noteText.text('');
+                }
+            }
+
+            function populateManagerCustomerDetail($item) {
+                if (!customerDetail.length || !$item || !$item.length) {
+                    return;
+                }
+
+                var customerId = $item.attr('data-customer-id') || '';
+                customerDetail.attr('data-active-id', customerId);
+
+                var $empty = customerDetail.find('.rb-inbox-detail-empty');
+                var $body = customerDetail.find('.rb-inbox-detail-body');
+                $empty.hide();
+                $body.removeAttr('hidden');
+
+                var name = $item.attr('data-name') || '';
+                var phone = $item.attr('data-phone') || '';
+                var email = $item.attr('data-email') || '';
+                var total = $item.attr('data-total') || '0';
+                var completed = $item.attr('data-completed') || '0';
+                var cancelled = $item.attr('data-cancelled') || '0';
+                var noShows = $item.attr('data-no-shows') || '0';
+                var successRate = $item.attr('data-success-rate') || '0';
+                var problemRate = $item.attr('data-problem-rate') || '0';
+                var firstVisit = $item.attr('data-first-visit') || '—';
+                var lastVisit = $item.attr('data-last-visit') || '—';
+                var notes = decodeCustomerField($item.attr('data-notes'));
+                var isVip = $item.attr('data-is-vip') === '1';
+                var isBlacklisted = $item.attr('data-is-blacklisted') === '1';
+                var isLoyal = $item.attr('data-is-loyal') === '1';
+                var isProblem = $item.attr('data-is-problem') === '1';
+                var canPromoteVip = $item.attr('data-can-promote-vip') === '1';
+                var problemCount = $item.attr('data-problem-count') || '0';
+                var historyPhone = $item.attr('data-history-phone') || phone;
+
+                customerDetail.find('[data-field="name"]').text(name);
+
+                var $phoneLink = customerDetail.find('[data-field="phone"]').text(phone);
+                if (phone) {
+                    $phoneLink.attr('href', 'tel:' + phone).show();
+                } else {
+                    $phoneLink.removeAttr('href').hide();
+                }
+
+                var $emailLink = customerDetail.find('[data-field="email"]').text(email);
+                if (email) {
+                    $emailLink.attr('href', 'mailto:' + email).show();
+                } else {
+                    $emailLink.removeAttr('href').hide();
+                }
+
+                customerDetail.find('[data-field="total"]').text(formatCustomerNumber(total));
+                customerDetail.find('[data-field="completed"]').text(formatCustomerNumber(completed));
+                customerDetail.find('[data-field="problem-count"]').text(formatCustomerNumber(problemCount));
+                customerDetail.find('[data-field="success-rate"]').text((successRate || '0') + '%');
+                customerDetail.find('[data-field="problem-rate"]').text((problemRate || '0') + '%');
+                customerDetail.find('[data-field="last-visit"]').text(lastVisit || '—');
+                customerDetail.find('[data-field="first-visit"]').text(firstVisit || '—');
+                customerDetail.find('[data-field="cancelled"]').text(formatCustomerNumber(cancelled));
+                customerDetail.find('[data-field="no-shows"]').text(formatCustomerNumber(noShows));
+
+                var $tags = customerDetail.find('[data-badge-row]');
+                var badgeVisible = false;
+
+                function toggleBadge(selector, visible) {
+                    var $badge = $tags.find(selector);
+                    if (!$badge.length) {
+                        return;
+                    }
+
+                    if (visible) {
+                        $badge.removeAttr('hidden');
+                        badgeVisible = true;
+                    } else {
+                        $badge.attr('hidden', 'hidden');
+                    }
+                }
+
+                toggleBadge('[data-badge="vip"]', isVip);
+                toggleBadge('[data-badge="blacklist"]', isBlacklisted);
+                toggleBadge('[data-badge="loyal"]', isLoyal);
+                toggleBadge('[data-badge="problem"]', isProblem);
+
+                if (badgeVisible) {
+                    $tags.removeAttr('hidden');
+                } else {
+                    $tags.attr('hidden', 'hidden');
+                }
+
+                var $noteField = customerDetail.find('.rb-manager-note-field');
+                $noteField.val(notes).attr('data-customer-id', customerId);
+
+                customerDetail.find('.rb-manager-note-status').removeClass('is-error').text('');
+                customerDetail.find('.rb-manager-save-note').attr('data-customer-id', customerId);
+
+                customerDetail
+                    .find('.rb-manager-view-history')
+                    .attr('data-customer-id', customerId)
+                    .attr('data-phone', historyPhone || '');
+
+                customerDetail
+                    .find('.rb-manager-set-vip')
+                    .attr('data-customer-id', customerId)
+                    .toggle(canPromoteVip);
+
+                customerDetail
+                    .find('.rb-manager-blacklist')
+                    .attr('data-customer-id', customerId)
+                    .toggle(!isBlacklisted);
+
+                customerDetail
+                    .find('.rb-manager-unblacklist')
+                    .attr('data-customer-id', customerId)
+                    .toggle(isBlacklisted);
+            }
+
+            function showManagerCustomerDetail($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var $list = $item.closest('.rb-customer-list');
+                $list.find('.rb-inbox-item').removeClass('is-active');
+                $item.addClass('is-active');
+                populateManagerCustomerDetail($item);
+            }
+
+            function refreshManagerCustomerDetail(customerId) {
+                if (!customerDetail.length || !customerId) {
+                    return;
+                }
+
+                var activeId = customerDetail.attr('data-active-id');
+                if (!activeId || String(activeId) !== String(customerId)) {
+                    return;
+                }
+
+                var $item = customerLists.find('.rb-inbox-item[data-customer-id="' + customerId + '"]').first();
+                if ($item.length) {
+                    populateManagerCustomerDetail($item);
+                }
+            }
+
+            function initManagerCustomerInbox() {
+                if (!customerLists.length) {
+                    return;
+                }
+
+                customerLists.on('click', '.rb-inbox-item', function(e) {
+                    if ($(e.target).closest('button, a, textarea, input, label').length) {
+                        return;
+                    }
+
+                    showManagerCustomerDetail($(this));
+                });
+
+                var $initial = customerLists.find('.rb-inbox-item.is-active').first();
+                if (!$initial.length) {
+                    $initial = customerLists.find('.rb-inbox-item').first();
+                }
+
+                if ($initial && $initial.length) {
+                    showManagerCustomerDetail($initial);
+                } else if (customerDetail.length) {
+                    customerDetail.removeAttr('data-active-id');
+                    customerDetail.find('.rb-inbox-detail-body').attr('hidden', true);
+                    customerDetail.find('.rb-inbox-detail-empty').show();
+                }
+            }
+
+            initManagerCustomerInbox();
+
             managerWrapper.on('click', '.rb-manager-action', function(e) {
                 e.preventDefault();
                 var button = $(this);
@@ -983,18 +1229,23 @@
 
             managerWrapper.on('click', '.rb-manager-save-note', function(e) {
                 e.preventDefault();
-                var button = $(this);
-                var customerId = button.data('customerId');
-                var noteField = button.closest('td').find('.rb-manager-customer-note');
-                var noteValue = noteField.length ? noteField.val() : '';
-                var feedback = $('#rb-manager-customers-feedback');
 
-                if (button.prop('disabled')) {
+                var button = $(this);
+                var customerId = button.attr('data-customer-id');
+                if (!customerId || button.prop('disabled')) {
                     return;
                 }
 
+                if (!customerDetail.length) {
+                    return;
+                }
+
+                var noteField = customerDetail.find('.rb-manager-note-field');
+                var noteValue = noteField.length ? noteField.val() || '' : '';
+                var status = customerDetail.find('.rb-manager-note-status');
+
                 button.prop('disabled', true);
-                showManagerFeedback(feedback, 'success', rb_ajax.loading_text || 'Saving...');
+                status.removeClass('is-error').text(rb_ajax.loading_text || 'Saving...');
 
                 $.ajax({
                     url: rb_ajax.ajax_url,
@@ -1007,14 +1258,17 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            showManagerFeedback(feedback, 'success', response.data.message || (rb_ajax.success_text || 'Saved successfully.'));
+                            var message = response.data && response.data.message ? response.data.message : (rb_ajax.success_text || 'Saved successfully.');
+                            status.removeClass('is-error').text(message);
+                            updateCustomerNotePreview(customerId, noteValue);
+                            refreshManagerCustomerDetail(customerId);
                         } else {
-                            var message = response.data && response.data.message ? response.data.message : rb_ajax.error_text;
-                            showManagerFeedback(feedback, 'error', message);
+                            var errorMessage = response.data && response.data.message ? response.data.message : rb_ajax.error_text;
+                            status.addClass('is-error').text(errorMessage);
                         }
                     },
                     error: function() {
-                        showManagerFeedback(feedback, 'error', rb_ajax.error_text);
+                        status.addClass('is-error').text(rb_ajax.error_text);
                     },
                     complete: function() {
                         button.prop('disabled', false);
