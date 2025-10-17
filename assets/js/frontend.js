@@ -750,12 +750,239 @@
         // Manager dashboard actions
         var managerWrapper = $('.rb-manager');
         if (managerWrapper.length) {
+            var bookingDetail = $('#rb-manager-detail');
+            var detailEmptyHtml = bookingDetail.length ? bookingDetail.html() : '';
+            var bookingList = $('.rb-booking-item');
+            var currentBookingId = null;
+
+            function refreshBookingListCache() {
+                bookingList = $('.rb-booking-item');
+            }
+
             function escapeAttribute(value) {
                 return String(value == null ? '' : value)
                     .replace(/&/g, '&amp;')
                     .replace(/"/g, '&quot;')
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;');
+            }
+
+            function escapeHtml(value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function getBookingDataFromElement(item) {
+                if (!item || !item.length) {
+                    return null;
+                }
+
+                return {
+                    id: String(item.data('bookingId') || item.attr('data-booking-id') || ''),
+                    padded_id: String(item.data('paddedId') || item.attr('data-padded-id') || ''),
+                    customer_name: String(item.data('customerName') || item.attr('data-customer-name') || ''),
+                    customer_phone: String(item.data('customerPhone') || item.attr('data-customer-phone') || ''),
+                    customer_email: String(item.data('customerEmail') || item.attr('data-customer-email') || ''),
+                    booking_date: String(item.data('bookingDate') || item.attr('data-booking-date') || ''),
+                    booking_time: String(item.data('bookingTime') || item.attr('data-booking-time') || ''),
+                    date_display: String(item.data('dateDisplay') || item.attr('data-date-display') || ''),
+                    guest_count: String(item.data('guestCount') || item.attr('data-guest-count') || ''),
+                    booking_source: String(item.data('bookingSource') || item.attr('data-booking-source') || ''),
+                    source_label: String(item.data('sourceLabel') || item.attr('data-source-label') || ''),
+                    special_requests: String(item.data('specialRequests') || item.attr('data-special-requests') || ''),
+                    admin_notes: String(item.data('adminNotes') || item.attr('data-admin-notes') || ''),
+                    status: String(item.data('status') || item.attr('data-status') || ''),
+                    status_label: String(item.data('statusLabel') || item.attr('data-status-label') || ''),
+                    table_number: String(item.data('tableNumber') || item.attr('data-table-number') || ''),
+                    created_display: String(item.data('createdDisplay') || item.attr('data-created-display') || '')
+                };
+            }
+
+            function showEmptyDetail() {
+                if (!bookingDetail.length) {
+                    return;
+                }
+
+                var message = bookingDetail.data('emptyMessage') || '';
+                if (message) {
+                    bookingDetail.html('<div class="rb-detail-empty">👈 ' + escapeHtml(message) + '</div>');
+                } else if (detailEmptyHtml) {
+                    bookingDetail.html(detailEmptyHtml);
+                } else {
+                    bookingDetail.empty();
+                }
+
+                currentBookingId = null;
+            }
+
+            function renderBookingDetail(booking) {
+                if (!bookingDetail.length) {
+                    return;
+                }
+
+                if (!booking || !booking.id) {
+                    showEmptyDetail();
+                    return;
+                }
+
+                currentBookingId = String(booking.id);
+
+                var contactLabel = bookingDetail.data('contactLabel') || 'Contact';
+                var bookingLabel = bookingDetail.data('bookingLabel') || 'Booking details';
+                var notesLabel = bookingDetail.data('notesLabel') || 'Notes';
+                var actionsLabel = bookingDetail.data('actionsLabel') || 'Actions';
+                var phoneLabel = bookingDetail.data('phoneLabel') || 'Phone';
+                var emailLabel = bookingDetail.data('emailLabel') || 'Email';
+                var dateLabel = bookingDetail.data('dateLabel') || 'Date';
+                var timeLabel = bookingDetail.data('timeLabel') || 'Time';
+                var guestsLabel = bookingDetail.data('guestsLabel') || 'Guests';
+                var sourceLabel = bookingDetail.data('sourceLabel') || 'Source';
+                var tableLabel = bookingDetail.data('tableLabel') || 'Table';
+                var createdLabel = bookingDetail.data('createdLabel') || 'Created';
+                var specialLabel = bookingDetail.data('specialLabel') || 'Special requests';
+                var internalLabel = bookingDetail.data('internalLabel') || 'Internal notes';
+
+                var subtitleParts = [];
+                if (booking.padded_id || booking.id) {
+                    subtitleParts.push('#' + escapeHtml(booking.padded_id || booking.id));
+                }
+                if (booking.date_display || booking.booking_date) {
+                    subtitleParts.push(escapeHtml(booking.date_display || booking.booking_date));
+                }
+                if (booking.booking_time) {
+                    subtitleParts.push(escapeHtml(booking.booking_time));
+                }
+                var subtitle = subtitleParts.join(' • ');
+
+                var statusLabel = booking.status_label || booking.status || '';
+                var phoneValue = booking.customer_phone ? '<a href="tel:' + escapeAttribute(booking.customer_phone) + '">' + escapeHtml(booking.customer_phone) + '</a>' : '—';
+                var emailValue = booking.customer_email ? '<a href="mailto:' + escapeAttribute(booking.customer_email) + '">' + escapeHtml(booking.customer_email) + '</a>' : '—';
+                var guestsValue = booking.guest_count ? escapeHtml(booking.guest_count) : '0';
+                var tableValue = booking.table_number ? escapeHtml(booking.table_number) : '—';
+                var createdValue = booking.created_display ? escapeHtml(booking.created_display) : '';
+                var sourceValue = booking.source_label ? escapeHtml(booking.source_label) : escapeHtml(booking.booking_source || '');
+
+                var contactHtml = '<div class="rb-detail-section"><h4 class="rb-detail-section-title">' + escapeHtml(contactLabel) + '</h4>' +
+                    '<div class="rb-detail-grid">' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(phoneLabel) + '</span><span class="rb-detail-value">' + phoneValue + '</span></div>' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(emailLabel) + '</span><span class="rb-detail-value">' + emailValue + '</span></div>' +
+                    '</div></div>';
+
+                var bookingInfoHtml = '<div class="rb-detail-section"><h4 class="rb-detail-section-title">' + escapeHtml(bookingLabel) + '</h4>' +
+                    '<div class="rb-detail-grid">' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(dateLabel) + '</span><span class="rb-detail-value large">' + escapeHtml(booking.date_display || booking.booking_date || '') + '</span></div>' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(timeLabel) + '</span><span class="rb-detail-value large">' + escapeHtml(booking.booking_time || '') + '</span></div>' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(guestsLabel) + '</span><span class="rb-detail-value large">' + guestsValue + ' 👥</span></div>' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(sourceLabel) + '</span><span class="rb-detail-value">' + sourceValue + '</span></div>' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(tableLabel) + '</span><span class="rb-detail-value">' + tableValue + '</span></div>' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(createdLabel) + '</span><span class="rb-detail-value">' + createdValue + '</span></div>' +
+                    '</div></div>';
+
+                var notesHtml = '';
+                if (booking.special_requests) {
+                    notesHtml += '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(specialLabel) + '</span><span class="rb-detail-value">' + escapeHtml(booking.special_requests) + '</span></div>';
+                }
+                if (booking.admin_notes) {
+                    notesHtml += '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(internalLabel) + '</span><span class="rb-detail-value">' + escapeHtml(booking.admin_notes) + '</span></div>';
+                }
+
+                var notesSection = notesHtml ? '<div class="rb-detail-section"><h4 class="rb-detail-section-title">' + escapeHtml(notesLabel) + '</h4>' + notesHtml + '</div>' : '';
+
+                var actionsHtml = buildActionButtons(booking.status, booking.id);
+                var actionsSection = '<div class="rb-detail-section"><h4 class="rb-detail-section-title">' + escapeHtml(actionsLabel) + '</h4><div class="rb-detail-actions">' + actionsHtml + '</div></div>';
+
+                bookingDetail.html(
+                    '<div class="rb-detail-header">' +
+                        '<div class="rb-detail-header-row">' +
+                            '<div>' +
+                                '<h3 class="rb-detail-title">' + escapeHtml(booking.customer_name || '') + '</h3>' +
+                                '<p class="rb-detail-subtitle">' + subtitle + '</p>' +
+                            '</div>' +
+                            '<span class="rb-detail-status-badge rb-booking-badge ' + escapeAttribute(booking.status || '') + '">' + escapeHtml(statusLabel) + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="rb-detail-body">' +
+                        contactHtml +
+                        bookingInfoHtml +
+                        notesSection +
+                        actionsSection +
+                    '</div>'
+                );
+            }
+
+            function selectBookingItem(item, scrollIntoView) {
+                if (!item || !item.length) {
+                    showEmptyDetail();
+                    return;
+                }
+
+                refreshBookingListCache();
+                bookingList.removeClass('active');
+                item.addClass('active');
+
+                var data = getBookingDataFromElement(item);
+                renderBookingDetail(data);
+
+                if (scrollIntoView && item.length && item[0].scrollIntoView) {
+                    try {
+                        item[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    } catch (scrollError) {
+                        item[0].scrollIntoView();
+                    }
+                }
+            }
+
+            function filterBookingList(term) {
+                var query = String(term || '').toLowerCase();
+                refreshBookingListCache();
+
+                bookingList.each(function() {
+                    var el = $(this);
+                    var name = String(el.data('customerName') || el.attr('data-customer-name') || '').toLowerCase();
+                    var phone = String(el.data('customerPhone') || el.attr('data-customer-phone') || '').toLowerCase();
+                    var email = String(el.data('customerEmail') || el.attr('data-customer-email') || '').toLowerCase();
+                    var match = !query || name.indexOf(query) !== -1 || phone.indexOf(query) !== -1 || email.indexOf(query) !== -1;
+                    el.toggle(match);
+                });
+
+                var active = bookingList.filter('.active');
+                if (active.length && !active.is(':visible')) {
+                    var nextVisible = bookingList.filter(':visible').first();
+                    if (nextVisible.length) {
+                        selectBookingItem(nextVisible, false);
+                    } else {
+                        showEmptyDetail();
+                    }
+                }
+            }
+
+            var searchInput = $('.rb-manager-filter-search .rb-list-search input[name="search"]');
+            if (searchInput.length) {
+                var searchTimeout = null;
+                searchInput.on('input', function() {
+                    var value = $(this).val();
+                    window.clearTimeout(searchTimeout);
+                    searchTimeout = window.setTimeout(function() {
+                        filterBookingList(value);
+                    }, 150);
+                });
+
+                filterBookingList(searchInput.val());
+            }
+
+            managerWrapper.on('click', '.rb-booking-item', function(e) {
+                e.preventDefault();
+                selectBookingItem($(this));
+            });
+
+            if (bookingList.length) {
+                selectBookingItem(bookingList.first(), false);
+            } else {
+                showEmptyDetail();
             }
 
             function showManagerFeedback(container, type, message) {
@@ -795,60 +1022,98 @@
                     return;
                 }
 
-                row.attr('data-booking-id', booking.id || '');
-                row.attr('data-customer-name', booking.customer_name || '');
-                row.attr('data-customer-phone', booking.customer_phone || '');
-                row.attr('data-customer-email', booking.customer_email || '');
-                row.attr('data-booking-date', booking.booking_date || '');
-                row.attr('data-booking-time', booking.booking_time || '');
-                row.attr('data-guest-count', booking.guest_count || '');
-                row.attr('data-booking-source', booking.booking_source || '');
-                row.attr('data-special-requests', booking.special_requests || '');
-                row.attr('data-admin-notes', booking.admin_notes || '');
-                row.attr('data-status', booking.status || '');
-                row.attr('data-table-number', booking.table_number || '');
-
-                row.data('bookingId', booking.id || '');
-                row.data('customerName', booking.customer_name || '');
-                row.data('customerPhone', booking.customer_phone || '');
-                row.data('customerEmail', booking.customer_email || '');
-                row.data('bookingDate', booking.booking_date || '');
-                row.data('bookingTime', booking.booking_time || '');
-                row.data('guestCount', booking.guest_count || '');
-                row.data('bookingSource', booking.booking_source || '');
-                row.data('specialRequests', booking.special_requests || '');
-                row.data('adminNotes', booking.admin_notes || '');
-                row.data('status', booking.status || '');
-                row.data('tableNumber', booking.table_number || '');
-
-                var cells = row.find('td');
-                cells.eq(0).text('#' + (booking.padded_id || booking.id));
-
-                var guestHtml = '<strong>' + booking.customer_name + '</strong>';
-                if (booking.special_requests) {
-                    guestHtml += '<div class="rb-manager-note">' + booking.special_requests + '</div>';
+                var item = row;
+                if (!item || !item.length) {
+                    return;
                 }
-                if (booking.admin_notes) {
-                    guestHtml += '<div class="rb-manager-note rb-manager-note-internal">' + booking.admin_notes + '</div>';
+
+                if (!item.hasClass('rb-booking-item')) {
+                    item = $('.rb-booking-item[data-booking-id="' + booking.id + '"]');
+                    if (!item.length) {
+                        return;
+                    }
                 }
-                cells.eq(1).html(guestHtml);
 
-                cells.eq(2).html('<div>' + (booking.customer_phone || '') + '</div><div>' + (booking.customer_email || '') + '</div>');
-                cells.eq(3).text(booking.date_display || booking.booking_date || '');
-                cells.eq(4).text(booking.booking_time || '');
-                cells.eq(5).text(booking.guest_count || '');
-                cells.eq(6).text(booking.source_label || booking.booking_source || '');
+                var paddedId = booking.padded_id || booking.id || '';
+                var dateDisplay = booking.date_display || booking.booking_date || '';
+                var statusLabel = booking.status_label || booking.status || '';
+                var status = booking.status || '';
+                var sourceLabel = booking.source_label || booking.booking_source || '';
+                var createdDisplay = booking.created_display || booking.created_at || '';
+                var guestCount = booking.guest_count || '';
 
-                var statusBadge = cells.eq(7).find('.rb-status');
-                statusBadge.removeClass(function(index, className) {
-                    return (className.match(/rb-status-[^\s]+/g) || []).join(' ');
-                });
-                statusBadge.addClass('rb-status-' + booking.status);
-                statusBadge.text(booking.status_label || booking.status || '');
+                item.attr('data-booking-id', booking.id || '');
+                item.attr('data-padded-id', paddedId);
+                item.attr('data-customer-name', booking.customer_name || '');
+                item.attr('data-customer-phone', booking.customer_phone || '');
+                item.attr('data-customer-email', booking.customer_email || '');
+                item.attr('data-booking-date', booking.booking_date || '');
+                item.attr('data-booking-time', booking.booking_time || '');
+                item.attr('data-date-display', dateDisplay);
+                item.attr('data-guest-count', guestCount);
+                item.attr('data-booking-source', booking.booking_source || '');
+                item.attr('data-source-label', sourceLabel);
+                item.attr('data-special-requests', booking.special_requests || '');
+                item.attr('data-admin-notes', booking.admin_notes || '');
+                item.attr('data-status', status);
+                item.attr('data-status-label', statusLabel);
+                item.attr('data-table-number', booking.table_number || '');
+                item.attr('data-created-display', createdDisplay);
 
-                cells.eq(8).text(booking.table_number || '—');
-                cells.eq(9).text(booking.created_display || booking.created_at || '');
-                cells.eq(10).html(buildActionButtons(booking.status, booking.id));
+                item.data('bookingId', booking.id || '');
+                item.data('paddedId', paddedId);
+                item.data('customerName', booking.customer_name || '');
+                item.data('customerPhone', booking.customer_phone || '');
+                item.data('customerEmail', booking.customer_email || '');
+                item.data('bookingDate', booking.booking_date || '');
+                item.data('bookingTime', booking.booking_time || '');
+                item.data('dateDisplay', dateDisplay);
+                item.data('guestCount', guestCount);
+                item.data('bookingSource', booking.booking_source || '');
+                item.data('sourceLabel', sourceLabel);
+                item.data('specialRequests', booking.special_requests || '');
+                item.data('adminNotes', booking.admin_notes || '');
+                item.data('status', status);
+                item.data('statusLabel', statusLabel);
+                item.data('tableNumber', booking.table_number || '');
+                item.data('createdDisplay', createdDisplay);
+
+                var initials = '';
+                if (booking.customer_name) {
+                    initials = booking.customer_name.trim().charAt(0).toUpperCase();
+                }
+
+                var avatar = item.find('.rb-booking-item-avatar');
+                if (avatar.length) {
+                    avatar.text(initials || '•');
+                }
+
+                item.find('.rb-booking-item-name').text(booking.customer_name || '');
+                item.find('.rb-booking-item-time').text(dateDisplay);
+
+                var phoneSpan = item.find('[data-meta="phone"]');
+                if (phoneSpan.length) {
+                    var phoneText = booking.customer_phone ? '📞 ' + booking.customer_phone : '📞';
+                    phoneSpan.text(phoneText.trim());
+                }
+
+                var statusBadge = item.find('[data-meta="status"]');
+                if (statusBadge.length) {
+                    statusBadge.removeClass('pending confirmed completed cancelled').addClass(status || '');
+                    statusBadge.text(statusLabel);
+                }
+
+                var guestsSpan = item.find('[data-meta="guests"]');
+                if (guestsSpan.length) {
+                    var guestsLabel = guestCount ? guestCount + ' 👥' : '0 👥';
+                    guestsSpan.text(guestsLabel);
+                }
+
+                refreshBookingListCache();
+
+                if (currentBookingId && String(currentBookingId) === String(booking.id)) {
+                    renderBookingDetail(getBookingDataFromElement(item));
+                }
             }
 
             var customerDetail = $('#rb-customer-detail');
@@ -1104,9 +1369,12 @@
                     return;
                 }
 
-                var bookingId = button.data('id');
+                var bookingId = String(button.data('id'));
                 var action = button.data('action');
-                var row = button.closest('tr');
+                var item = button.closest('.rb-booking-item');
+                if (!item.length) {
+                    item = $('.rb-booking-item[data-booking-id="' + bookingId + '"]');
+                }
                 var feedback = $('#rb-manager-feedback');
 
                 if (action === 'delete' && !window.confirm(rb_ajax.delete_confirm_text || 'Are you sure you want to delete this booking?')) {
@@ -1130,9 +1398,21 @@
                             showManagerFeedback(feedback, 'success', successMessage);
 
                             if (action === 'delete') {
-                                row.remove();
+                                item.remove();
+                                refreshBookingListCache();
+                                if (currentBookingId && String(currentBookingId) === bookingId) {
+                                    var nextItem = bookingList.filter(':visible').first();
+                                    if (!nextItem.length) {
+                                        nextItem = bookingList.first();
+                                    }
+                                    if (nextItem.length) {
+                                        selectBookingItem(nextItem, false);
+                                    } else {
+                                        showEmptyDetail();
+                                    }
+                                }
                             } else if (response.data && response.data.booking) {
-                                updateBookingRow(row, response.data.booking);
+                                updateBookingRow(item, response.data.booking);
                             }
                         } else {
                             var message = response.data && response.data.message ? response.data.message : rb_ajax.error_text;
@@ -1161,18 +1441,22 @@
             managerWrapper.on('click', '.rb-manager-edit-booking', function(e) {
                 e.preventDefault();
                 var button = $(this);
-                var row = button.closest('tr');
-                editForm.find('[name="booking_id"]').val(row.data('bookingId') || row.data('booking-id'));
-                editForm.find('[name="customer_name"]').val(row.data('customerName'));
-                editForm.find('[name="customer_phone"]').val(row.data('customerPhone'));
-                editForm.find('[name="customer_email"]').val(row.data('customerEmail'));
-                editForm.find('[name="guest_count"]').val(row.data('guestCount'));
-                editForm.find('[name="booking_date"]').val(row.data('bookingDate'));
-                editForm.find('[name="booking_time"]').val(row.data('bookingTime'));
-                editForm.find('[name="booking_source"]').val(row.data('bookingSource'));
-                editForm.find('[name="special_requests"]').val(row.data('specialRequests'));
-                editForm.find('[name="admin_notes"]').val(row.data('adminNotes'));
-                editForm.data('row', row);
+                var item = button.closest('.rb-booking-item');
+                if (!item.length) {
+                    item = $('.rb-booking-item[data-booking-id="' + button.data('id') + '"]');
+                }
+
+                editForm.find('[name="booking_id"]').val(item.data('bookingId') || item.data('booking-id'));
+                editForm.find('[name="customer_name"]').val(item.data('customerName'));
+                editForm.find('[name="customer_phone"]').val(item.data('customerPhone'));
+                editForm.find('[name="customer_email"]').val(item.data('customerEmail'));
+                editForm.find('[name="guest_count"]').val(item.data('guestCount'));
+                editForm.find('[name="booking_date"]').val(item.data('bookingDate'));
+                editForm.find('[name="booking_time"]').val(item.data('bookingTime'));
+                editForm.find('[name="booking_source"]').val(item.data('bookingSource'));
+                editForm.find('[name="special_requests"]').val(item.data('specialRequests'));
+                editForm.find('[name="admin_notes"]').val(item.data('adminNotes'));
+                editForm.data('row', item);
                 editModal.removeAttr('hidden');
             });
 

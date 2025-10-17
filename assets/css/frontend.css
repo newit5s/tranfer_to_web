@@ -2194,3 +2194,425 @@
         text-align: center;
     }
 }
+/* === Gmail-style manager dashboard layout === */
+.rb-manager-dashboard-new {
+    display: grid;
+    grid-template-columns: minmax(240px, var(--rb-sidebar-width, 280px)) minmax(260px, var(--rb-list-width, 35%)) minmax(320px, var(--rb-detail-width, 45%));
+    gap: var(--rb-spacing, 16px);
+    min-height: 60vh;
+}
+
+.rb-manager-sidebar-filters {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+.rb-sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rb-sidebar-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #666;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.rb-manager-filter-search .rb-list-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5f5f5;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.rb-manager-filter-search input[type="text"] {
+    border: none;
+    background: transparent;
+    flex: 1;
+    font-size: 14px;
+    outline: none;
+}
+
+.rb-filter-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f9f9f9;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    color: #333;
+    text-decoration: none;
+}
+
+.rb-filter-button:hover,
+.rb-filter-button.active {
+    background: #f0f7ff;
+    border-color: #2196F3;
+    color: #2196F3;
+    font-weight: 600;
+}
+
+.rb-filter-count {
+    display: inline-block;
+    min-width: 24px;
+    padding: 0 6px;
+    background: #2196F3;
+    color: #ffffff;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 24px;
+}
+
+.rb-filter-button.active .rb-filter-count {
+    background: #1976D2;
+}
+
+.rb-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.rb-stat-mini {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.rb-stat-mini.pending { background: linear-gradient(135deg, #fff5e1 0%, #ffe082 100%); }
+.rb-stat-mini.confirmed { background: linear-gradient(135deg, #e1f5e1 0%, #a5d6a7 100%); }
+.rb-stat-mini.completed { background: linear-gradient(135deg, #e3f2fd 0%, #90caf9 100%); }
+.rb-stat-mini.cancelled { background: linear-gradient(135deg, #ffebee 0%, #ef9a9a 100%); }
+
+.rb-stat-mini-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(0,0,0,0.6);
+    text-transform: uppercase;
+}
+
+.rb-stat-mini-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
+
+.rb-manager-list-panel {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.rb-list-header {
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.rb-list-body {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.rb-booking-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+}
+
+.rb-booking-item:hover {
+    background: #f9f9f9;
+}
+
+.rb-booking-item.active {
+    background: #f0f7ff;
+    border-left: 3px solid #2196F3;
+    padding-left: 13px;
+}
+
+.rb-booking-item-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.rb-booking-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.rb-booking-item-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rb-booking-item-time {
+    font-size: 12px;
+    color: #999;
+}
+
+.rb-booking-item-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+}
+
+.rb-booking-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.rb-booking-badge.pending { background: #fff3cd; color: #856404; }
+.rb-booking-badge.confirmed { background: #d4edda; color: #155724; }
+.rb-booking-badge.completed { background: #d1ecf1; color: #0c5460; }
+.rb-booking-badge.cancelled { background: #f8d7da; color: #721c24; }
+
+.rb-list-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+.rb-manager-detail-panel {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+#rb-manager-detail {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.rb-detail-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.rb-detail-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.rb-detail-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+}
+
+.rb-detail-subtitle {
+    font-size: 13px;
+    color: #666;
+    margin: 0;
+}
+
+.rb-detail-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #ffffff;
+    border: 1px solid #ddd;
+}
+
+.rb-detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rb-detail-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: #999;
+    font-size: 14px;
+    text-align: center;
+}
+
+.rb-detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rb-detail-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #666;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.rb-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.rb-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rb-detail-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+}
+
+.rb-detail-value {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.rb-detail-value.large {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.rb-detail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rb-advanced-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+}
+
+.rb-advanced-filters input,
+.rb-advanced-filters select {
+    width: 100%;
+}
+
+.rb-advanced-filter-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+@media (max-width: 1200px) {
+    .rb-manager-dashboard-new {
+        grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr);
+        grid-template-areas:
+            "sidebar list"
+            "sidebar detail";
+    }
+
+    .rb-manager-sidebar-filters {
+        grid-area: sidebar;
+    }
+
+    .rb-manager-list-panel {
+        grid-area: list;
+    }
+
+    .rb-manager-detail-panel {
+        grid-area: detail;
+    }
+}
+
+@media (max-width: 992px) {
+    .rb-manager-dashboard-new {
+        grid-template-columns: 1fr;
+    }
+
+    .rb-manager-sidebar-filters,
+    .rb-manager-list-panel,
+    .rb-manager-detail-panel {
+        max-height: unset;
+    }
+
+    .rb-manager-sidebar-filters {
+        order: 1;
+    }
+
+    .rb-manager-list-panel {
+        order: 2;
+    }
+
+    .rb-manager-detail-panel {
+        order: 3;
+    }
+}
+
