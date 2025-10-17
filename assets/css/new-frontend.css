@@ -145,26 +145,71 @@
 /* Close Button */
 .rb-new-close {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(92, 64, 51, 0.08);
-    border: none;
-    width: 40px;
-    height: 40px;
+    top: 24px;
+    right: 24px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
-    color: var(--rb-new-subtle);
-    font-size: 24px;
-    font-weight: 300;
-    line-height: 1;
+    border: 1px solid var(--rb-new-border);
+    background: rgba(92, 64, 51, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+    line-height: 0;
     z-index: 10;
 }
 
-.rb-new-close:hover {
-    background: rgba(92, 64, 51, 0.18);
-    color: var(--rb-new-primary);
-    transform: rotate(90deg);
+.rb-new-close::before,
+.rb-new-close::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 60%;
+    height: 2px;
+    background: var(--rb-new-subtle);
+    border-radius: 999px;
+    transition: transform 0.35s ease, background 0.3s ease;
+}
+
+.rb-new-close::before {
+    transform: translate(-50%, -6px) rotate(0deg);
+}
+
+.rb-new-close::after {
+    transform: translate(-50%, 6px) rotate(0deg);
+}
+
+.rb-new-close:hover,
+.rb-new-close:focus,
+.rb-new-close:focus-visible {
+    background: rgba(92, 64, 51, 0.16);
+    border-color: var(--rb-new-primary-light);
+    box-shadow: 0 8px 24px rgba(32, 24, 19, 0.22);
+}
+
+.rb-new-close:hover::before,
+.rb-new-close:focus::before,
+.rb-new-close:focus-visible::before {
+    transform: translate(-50%, 0) rotate(45deg);
+    background: var(--rb-new-primary);
+}
+
+.rb-new-close:hover::after,
+.rb-new-close:focus::after,
+.rb-new-close:focus-visible::after {
+    transform: translate(-50%, 0) rotate(-45deg);
+    background: var(--rb-new-primary);
+}
+
+.rb-new-close:focus,
+.rb-new-close:focus-visible {
+    outline: none;
 }
 
 /* Modal Header */
@@ -173,7 +218,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 20px;
-    padding: 36px 40px 0;
+    padding: 36px 88px 0 40px;
     margin-bottom: 24px;
     border-bottom: 1px solid var(--rb-new-border);
 }
@@ -188,11 +233,11 @@
 
 /* Language Switcher */
 .rb-new-language-switcher {
-    flex: 1 1 220px;
+    flex: 1 1 260px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-width: 320px;
+    max-width: 100%;
     margin-left: auto;
 }
 
@@ -207,7 +252,9 @@
     transition: all 0.3s ease;
     width: 100%;
     min-width: 0;
-    line-height: 1.5;
+    line-height: 1.45;
+    white-space: normal;
+    min-height: 48px;
 }
 
 .rb-new-lang-select:hover,
@@ -319,6 +366,9 @@
     background-position: right 16px center;
     padding-right: 45px;
     cursor: pointer;
+    white-space: normal;
+    line-height: 1.45;
+    min-height: 52px;
 }
 
 /* Form Section */
