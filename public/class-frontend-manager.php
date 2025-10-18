@@ -307,12 +307,19 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         ob_start();
+        $manager_classes = array('rb-manager');
+        $is_gmail_dashboard = ($section === 'dashboard');
+        if ($is_gmail_dashboard) {
+            $manager_classes[] = 'rb-manager--gmail';
+        }
+
         ?>
-        <div class="rb-manager" data-location="<?php echo esc_attr($selected_location_id); ?>">
+        <div class="<?php echo esc_attr(implode(' ', $manager_classes)); ?>" data-location="<?php echo esc_attr($selected_location_id); ?>">
             <div class="rb-manager-header">
                 <div class="rb-manager-header-left">
-                    <h2><?php echo esc_html($atts['title']); ?></h2>
-                    <form method="get" class="rb-manager-location-switcher">
+                    <div class="rb-gmail-header-title">
+                        <h2><?php echo esc_html($atts['title']); ?></h2>
+                        <form method="get" class="rb-manager-location-switcher">
                         <?php if (!empty($_GET)) : ?>
                             <?php foreach ($_GET as $key => $value) : ?>
                                 <?php if (in_array($key, array('location_id'), true)) { continue; } ?>
@@ -327,7 +334,27 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                    </form>
+                        </form>
+                    </div>
+                    <?php if ($is_gmail_dashboard) : ?>
+                        <nav class="rb-gmail-header-nav" aria-label="<?php echo esc_attr($this->t('manager_sections', __('Manager sections', 'restaurant-booking'))); ?>">
+                            <ul>
+                                <?php foreach ($nav_items as $key => $item) :
+                                    $url = add_query_arg(array(
+                                        'location_id' => $selected_location_id,
+                                        'rb_section' => $key,
+                                    ), remove_query_arg(array('rb_section')));
+                                    ?>
+                                    <li class="<?php echo $section === $key ? 'is-active' : ''; ?>">
+                                        <a href="<?php echo esc_url($url); ?>">
+                                            <span class="rb-gmail-nav-icon" aria-hidden="true"><?php echo esc_html($item['icon']); ?></span>
+                                            <span class="rb-gmail-nav-label"><?php echo esc_html($item['label']); ?></span>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </nav>
+                    <?php endif; ?>
                 </div>
                 <div class="rb-manager-header-right">
                     <?php if (class_exists('RB_Language_Switcher')) : ?>
@@ -351,47 +378,49 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             </div>
 
             <div class="rb-manager-layout">
-                <aside class="rb-manager-sidebar">
-                    <div class="rb-manager-location-card">
-                        <h3><?php echo esc_html($active_location['name']); ?></h3>
-                        <?php if (!empty($active_location['address'])) : ?>
-                            <p>📍 <?php echo esc_html($active_location['address']); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($active_location['hotline'])) : ?>
-                            <p>📞 <?php echo esc_html($active_location['hotline']); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($active_location['email'])) : ?>
-                            <p>✉️ <?php echo esc_html($active_location['email']); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($available_language_labels)) : ?>
-                            <p class="rb-manager-location-languages">🌐 <?php echo esc_html(implode(', ', $available_language_labels)); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($location_settings['shift_notes'])) : ?>
-                            <div class="rb-manager-location-notes">
-                                <strong><?php echo esc_html($this->t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>:</strong>
-                                <p><?php echo esc_html($location_settings['shift_notes']); ?></p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                <?php if (!$is_gmail_dashboard) : ?>
+                    <aside class="rb-manager-sidebar">
+                        <div class="rb-manager-location-card">
+                            <h3><?php echo esc_html($active_location['name']); ?></h3>
+                            <?php if (!empty($active_location['address'])) : ?>
+                                <p>📍 <?php echo esc_html($active_location['address']); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($active_location['hotline'])) : ?>
+                                <p>📞 <?php echo esc_html($active_location['hotline']); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($active_location['email'])) : ?>
+                                <p>✉️ <?php echo esc_html($active_location['email']); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($available_language_labels)) : ?>
+                                <p class="rb-manager-location-languages">🌐 <?php echo esc_html(implode(', ', $available_language_labels)); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($location_settings['shift_notes'])) : ?>
+                                <div class="rb-manager-location-notes">
+                                    <strong><?php echo esc_html($this->t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>:</strong>
+                                    <p><?php echo esc_html($location_settings['shift_notes']); ?></p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
 
-                    <nav class="rb-manager-nav">
-                        <ul>
-                            <?php foreach ($nav_items as $key => $item) :
-                                $url = add_query_arg(array(
-                                    'location_id' => $selected_location_id,
-                                    'rb_section' => $key,
-                                ), remove_query_arg(array('rb_section')));
-                                ?>
-                                <li class="<?php echo $section === $key ? 'active' : ''; ?>">
-                                    <a href="<?php echo esc_url($url); ?>">
-                                        <span class="rb-manager-nav-icon"><?php echo esc_html($item['icon']); ?></span>
-                                        <span class="rb-manager-nav-label"><?php echo esc_html($item['label']); ?></span>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </nav>
-                </aside>
+                        <nav class="rb-manager-nav">
+                            <ul>
+                                <?php foreach ($nav_items as $key => $item) :
+                                    $url = add_query_arg(array(
+                                        'location_id' => $selected_location_id,
+                                        'rb_section' => $key,
+                                    ), remove_query_arg(array('rb_section')));
+                                    ?>
+                                    <li class="<?php echo $section === $key ? 'active' : ''; ?>">
+                                        <a href="<?php echo esc_url($url); ?>">
+                                            <span class="rb-manager-nav-icon"><?php echo esc_html($item['icon']); ?></span>
+                                            <span class="rb-manager-nav-label"><?php echo esc_html($item['label']); ?></span>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </nav>
+                    </aside>
+                <?php endif; ?>
 
                 <div class="rb-manager-content">
                     <?php
