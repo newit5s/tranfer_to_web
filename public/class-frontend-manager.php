@@ -307,12 +307,15 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         ob_start();
+        $manager_classes = array('rb-manager', 'rb-manager--gmail');
+
         ?>
-        <div class="rb-manager" data-location="<?php echo esc_attr($selected_location_id); ?>">
+        <div class="<?php echo esc_attr(implode(' ', $manager_classes)); ?>" data-location="<?php echo esc_attr($selected_location_id); ?>">
             <div class="rb-manager-header">
                 <div class="rb-manager-header-left">
-                    <h2><?php echo esc_html($atts['title']); ?></h2>
-                    <form method="get" class="rb-manager-location-switcher">
+                    <div class="rb-gmail-header-title">
+                        <h2><?php echo esc_html($atts['title']); ?></h2>
+                        <form method="get" class="rb-manager-location-switcher">
                         <?php if (!empty($_GET)) : ?>
                             <?php foreach ($_GET as $key => $value) : ?>
                                 <?php if (in_array($key, array('location_id'), true)) { continue; } ?>
@@ -327,7 +330,25 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                    </form>
+                        </form>
+                    </div>
+                    <nav class="rb-gmail-header-nav" aria-label="<?php echo esc_attr($this->t('manager_sections', __('Manager sections', 'restaurant-booking'))); ?>">
+                        <ul>
+                            <?php foreach ($nav_items as $key => $item) :
+                                $url = add_query_arg(array(
+                                    'location_id' => $selected_location_id,
+                                    'rb_section' => $key,
+                                ), remove_query_arg(array('rb_section')));
+                                ?>
+                                <li class="<?php echo $section === $key ? 'is-active' : ''; ?>">
+                                    <a href="<?php echo esc_url($url); ?>">
+                                        <span class="rb-gmail-nav-icon" aria-hidden="true"><?php echo esc_html($item['icon']); ?></span>
+                                        <span class="rb-gmail-nav-label"><?php echo esc_html($item['label']); ?></span>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </nav>
                 </div>
                 <div class="rb-manager-header-right">
                     <?php if (class_exists('RB_Language_Switcher')) : ?>
@@ -350,73 +371,83 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 </div>
             </div>
 
-            <div class="rb-manager-layout">
-                <aside class="rb-manager-sidebar">
-                    <div class="rb-manager-location-card">
-                        <h3><?php echo esc_html($active_location['name']); ?></h3>
-                        <?php if (!empty($active_location['address'])) : ?>
-                            <p>📍 <?php echo esc_html($active_location['address']); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($active_location['hotline'])) : ?>
-                            <p>📞 <?php echo esc_html($active_location['hotline']); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($active_location['email'])) : ?>
-                            <p>✉️ <?php echo esc_html($active_location['email']); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($available_language_labels)) : ?>
-                            <p class="rb-manager-location-languages">🌐 <?php echo esc_html(implode(', ', $available_language_labels)); ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($location_settings['shift_notes'])) : ?>
-                            <div class="rb-manager-location-notes">
-                                <strong><?php echo esc_html($this->t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>:</strong>
-                                <p><?php echo esc_html($location_settings['shift_notes']); ?></p>
-                            </div>
-                        <?php endif; ?>
+            <?php
+            $section_markup = '';
+            switch ($section) {
+                case 'create':
+                    $section_markup = $this->render_section_create_booking($location_settings, $selected_location_id, $active_location, $ajax_nonce);
+                    break;
+                case 'tables':
+                    $section_markup = $this->render_section_tables($selected_location_id, $ajax_nonce);
+                    break;
+                case 'customers':
+                    $section_markup = $this->render_section_customers($selected_location_id, $ajax_nonce);
+                    break;
+                case 'settings':
+                    $section_markup = $this->render_section_settings($location_settings, $selected_location_id, $ajax_nonce);
+                    break;
+                case 'dashboard':
+                default:
+                    $section = 'dashboard';
+                    $section_markup = $this->render_section_dashboard($bookings, $ajax_nonce, $filters, $stats, $source_stats, $selected_location_id);
+                    break;
+            }
+
+            $body_classes = array('rb-manager-body');
+            if ($section === 'dashboard') {
+                $body_classes[] = 'rb-manager-body--dashboard';
+            }
+            ?>
+
+            <div class="<?php echo esc_attr(implode(' ', $body_classes)); ?>">
+                <?php if ($section === 'dashboard') : ?>
+                    <?php echo $section_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                <?php else : ?>
+                    <div class="rb-manager-gmail-page" data-section="<?php echo esc_attr($section); ?>">
+                        <?php echo $this->render_gmail_location_summary_card($active_location, $available_language_labels, $location_settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                        <?php echo $section_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     </div>
-
-                    <nav class="rb-manager-nav">
-                        <ul>
-                            <?php foreach ($nav_items as $key => $item) :
-                                $url = add_query_arg(array(
-                                    'location_id' => $selected_location_id,
-                                    'rb_section' => $key,
-                                ), remove_query_arg(array('rb_section')));
-                                ?>
-                                <li class="<?php echo $section === $key ? 'active' : ''; ?>">
-                                    <a href="<?php echo esc_url($url); ?>">
-                                        <span class="rb-manager-nav-icon"><?php echo esc_html($item['icon']); ?></span>
-                                        <span class="rb-manager-nav-label"><?php echo esc_html($item['label']); ?></span>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </nav>
-                </aside>
-
-                <div class="rb-manager-content">
-                    <?php
-                    switch ($section) {
-                        case 'create':
-                            echo $this->render_section_create_booking($location_settings, $selected_location_id, $active_location, $ajax_nonce);
-                            break;
-                        case 'tables':
-                            echo $this->render_section_tables($selected_location_id, $ajax_nonce);
-                            break;
-                        case 'customers':
-                            echo $this->render_section_customers($selected_location_id, $ajax_nonce);
-                            break;
-                        case 'settings':
-                            echo $this->render_section_settings($location_settings, $selected_location_id, $ajax_nonce);
-                            break;
-                        case 'dashboard':
-                        default:
-                            echo $this->render_section_dashboard($bookings, $ajax_nonce, $filters, $stats, $source_stats, $selected_location_id);
-                            break;
-                    }
-                    ?>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    private function render_gmail_location_summary_card($location, $language_labels, $location_settings) {
+        if (empty($location) || !is_array($location)) {
+            return '';
+        }
+
+        $shift_notes = isset($location_settings['shift_notes']) ? trim($location_settings['shift_notes']) : '';
+
+        ob_start();
+        ?>
+        <section class="rb-gmail-location-card">
+            <div class="rb-gmail-location-card__header">
+                <h3><?php echo esc_html($location['name']); ?></h3>
+                <?php if (!empty($language_labels)) : ?>
+                    <span class="rb-gmail-location-card__badge">🌐 <?php echo esc_html(implode(', ', $language_labels)); ?></span>
+                <?php endif; ?>
+            </div>
+            <ul class="rb-gmail-location-card__meta">
+                <?php if (!empty($location['address'])) : ?>
+                    <li>📍 <?php echo esc_html($location['address']); ?></li>
+                <?php endif; ?>
+                <?php if (!empty($location['hotline'])) : ?>
+                    <li>📞 <?php echo esc_html($location['hotline']); ?></li>
+                <?php endif; ?>
+                <?php if (!empty($location['email'])) : ?>
+                    <li>✉️ <?php echo esc_html($location['email']); ?></li>
+                <?php endif; ?>
+            </ul>
+            <?php if ($shift_notes !== '') : ?>
+                <div class="rb-gmail-location-card__notes">
+                    <strong><?php echo esc_html($this->t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>:</strong>
+                    <p><?php echo esc_html($shift_notes); ?></p>
+                </div>
+            <?php endif; ?>
+        </section>
         <?php
         return ob_get_clean();
     }
