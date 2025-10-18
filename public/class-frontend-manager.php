@@ -307,8 +307,13 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         ob_start();
+        $manager_classes = array('rb-manager');
+        if ($section === 'dashboard') {
+            $manager_classes[] = 'rb-manager--gmail';
+        }
+
         ?>
-        <div class="rb-manager" data-location="<?php echo esc_attr($selected_location_id); ?>">
+        <div class="<?php echo esc_attr(implode(' ', $manager_classes)); ?>" data-location="<?php echo esc_attr($selected_location_id); ?>">
             <div class="rb-manager-header">
                 <div class="rb-manager-header-left">
                     <h2><?php echo esc_html($atts['title']); ?></h2>
