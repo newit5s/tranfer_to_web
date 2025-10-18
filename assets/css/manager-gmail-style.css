@@ -1606,9 +1606,13 @@
     }
 
     .rb-manager--gmail .rb-manager-location-switcher {
-        width: 100%;
-        flex-direction: column;
-        align-items: flex-start;
+        display: none !important;
+    }
+
+    .rb-manager--gmail .rb-gmail-header-title {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
     }
 
     .rb-manager--gmail .rb-gmail-header-title {
@@ -1697,7 +1701,7 @@
     }
 
     .rb-manager--gmail .rb-manager-location-switcher {
-        width: 100% !important;
+        display: none !important;
     }
 
     .rb-manager--gmail .rb-gmail-header-nav ul {
