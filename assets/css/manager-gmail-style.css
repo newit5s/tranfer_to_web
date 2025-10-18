@@ -1615,6 +1615,12 @@
         gap: 8px !important;
     }
 
+    .rb-manager--gmail .rb-gmail-header-title {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+
     .rb-manager--gmail .rb-manager-location-switcher label {
         width: 100%;
     }
