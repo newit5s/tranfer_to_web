@@ -197,6 +197,19 @@ function rb_frontend_enqueue_scripts() {
     wp_enqueue_style('rb-frontend-css', RB_PLUGIN_URL . 'assets/css/frontend.css', array(), $style_version);
     wp_enqueue_script('rb-frontend-js', RB_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), $script_version, true);
 
+    $gmail_style_path = RB_PLUGIN_DIR . 'assets/css/manager-gmail-style.css';
+    $gmail_script_path = RB_PLUGIN_DIR . 'assets/js/manager-gmail.js';
+
+    if (file_exists($gmail_style_path)) {
+        $gmail_style_version = filemtime($gmail_style_path);
+        wp_enqueue_style('rb-manager-gmail', RB_PLUGIN_URL . 'assets/css/manager-gmail-style.css', array('rb-frontend-css'), $gmail_style_version);
+    }
+
+    if (file_exists($gmail_script_path)) {
+        $gmail_script_version = filemtime($gmail_script_path);
+        wp_enqueue_script('rb-manager-gmail', RB_PLUGIN_URL . 'assets/js/manager-gmail.js', array('jquery', 'rb-frontend-js'), $gmail_script_version, true);
+    }
+
     global $rb_location;
     if (!$rb_location) {
         require_once RB_PLUGIN_DIR . 'includes/class-location.php';
@@ -251,6 +264,7 @@ function rb_frontend_enqueue_scripts() {
         'confirm_set_vip' => __('Upgrade this customer to VIP?', 'restaurant-booking'),
         'confirm_blacklist' => __('Blacklist this customer?', 'restaurant-booking'),
         'confirm_unblacklist' => __('Remove this customer from blacklist?', 'restaurant-booking'),
+        'bulk_cancel_confirm' => __('Cancel selected bookings?', 'restaurant-booking'),
         'booking_actions_label' => rb_t('booking_actions', __('Booking actions', 'restaurant-booking')),
         'customer_actions_label' => rb_t('customer_actions', __('Customer actions', 'restaurant-booking'))
     ));
