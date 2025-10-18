@@ -743,6 +743,65 @@
 .rb-manager-dashboard-gmail {
     background: transparent;
     color: var(--rb-gmail-text);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 32px 48px 48px;
+    box-sizing: border-box;
+}
+
+.rb-manager--gmail .rb-manager-header h2,
+.rb-manager--gmail .rb-manager-user,
+.rb-manager--gmail .rb-manager-location-switcher label {
+    color: var(--rb-gmail-text);
+}
+
+.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select,
+.rb-manager--gmail .rb-manager-location-switcher select {
+    background: var(--rb-gmail-surface);
+    color: var(--rb-gmail-text);
+    border: 1px solid var(--rb-gmail-border);
+    box-shadow: 0 12px 24px var(--rb-gmail-shadow);
+}
+
+.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select:hover,
+.rb-manager--gmail .rb-manager-location-switcher select:hover,
+.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select:focus,
+.rb-manager--gmail .rb-manager-location-switcher select:focus {
+    border-color: var(--rb-gmail-border-strong);
+    box-shadow: 0 0 0 3px rgba(92, 64, 51, 0.12);
+    outline: none;
+}
+
+.rb-manager--gmail .rb-manager-location-switcher option,
+.rb-manager--gmail .rb-manager-language-switcher option {
+    color: var(--rb-gmail-text);
+}
+
+.rb-manager--gmail .rb-manager-header,
+.rb-manager--gmail .rb-manager-layout {
+    color: inherit;
+}
+
+.rb-manager--gmail .rb-manager-header-left,
+.rb-manager--gmail .rb-manager-header-right {
+    background: transparent;
+}
+
+.rb-manager--gmail .rb-manager-user {
+    font-weight: 500;
+}
+
+.rb-manager--gmail .rb-manager-logout .rb-btn-secondary {
+    align-self: flex-start;
+}
+
+.rb-manager-dashboard-gmail {
+    background: transparent;
+    color: var(--rb-gmail-text);
     font-family: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     display: block;
     padding: 32px 40px 48px;
