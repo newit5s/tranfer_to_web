@@ -18,6 +18,7 @@
             this.bindEvents();
             this.refreshCards();
             this.syncSelectionUI();
+            this.handleResize();
         },
 
         bindEvents: function () {
