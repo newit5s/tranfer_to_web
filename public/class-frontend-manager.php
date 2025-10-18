@@ -882,6 +882,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         </div>
                     </div>
                 </aside>
+                <button
+                    type="button"
+                    class="rb-gmail-overlay"
+                    data-rb-close-panels
+                    aria-label="<?php echo esc_attr($this->t('close', __('Close', 'restaurant-booking'))); ?>"
+                ></button>
             </div>
 
             <div id="rb-manager-feedback" class="rb-portal-result" hidden data-nonce="<?php echo esc_attr($ajax_nonce); ?>"></div>
@@ -1245,21 +1251,26 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     </thead>
                     <tbody>
                         <?php if (!empty($tables)) : ?>
-                            <?php foreach ($tables as $table) :
+                            <?php
+                            $table_label = $this->t('table', __('Table', 'restaurant-booking'));
+                            $capacity_label = $this->t('capacity', __('Capacity', 'restaurant-booking'));
+                            $status_label = $this->t('status', __('Status', 'restaurant-booking'));
+                            $actions_label = $this->t('actions', __('Actions', 'restaurant-booking'));
+                            foreach ($tables as $table) :
                                 $is_available = (int) $table->is_available === 1;
                                 $next_status = $is_available ? 0 : 1;
                                 ?>
                                 <tr>
-                                    <td><?php echo esc_html($table->table_number); ?></td>
-                                    <td><?php echo esc_html($table->capacity); ?></td>
-                                    <td>
+                                    <td data-label="<?php echo esc_attr($table_label); ?>"><?php echo esc_html($table->table_number); ?></td>
+                                    <td data-label="<?php echo esc_attr($capacity_label); ?>"><?php echo esc_html($table->capacity); ?></td>
+                                    <td data-label="<?php echo esc_attr($status_label); ?>">
                                         <?php if ($is_available) : ?>
                                             <span class="rb-status rb-status-available"><?php echo esc_html($this->t('available', __('Available', 'restaurant-booking'))); ?></span>
                                         <?php else : ?>
                                             <span class="rb-status rb-status-unavailable"><?php echo esc_html($this->t('unavailable', __('Unavailable', 'restaurant-booking'))); ?></span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td data-label="<?php echo esc_attr($actions_label); ?>">
                                         <button class="rb-btn-secondary rb-manager-toggle-table" data-table-id="<?php echo esc_attr($table->id); ?>" data-next-status="<?php echo esc_attr($next_status); ?>">
                                             <?php echo $is_available ? esc_html__('Deactivate', 'restaurant-booking') : esc_html__('Activate', 'restaurant-booking'); ?>
                                         </button>
