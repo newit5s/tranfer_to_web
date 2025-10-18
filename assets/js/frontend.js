@@ -19,6 +19,7 @@
         rb_ajax.complete_text = rb_ajax.complete_text || 'Complete';
         rb_ajax.edit_text = rb_ajax.edit_text || 'Edit';
         rb_ajax.delete_text = rb_ajax.delete_text || 'Delete';
+        rb_ajax.bulk_cancel_confirm = rb_ajax.bulk_cancel_confirm || 'Cancel selected bookings?';
         rb_ajax.confirm_delete_table = rb_ajax.confirm_delete_table || 'Are you sure you want to delete this table?';
         rb_ajax.confirm_set_vip = rb_ajax.confirm_set_vip || 'Upgrade this customer to VIP?';
         rb_ajax.confirm_blacklist = rb_ajax.confirm_blacklist || 'Blacklist this customer?';
@@ -926,6 +927,7 @@
 
                 var data = getBookingDataFromElement(item);
                 renderBookingDetail(data);
+                $(document).trigger('rb:manager:bookingSelected', [item]);
 
                 if (scrollIntoView && item.length && item[0].scrollIntoView) {
                     try {
@@ -1089,7 +1091,19 @@
                 }
 
                 item.find('.rb-booking-item-name').text(booking.customer_name || '');
-                item.find('.rb-booking-item-time').text(dateDisplay);
+                var combinedTime = dateDisplay || '';
+                if (booking.booking_time) {
+                    combinedTime = combinedTime ? combinedTime + ' ' + booking.booking_time : booking.booking_time;
+                }
+                item.find('.rb-booking-item-time').text(combinedTime);
+                var slotSpan = item.find('.rb-booking-item-slot');
+                if (slotSpan.length) {
+                    slotSpan.text(booking.booking_time || '');
+                }
+                var idBadge = item.find('.rb-booking-card-id');
+                if (idBadge.length) {
+                    idBadge.text(paddedId ? '#' + paddedId : (booking.id ? '#' + booking.id : ''));
+                }
 
                 var phoneSpan = item.find('[data-meta="phone"]');
                 if (phoneSpan.length) {
@@ -1105,15 +1119,40 @@
 
                 var guestsSpan = item.find('[data-meta="guests"]');
                 if (guestsSpan.length) {
-                    var guestsLabel = guestCount ? guestCount + ' 👥' : '0 👥';
+                    var guestsLabel = guestCount ? '👥 ' + guestCount : '👥 0';
                     guestsSpan.text(guestsLabel);
                 }
+
+                var sourceSpan = item.find('[data-meta="source"]');
+                if (sourceSpan.length) {
+                    sourceSpan.text(sourceLabel || '');
+                }
+
+                var createdSpan = item.find('[data-meta="created"]');
+                if (createdSpan.length) {
+                    createdSpan.text(createdDisplay ? '⏱ ' + createdDisplay : '');
+                }
+
+                var noteParagraph = item.find('[data-meta="special"]');
+                if (noteParagraph.length) {
+                    if (booking.special_requests) {
+                        noteParagraph.text('📝 ' + booking.special_requests);
+                    } else {
+                        noteParagraph.text('');
+                    }
+                }
+
+                item.removeClass(function(index, className) {
+                    return (className.match(/status-[^\s]+/g) || []).join(' ');
+                }).addClass('status-' + (status || ''));
 
                 refreshBookingListCache();
 
                 if (currentBookingId && String(currentBookingId) === String(booking.id)) {
                     renderBookingDetail(getBookingDataFromElement(item));
                 }
+
+                $(document).trigger('rb:manager:bookingUpdated', [booking]);
             }
 
             var customerDetail = $('#rb-customer-detail');
@@ -1360,6 +1399,16 @@
                 }
             }
 
+            window.RBManagerInbox = window.RBManagerInbox || {};
+            $.extend(window.RBManagerInbox, {
+                updateBookingRow: updateBookingRow,
+                refreshBookingListCache: refreshBookingListCache,
+                showManagerFeedback: showManagerFeedback,
+                getManagerNonce: getManagerNonce,
+                selectBookingItem: selectBookingItem,
+                showEmptyDetail: showEmptyDetail
+            });
+
             initManagerCustomerInbox();
 
             managerWrapper.on('click', '.rb-manager-action', function(e) {
@@ -1400,6 +1449,7 @@
                             if (action === 'delete') {
                                 item.remove();
                                 refreshBookingListCache();
+                                $(document).trigger('rb:manager:bookingRemoved', [bookingId]);
                                 if (currentBookingId && String(currentBookingId) === bookingId) {
                                     var nextItem = bookingList.filter(':visible').first();
                                     if (!nextItem.length) {
