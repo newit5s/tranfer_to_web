@@ -27,6 +27,10 @@
                 self.toggleSidebar();
             });
 
+            this.layout.on('click', '[data-rb-close-panels]', function () {
+                self.closePanels();
+            });
+
             this.layout.on('click', '.rb-booking-select-checkbox', function (event) {
                 event.stopPropagation();
                 self.handleCheckbox($(this), event);
@@ -123,6 +127,7 @@
 
         toggleSidebar: function () {
             if (window.matchMedia('(max-width: 768px)').matches) {
+                this.layout.removeClass('has-detail-open');
                 this.layout.toggleClass('is-sidebar-open');
                 if (this.layout.hasClass('is-sidebar-open')) {
                     this.sidebar.removeClass('is-collapsed');
@@ -136,6 +141,7 @@
         },
 
         openDetail: function () {
+            this.closeSidebar();
             this.layout.addClass('has-detail-open');
         },
 
@@ -143,10 +149,30 @@
             this.layout.removeClass('has-detail-open');
         },
 
+        closeSidebar: function () {
+            if (window.innerWidth < 769) {
+                this.layout.removeClass('is-sidebar-open');
+                this.sidebar.addClass('is-collapsed');
+            } else {
+                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
+            }
+        },
+
+        closePanels: function () {
+            this.layout.removeClass('has-detail-open is-sidebar-open');
+            if (window.innerWidth < 769) {
+                this.sidebar.addClass('is-collapsed');
+            } else {
+                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
+            }
+        },
+
         handleResize: function () {
             if (window.innerWidth >= 769) {
                 this.layout.removeClass('has-detail-open is-sidebar-open');
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
+            } else {
+                this.sidebar.addClass('is-collapsed');
             }
         },
 
@@ -281,7 +307,7 @@
 
             if (event.key === 'Escape') {
                 if (window.innerWidth < 769) {
-                    this.closeDetail();
+                    this.closePanels();
                 }
             }
         },
