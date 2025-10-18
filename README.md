@@ -1,305 +1,119 @@
-# Restaurant Booking Manager Plugin
+# Restaurant Booking Manager
 
-Plugin WordPress quản lý đặt bàn nhà hàng hoàn chỉnh với giao diện thân thiện người dùng và quản lý admin chuyên nghiệp.
+Plugin WordPress giúp nhà hàng quản lý đặt bàn với giao diện đặt chỗ hiện đại cho khách, portal riêng cho nhân viên và bộ công cụ quản trị đầy đủ. Phiên bản này đã được tinh gọn lại, loại bỏ mã thử nghiệm cũ và cập nhật tài liệu cho đúng với cấu trúc hiện tại.
 
-Phiên bản hiện tại bổ sung **tài khoản portal nội bộ** cho nhân viên duyệt đơn, quy trình đặt bàn đa bước `[restaurant_booking_portal]` và bộ lọc chi nhánh theo người dùng, cho phép triển khai hệ thống đặt bàn mà không cần tạo tài khoản WordPress cho từng quản lý.
-
-## 📁 Cấu trúc thư mục
+## 📦 Cấu trúc thư mục
 
 ```
 restaurant-booking-manager/
-├── restaurant-booking-manager.php          # File plugin chính
-├── includes/
-│   ├── class-database.php                  # Quản lý cơ sở dữ liệu
-│   ├── class-booking.php                   # Logic nghiệp vụ đặt bàn  
-│   ├── class-ajax.php                      # Xử lý AJAX requests
-│   ├── class-email.php                     # Gửi email tự động
-│   └── class-portal-account.php            # Quản lý tài khoản portal & session
+├── restaurant-booking-manager.php      # Bootstrap plugin
 ├── admin/
-│   └── class-admin.php                     # Giao diện admin
+│   └── class-admin.php                 # Màn hình quản trị & settings
+├── includes/
+│   ├── class-ajax.php                  # Endpoint AJAX cho frontend & portal
+│   ├── class-assets-manager.php        # Enqueue giao diện đặt bàn mới
+│   ├── class-booking.php               # Business logic đặt bàn
+│   ├── class-customer.php              # Quản lý khách hàng & lịch sử
+│   ├── class-database.php              # Tạo & migrate bảng dữ liệu
+│   ├── class-email.php                 # Gửi email xác nhận & thông báo
+│   ├── class-i18n.php                  # Đa ngôn ngữ & bản dịch
+│   ├── class-language-switcher.php     # Shortcode + widget đổi ngôn ngữ
+│   ├── class-location.php              # Quản lý chi nhánh & lịch làm việc
+│   └── class-portal-account.php        # Tài khoản portal & session
 ├── public/
-│   └── class-frontend.php                  # Giao diện frontend
-└── assets/
-    ├── css/
-    │   ├── frontend.css                    # CSS cho frontend & portal đa bước
-    │   └── admin.css                       # CSS cho admin & tab portal accounts
-    └── js/
-        ├── frontend.js                     # JavaScript frontend & flow đa bước
-        └── admin.js                        # JavaScript admin & CRUD portal account
+│   ├── class-frontend-base.php         # Logic chia sẻ giữa frontend/portal
+│   ├── class-frontend-public.php       # Widget đặt bàn mới (customer facing)
+│   ├── class-frontend-manager.php      # Portal quản lý cho nhân viên
+│   └── class-frontend.php              # Facade nạp các bề mặt frontend
+├── assets/
+│   ├── css/
+│   │   ├── admin.css                   # Phong cách trang quản trị plugin
+│   │   ├── frontend.css                # Portal quản lý (layout kế thừa)
+│   │   └── new-frontend.css            # Giao diện đặt bàn mới dạng modal
+│   └── js/
+│       ├── admin.js                    # Tương tác CRUD trong trang admin
+│       ├── frontend.js                 # Portal quản lý & bảng điều khiển
+│       └── new-booking.js              # Logic luồng đặt bàn mới 3 bước
+├── languages/                          # File bản dịch (vi, en, ja)
+└── public assets khác...
 ```
 
-## 🚀 Cài đặt
+## ✅ Yêu cầu
 
-### Bước 1: Tạo thư mục plugin
-```bash
-wp-content/plugins/restaurant-booking-manager/
-```
+- WordPress 5.8+ và PHP 7.0 trở lên
+- Bật wp-cron để xử lý email và nhắc hẹn
+- Quyền tạo bảng trong cơ sở dữ liệu MySQL
 
-### Bước 2: Copy các file
-- Tạo tất cả các file theo cấu trúc thư mục ở trên
-- Copy code từ các artifacts vào đúng file tương ứng
+## 🚀 Cài đặt & kích hoạt
 
-### Bước 3: Kích hoạt plugin
-1. Vào WordPress Admin > Plugins  
-2. Tìm "Restaurant Booking Manager"
-3. Click "Activate"
+1. Upload toàn bộ thư mục `restaurant-booking-manager` vào `wp-content/plugins/`.
+2. Đăng nhập trang quản trị WordPress, vào **Plugins → Installed Plugins**.
+3. Kích hoạt **Restaurant Booking Manager**.
+4. Vào **Đặt bàn → Cài đặt** để cấu hình:
+   - Số bàn tối đa, giờ mở/đóng cửa và khoảng cách ca làm việc.
+   - Giờ nghỉ trưa, ca sáng/chiều (nếu dùng chế độ nâng cao).
+   - Bật/tắt email tự động và cập nhật email nhận thông báo.
+5. Sang tab **Portal Accounts** để tạo tài khoản nội bộ, gán chi nhánh và mật khẩu cho từng quản lý.
 
-### Bước 4: Cấu hình cơ bản
-1. Vào **Admin > Đặt bàn > Cài đặt**
-2. Ở tab **Cấu hình**, thiết lập:
-   - Số bàn tối đa
-   - Giờ mở cửa/đóng cửa
-   - Thời gian đặt bàn
-3. Chuyển sang tab **Portal Accounts** để tạo tài khoản portal, gán chi nhánh và thiết lập trạng thái hoạt động cho từng nhân viên.
+## 🧭 Shortcode & Widget
 
-## 📝 Sử dụng
+| Mục đích | Shortcode | Mô tả |
+| --- | --- | --- |
+| Form đặt bàn cho khách | `[restaurant_booking]` | Giao diện modal 3 bước, tự nạp CSS/JS mới (`new-frontend.css`, `new-booking.js`). |
+| Portal dành cho nhân viên | `[restaurant_booking_manager]` | Dashboard quản lý đặt bàn, sử dụng assets kế thừa (`frontend.css`, `frontend.js`). |
+| Bộ chọn ngôn ngữ | `[rb_language_switcher style="flags"]` | Hiển thị dropdown hoặc biểu tượng cờ, đồng bộ với hệ thống RB_I18n. |
 
-### Hiển thị form đặt bàn
+> **Mẹo:** Có thể đặt shortcode đặt bàn vào Gutenberg block, widget, hoặc template PHP (`echo do_shortcode('[restaurant_booking]');`).
 
-**Shortcode cơ bản:**
-```
-[restaurant_booking]
-```
+## ✨ Tính năng nổi bật
 
-**Shortcode tùy chỉnh:**
-```
-[restaurant_booking title="Đặt bàn ngay" button_text="Book Now"]
-```
+### Giao diện khách hàng
 
-### Portal đa bước cho khách
+- Modal responsive với 3 bước: chọn lịch, nhập thông tin, xác nhận.
+- Kiểm tra bàn trống theo chi nhánh, gợi ý giờ lân cận khi full slot.
+- Tự động chuyển ngôn ngữ và bản dịch theo lựa chọn của khách.
+- Xác nhận qua email kèm token bảo mật.
 
-Shortcode mới hiển thị flow đặt bàn 3 bước, hỗ trợ đa ngôn ngữ và kiểm tra chỗ trống theo chi nhánh:
+### Portal quản lý
 
-```
-[restaurant_booking_portal]
-```
+- Đăng nhập bằng tài khoản nội bộ, gán được nhiều chi nhánh.
+- Quản lý trạng thái đặt bàn (pending/confirmed/cancelled/completed).
+- Cập nhật bàn, khách hàng VIP/Blacklist, ghi chú nội bộ.
+- CRUD bàn ăn, cấu hình giờ mở cửa theo từng chi nhánh.
 
-*Bước 1:* chọn ngôn ngữ & chi nhánh → *Bước 2:* kiểm tra giờ trống (kèm gợi ý) → *Bước 3:* nhập thông tin khách và xác nhận.
+### Trang quản trị WordPress
 
-### Quản lý đặt bàn
+- Tabs cấu hình chung, Portal Accounts, Quản lý chi nhánh.
+- Assets admin riêng (`admin.css`, `admin.js`) với AJAX nonce bảo vệ.
+- Thống kê đơn đặt bàn, thiết lập email, buffer time giữa các ca.
 
-1. **Xem đặt bàn:** Admin > Đặt bàn
-   - Tab "Chờ xác nhận": Đặt bàn mới cần xử lý
-   - Tab "Đã xác nhận": Đặt bàn đã confirm
-   - Tab "Đã hủy": Đặt bàn bị hủy
+## 🌐 Đa ngôn ngữ
 
-2. **Quản lý chi nhánh theo tài khoản:**
-   - Tab **Portal Accounts** (trong trang Cài đặt) cho phép tạo tài khoản nội bộ, đặt tên hiển thị, email, trạng thái, mật khẩu.
-   - Chọn một hoặc nhiều chi nhánh để giới hạn quyền truy cập của từng tài khoản.
+- File dịch `.po/.mo` nằm trong thư mục `languages/` (vi_VN, en_US, ja_JP).
+- Lớp `RB_I18n` xử lý việc lưu ngôn ngữ lựa chọn trong session/cookie.
+- `RB_Language_Switcher` cung cấp shortcode, widget và AJAX chuyển ngôn ngữ.
+- JS frontend nhận chuỗi dịch qua `wp_localize_script` để đồng bộ trải nghiệm.
 
-3. **Portal quản lý đặt bàn:**
-   - Shortcode `[restaurant_booking_manager]` hiển thị portal quản lý dành riêng cho các tài khoản nội bộ được tạo trong tab **Portal Accounts**.
-   - Portal chỉ load danh sách chi nhánh đã gán và lưu lựa chọn vào hồ sơ tài khoản portal.
+## 🗄️ Cấu trúc dữ liệu chính
 
-4. **Xác nhận đặt bàn:**
-   - Click "Xác nhận" trên đặt bàn pending
-   - Chọn bàn phù hợp
-   - Email confirm tự động gửi cho khách
+- `wp_rb_bookings`: lưu chi tiết đặt bàn, trạng thái, token xác nhận.
+- `wp_rb_tables`: cấu hình bàn theo chi nhánh và sức chứa.
+- `wp_rb_customers`: lịch sử khách hàng, trạng thái VIP/Blacklist.
+- `wp_rb_locations`: thông tin chi nhánh, giờ hoạt động, ngôn ngữ hỗ trợ.
+- `wp_rb_portal_accounts` & `wp_rb_portal_account_locations`: tài khoản nội bộ và quyền truy cập chi nhánh.
 
-5. **Quản lý bàn:** Admin > Quản lý bàn
-   - Xem tình trạng tất cả bàn
-   - Reset bàn khi khách sử dụng xong
-   - Tạm ngưng/kích hoạt bàn
+`includes/class-database.php` sẽ tự tạo/migrate bảng khi kích hoạt plugin.
 
-## 💻 Tính năng chính
+## 🔐 Bảo mật & Hiệu năng
 
-### Frontend (Khách hàng)
-- ✅ Modal đặt bàn responsive
-- ✅ Kiểm tra bàn trống realtime  
-- ✅ Form validation đầy đủ
-- ✅ Thông báo trạng thái đặt bàn
-- ✅ Tối ưu mobile/desktop
+- Nonce cho mọi AJAX (`rb_admin_nonce`, `rb_frontend_nonce`, `rb_language_nonce`).
+- Sanitization & validation đầu vào trước khi lưu database.
+- Prepared statements và `$wpdb->prepare()` để chống SQL Injection.
+- Chặn nạp assets frontend khi không cần thiết để tối ưu hiệu năng.
 
-### Backend (Admin)
-- ✅ Dashboard quản lý trực quan
-- ✅ Xác nhận đặt bàn với chọn bàn
-- ✅ Quản lý trạng thái bàn
-- ✅ Email tự động HTML đẹp
-- ✅ Thống kê cơ bản
+## 📄 Giấy phép
 
-### Hệ thống Email
-- ✅ Email thông báo admin khi có đặt bàn mới
-- ✅ Email xác nhận cho khách hàng
-- ✅ Template HTML responsive
-- ✅ Thông tin đầy đủ và đẹp mắt
-
-### Portal Accounts (Quản lý nội bộ)
-- ✅ Tạo/Chỉnh sửa/Xoá tài khoản portal ngay trong trang Cài đặt plugin
-- ✅ Gán nhiều chi nhánh cho mỗi tài khoản và tự động giới hạn truy cập
-- ✅ Đăng nhập portal độc lập không cần tài khoản WordPress
-- ✅ Ghi nhận trạng thái, lần đăng nhập gần nhất và khóa/mở tài khoản nhanh chóng
-
-## 🔧 Customization
-
-### Thay đổi giao diện
-**CSS Frontend:**
-```css
-.rb-booking-widget {
-    /* Tùy chỉnh widget đặt bàn */
-}
-
-.rb-modal {
-    /* Tùy chỉnh modal */
-}
-```
-
-**CSS Admin:**
-```css
-.rb-status {
-    /* Tùy chỉnh trạng thái đặt bàn */
-}
-```
-
-### Hooks và Filters
-
-**Actions:**
-```php
-// Sau khi tạo đặt bàn thành công
-do_action('rb_booking_created', $booking_id, $booking);
-
-// Sau khi xác nhận đặt bàn
-do_action('rb_booking_confirmed', $booking_id, $booking);
-
-// Sau khi hủy đặt bàn
-do_action('rb_booking_cancelled', $booking_id, $booking);
-
-// Sau khi hoàn tất phục vụ (đánh dấu completed)
-do_action('rb_booking_completed', $booking_id, $booking);
-```
-
-**Filters:**
-```php
-// Tùy chỉnh email template
-add_filter('rb_email_template', 'custom_email_template', 10, 2);
-
-// Tùy chỉnh validation
-add_filter('rb_booking_validation', 'custom_validation', 10, 2);
-```
-
-## 📊 Database Schema
-
-### Bảng `wp_rb_bookings`
-```sql
-- id: ID đặt bàn
-- customer_name: Tên khách hàng
-- customer_phone: Số điện thoại (đã chuẩn hóa)
-- customer_email: Email
-- guest_count: Số lượng khách
-- booking_date: Ngày đặt
-- booking_time: Giờ đặt
-- table_number: Số bàn được gán khi xác nhận
-- status: Trạng thái (pending/confirmed/cancelled/completed/no-show)
-- special_requests: Yêu cầu đặc biệt
-- booking_source: Nguồn đặt bàn (website, hotline...)
-- location_id: Chi nhánh phục vụ
-- language: Ngôn ngữ khách đã chọn
-- created_at: Thời gian tạo
-- confirmed_at: Thời gian xác nhận
-```
-
-### Bảng `wp_rb_tables`
-```sql
-- id: ID bàn
-- location_id: Thuộc chi nhánh nào
-- table_number: Số bàn
-- capacity: Sức chứa tối đa
-- is_available: Bàn đang hoạt động?
-- created_at: Thời gian tạo
-```
-
-### Bảng `wp_rb_customers`
-```sql
-- id: ID khách hàng
-- name: Tên khách
-- phone: Số điện thoại
-- email: Email
-- total_bookings: Tổng số lần đặt bàn
-- total_guests: Tổng số khách đã phục vụ
-- status: VIP/Black-list/Normal
-- last_booking_at: Lần đặt gần nhất
-```
-
-### Bảng `wp_rb_locations`
-```sql
-- id: ID chi nhánh
-- name: Tên chi nhánh
-- slug: Định danh duy nhất
-- hotline: Hotline liên hệ
-- email: Email nhận thông báo
-- address: Địa chỉ
-- opening_time / closing_time: Giờ mở - đóng cửa
-- time_slot_interval: Khoảng cách giữa các ca
-- min_advance_booking / max_advance_booking: Giới hạn đặt trước
-- languages: Danh sách ngôn ngữ phục vụ
-```
-
-### Bảng `wp_rb_portal_accounts`
-```sql
-- id: ID tài khoản portal
-- username: Định danh đăng nhập duy nhất
-- display_name: Tên hiển thị trong giao diện quản lý
-- email: Email liên hệ (tùy chọn)
-- password_hash: Mật khẩu đã băm theo chuẩn WordPress
-- status: Trạng thái (active/inactive/locked)
-- last_login_at: Lần đăng nhập gần nhất
-- created_at: Thời gian tạo tài khoản
-- updated_at: Lần cập nhật gần nhất
-```
-
-### Bảng `wp_rb_portal_account_locations`
-```sql
-- account_id: Liên kết tới tài khoản portal
-- location_id: Chi nhánh được phép truy cập
-- assigned_at: Thời điểm gán quyền
-```
-
-## 🔒 Bảo mật
-
-- ✅ **Nonce verification** cho mọi AJAX request
-- ✅ **Data sanitization** cho input
-- ✅ **Permission checks** cho admin functions
-- ✅ **SQL injection prevention** với prepared statements
-- ✅ **XSS protection** với proper escaping
-
-## 📱 Responsive Design
-
-Plugin được thiết kế mobile-first:
-- Modal tự động điều chỉnh kích thước
-- Form layout responsive 
-- Touch-friendly buttons
-- Optimized cho mọi screen size
-
-## 🚀 Tối ưu Performance  
-
-- ✅ **AJAX loading** - Không reload trang
-- ✅ **Lazy loading** - Load content khi cần
-- ✅ **Caching friendly** - Tương thích cache plugins
-- ✅ **Optimized queries** - Database queries hiệu quả
-
-## 🔄 Tính năng mở rộng
-
-Plugin được thiết kế để dễ dàng mở rộng:
-
-### Tính năng có thể thêm:
-- 📊 **Analytics & Reports** - Báo cáo chi tiết
-- 💳 **Payment Integration** - Thanh toán online  
-- 📱 **SMS Notifications** - Gửi SMS
-- 🎫 **QR Code Booking** - Mã QR cho đặt bàn
-- 🔄 **Multi-location** - Nhiều chi nhánh
-- 📅 **Calendar Integration** - Tích hợp Google Calendar
-- ⭐ **Reviews System** - Hệ thống đánh giá
-- 🎯 **Loyalty Program** - Chương trình khách hàng thân thiết
-
-## 📞 Support
-
-Để được hỗ trợ và báo lỗi:
-1. Kiểm tra WordPress debug log
-2. Kiểm tra browser console cho lỗi JavaScript
-3. Verify database tables đã được tạo đúng
-
-## 📄 License
-
-GPL v2 or later
+Phát hành theo GPL v2 hoặc mới hơn. Bạn có thể tự do chỉnh sửa và phân phối lại theo điều khoản GPL.
 
 ---
 
