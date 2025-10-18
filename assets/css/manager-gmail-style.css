@@ -1569,17 +1569,22 @@
     }
 
     .rb-manager--gmail .rb-manager-header {
-        grid-template-columns: 1fr;
-        justify-items: stretch;
-        gap: 16px;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
         padding: 16px;
     }
 
     .rb-manager--gmail .rb-manager-header-left {
+        width: 100% !important;
+        min-width: 0 !important;
         gap: 12px;
     }
 
     .rb-manager--gmail .rb-manager-header-right {
+        width: 100% !important;
+        min-width: 0 !important;
         flex-wrap: wrap;
         align-items: flex-start;
         justify-content: flex-start;
@@ -1606,13 +1611,19 @@
         align-items: flex-start;
     }
 
+    .rb-manager--gmail .rb-gmail-header-title {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+
     .rb-manager--gmail .rb-manager-location-switcher label {
         width: 100%;
     }
 
     .rb-manager--gmail .rb-manager-location-switcher select {
-        min-width: 0;
-        width: 100%;
+        min-width: 0 !important;
+        width: 100% !important;
     }
 
     .rb-manager--gmail .rb-manager-gmail-page {
@@ -1683,6 +1694,20 @@
     .rb-gmail-bulk-actions {
         width: 100%;
         justify-content: flex-start;
+    }
+
+    .rb-manager--gmail .rb-manager-location-switcher {
+        width: 100% !important;
+    }
+
+    .rb-manager--gmail .rb-gmail-header-nav ul {
+        overflow-x: auto !important;
+        flex-wrap: nowrap !important;
+        padding-bottom: 8px !important;
+    }
+
+    .rb-manager--gmail .rb-gmail-header-nav li {
+        flex-shrink: 0 !important;
     }
 
     .rb-gmail-detail {
@@ -1845,5 +1870,89 @@
     .rb-booking-avatar {
         width: 36px;
         height: 36px;
+    }
+}
+
+/* Enhanced responsive layout for booking list */
+@media (max-width: 768px) {
+    .rb-manager-gmail-layout {
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "sidebar"
+            "main"
+            "detail" !important;
+        gap: 12px !important;
+    }
+
+    .rb-gmail-sidebar {
+        grid-area: sidebar !important;
+        width: 100% !important;
+        transform: none !important;
+    }
+
+    .rb-manager-gmail-layout.is-mobile-ready .rb-gmail-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: -100% !important;
+        width: 80vw !important;
+        height: 100vh !important;
+        z-index: 1000 !important;
+        transition: left 0.3s ease !important;
+    }
+
+    .rb-manager-gmail-layout.is-mobile-ready.is-sidebar-open .rb-gmail-sidebar,
+    .rb-manager-gmail-layout.is-mobile-ready .rb-gmail-sidebar.is-open {
+        left: 0 !important;
+    }
+
+    .rb-gmail-main {
+        grid-area: main !important;
+    }
+
+    .rb-gmail-detail {
+        grid-area: detail !important;
+        position: static !important;
+    }
+
+    .rb-booking-card {
+        grid-template-columns: auto 1fr !important;
+        gap: 12px !important;
+        padding: 12px !important;
+    }
+
+    .rb-booking-select {
+        order: -1 !important;
+    }
+
+    .rb-booking-card-body {
+        grid-column: 1 / -1 !important;
+    }
+
+    .rb-booking-card-meta {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .rb-gmail-toolbar {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .rb-gmail-filter-form {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    .rb-gmail-filter-form label {
+        width: 100% !important;
+    }
+
+    .rb-gmail-search {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .rb-gmail-toggle {
+        display: block !important;
     }
 }

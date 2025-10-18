@@ -8,6 +8,8 @@
                 return;
             }
 
+            this.layout.attr('data-rb-gmail-enhanced', '1');
+
             this.sidebar = this.layout.find('.rb-gmail-sidebar');
             this.detail = this.layout.find('.rb-gmail-detail');
             this.selectAll = this.layout.find('.rb-gmail-select-all-checkbox');
@@ -128,13 +130,11 @@
 
         toggleSidebar: function () {
             if (window.matchMedia('(max-width: 768px)').matches) {
+                var shouldOpen = !this.sidebar.hasClass('is-open');
                 this.layout.removeClass('has-detail-open');
-                this.layout.toggleClass('is-sidebar-open');
-                if (this.layout.hasClass('is-sidebar-open')) {
-                    this.sidebar.removeClass('is-collapsed');
-                } else {
-                    this.sidebar.addClass('is-collapsed');
-                }
+                this.layout.toggleClass('is-sidebar-open', shouldOpen);
+                this.sidebar.toggleClass('is-open', shouldOpen);
+                this.sidebar.toggleClass('is-collapsed', !shouldOpen);
             } else {
                 this.layout.toggleClass('is-sidebar-collapsed');
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
@@ -153,6 +153,7 @@
         closeSidebar: function () {
             if (window.innerWidth < 769) {
                 this.layout.removeClass('is-sidebar-open');
+                this.sidebar.removeClass('is-open');
                 this.sidebar.addClass('is-collapsed');
             } else {
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
@@ -162,6 +163,7 @@
         closePanels: function () {
             this.layout.removeClass('has-detail-open is-sidebar-open');
             if (window.innerWidth < 769) {
+                this.sidebar.removeClass('is-open');
                 this.sidebar.addClass('is-collapsed');
             } else {
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
@@ -169,11 +171,22 @@
         },
 
         handleResize: function () {
-            if (window.innerWidth >= 769) {
-                this.layout.removeClass('has-detail-open is-sidebar-open');
-                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
+            var isMobile = window.innerWidth < 769;
+
+            this.layout.toggleClass('is-mobile-ready', isMobile);
+
+            if (isMobile) {
+                if (this.sidebar.hasClass('is-open')) {
+                    this.sidebar.removeClass('is-collapsed');
+                    this.layout.addClass('is-sidebar-open');
+                } else {
+                    this.sidebar.addClass('is-collapsed');
+                    this.layout.removeClass('is-sidebar-open');
+                }
             } else {
-                this.sidebar.addClass('is-collapsed');
+                this.layout.removeClass('has-detail-open is-sidebar-open');
+                this.sidebar.removeClass('is-open');
+                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
             }
         },
 
@@ -499,3 +512,36 @@
 
     window.RBGmailManager = GmailManager;
 })(jQuery);
+
+document.addEventListener('DOMContentLoaded', function () {
+    var layout = document.querySelector('.rb-manager-gmail-layout');
+    if (!layout || layout.getAttribute('data-rb-gmail-enhanced') === '1') {
+        return;
+    }
+
+    var toggle = layout.querySelector('.rb-gmail-toggle');
+    var sidebar = layout.querySelector('.rb-gmail-sidebar');
+
+    if (!toggle || !sidebar) {
+        return;
+    }
+
+    toggle.addEventListener('click', function () {
+        if (layout.getAttribute('data-rb-gmail-enhanced') === '1') {
+            return;
+        }
+
+        if (!window.matchMedia('(max-width: 768px)').matches) {
+            return;
+        }
+
+        var isOpen = sidebar.classList.toggle('is-open');
+        layout.classList.toggle('is-sidebar-open', isOpen);
+
+        if (isOpen) {
+            sidebar.classList.remove('is-collapsed');
+        } else {
+            sidebar.classList.add('is-collapsed');
+        }
+    });
+});
