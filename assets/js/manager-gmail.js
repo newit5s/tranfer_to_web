@@ -12,15 +12,25 @@
 
             this.sidebar = this.layout.find('.rb-gmail-sidebar');
             this.detail = this.layout.find('.rb-gmail-detail');
+            this.header = this.layout.closest('.rb-manager--gmail').find('.rb-manager-header');
+            this.toolbar = this.layout.find('.rb-gmail-toolbar');
+            this.toolbarForms = this.toolbar.find('form');
+            this.detailScroll = this.detail.find('.rb-gmail-detail-scroll');
             this.selectAll = this.layout.find('.rb-gmail-select-all-checkbox');
             this.selection = new Set();
             this.lastCheckedIndex = null;
             this.lastFocused = null;
+            this.mobileToolsContainer = null;
+            this.formsInSidebar = false;
+            this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
 
+            this.prepareToolbarPlaceholders();
+            this.ensureMobileToolsContainer();
             this.bindEvents();
             this.refreshCards();
             this.syncSelectionUI();
             this.handleResize();
+            this.handleScroll();
         },
 
         bindEvents: function () {
@@ -112,6 +122,10 @@
             $(window).on('resize', function () {
                 self.handleResize();
             });
+
+            $(window).on('scroll', function () {
+                self.handleScroll();
+            });
         },
 
         refreshCards: function () {
@@ -139,15 +153,32 @@
                 this.layout.toggleClass('is-sidebar-collapsed');
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
             }
+
+            this.revealHeader();
         },
 
         openDetail: function () {
             this.closeSidebar();
             this.layout.addClass('has-detail-open');
+            this.scrollDetailToTop();
+            this.revealHeader();
+
+            if (window.innerWidth < 769 && typeof window.scrollTo === 'function') {
+                try {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } catch (error) {
+                    window.scrollTo(0, 0);
+                }
+            }
         },
 
         closeDetail: function () {
             this.layout.removeClass('has-detail-open');
+            this.scrollDetailToTop();
+            this.layout.find('.rb-booking-item.active').removeClass('active');
+            this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
+            this.lastFocused = null;
+            this.revealHeader();
         },
 
         closeSidebar: function () {
@@ -158,6 +189,8 @@
             } else {
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
             }
+
+            this.revealHeader();
         },
 
         closePanels: function () {
@@ -168,6 +201,12 @@
             } else {
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
             }
+
+            this.revealHeader();
+            this.scrollDetailToTop();
+            this.layout.find('.rb-booking-item.active').removeClass('active');
+            this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
+            this.lastFocused = null;
         },
 
         handleResize: function () {
@@ -176,6 +215,7 @@
             this.layout.toggleClass('is-mobile-ready', isMobile);
 
             if (isMobile) {
+                this.moveToolbarFormsToSidebar();
                 if (this.sidebar.hasClass('is-open')) {
                     this.sidebar.removeClass('is-collapsed');
                     this.layout.addClass('is-sidebar-open');
@@ -184,10 +224,143 @@
                     this.layout.removeClass('is-sidebar-open');
                 }
             } else {
+                this.restoreToolbarForms();
                 this.layout.removeClass('has-detail-open is-sidebar-open');
                 this.sidebar.removeClass('is-open');
                 this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
+                this.revealHeader();
             }
+
+            this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        },
+
+        prepareToolbarPlaceholders: function () {
+            if (!this.toolbarForms || !this.toolbarForms.length) {
+                return;
+            }
+
+            this.toolbarForms.each(function () {
+                var form = $(this);
+                if (!form.data('rbPlaceholder')) {
+                    var placeholder = $('<div class="rb-gmail-toolbar-placeholder" aria-hidden="true"></div>');
+                    placeholder.insertAfter(form);
+                    form.data('rbPlaceholder', placeholder);
+                }
+            });
+        },
+
+        ensureMobileToolsContainer: function () {
+            if (this.mobileToolsContainer && this.mobileToolsContainer.length) {
+                return;
+            }
+
+            if (!this.sidebar || !this.sidebar.length) {
+                return;
+            }
+
+            var inner = this.sidebar.find('.rb-gmail-sidebar-inner');
+            if (!inner.length) {
+                return;
+            }
+
+            this.mobileToolsContainer = inner.find('.rb-gmail-sidebar-mobile-tools');
+            if (!this.mobileToolsContainer.length) {
+                this.mobileToolsContainer = $('<div class="rb-gmail-sidebar-mobile-tools" aria-hidden="true"></div>');
+                inner.prepend(this.mobileToolsContainer);
+            }
+        },
+
+        moveToolbarFormsToSidebar: function () {
+            if (!this.toolbarForms || !this.toolbarForms.length) {
+                return;
+            }
+
+            this.ensureMobileToolsContainer();
+            if (!this.mobileToolsContainer || !this.mobileToolsContainer.length || this.formsInSidebar) {
+                return;
+            }
+
+            var self = this;
+            this.mobileToolsContainer.attr('aria-hidden', 'false');
+
+            this.toolbarForms.each(function () {
+                var form = $(this);
+                var placeholder = form.data('rbPlaceholder');
+                if (!placeholder || !placeholder.length) {
+                    placeholder = $('<div class="rb-gmail-toolbar-placeholder" aria-hidden="true"></div>');
+                    placeholder.insertAfter(form);
+                    form.data('rbPlaceholder', placeholder);
+                }
+                self.mobileToolsContainer.append(form);
+            });
+
+            this.formsInSidebar = true;
+        },
+
+        restoreToolbarForms: function () {
+            if (!this.toolbarForms || !this.toolbarForms.length || !this.formsInSidebar) {
+                return;
+            }
+
+            var self = this;
+            this.toolbarForms.each(function () {
+                var form = $(this);
+                var placeholder = form.data('rbPlaceholder');
+                if (placeholder && placeholder.length) {
+                    placeholder.before(form);
+                } else if (self.toolbar && self.toolbar.length) {
+                    self.toolbar.append(form);
+                }
+            });
+
+            this.formsInSidebar = false;
+            if (this.mobileToolsContainer && this.mobileToolsContainer.length) {
+                this.mobileToolsContainer.attr('aria-hidden', 'true');
+            }
+        },
+
+        scrollDetailToTop: function () {
+            if (this.detailScroll && this.detailScroll.length) {
+                this.detailScroll.scrollTop(0);
+            }
+        },
+
+        revealHeader: function () {
+            if (this.header && this.header.length) {
+                this.header.removeClass('is-hidden');
+            }
+            this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        },
+
+        handleScroll: function () {
+            if (!this.header || !this.header.length) {
+                return;
+            }
+
+            if (window.innerWidth >= 769) {
+                this.header.removeClass('is-hidden');
+                this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+                return;
+            }
+
+            var currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            var delta = currentY - this.lastScrollY;
+
+            if (this.layout.hasClass('is-sidebar-open') || this.layout.hasClass('has-detail-open')) {
+                this.header.removeClass('is-hidden');
+                this.lastScrollY = currentY;
+                return;
+            }
+
+            if (currentY <= 0) {
+                this.header.removeClass('is-hidden');
+            } else if (delta > 6) {
+                this.header.addClass('is-hidden');
+            } else if (delta < -6) {
+                this.header.removeClass('is-hidden');
+            }
+
+            this.lastScrollY = currentY;
         },
 
         handleCheckbox: function (checkbox, event) {
@@ -294,7 +467,12 @@
                 return;
             }
 
+            this.layout.find('.rb-booking-item.active').removeClass('active');
+            card.addClass('active');
             this.markFocused(card);
+            if (window.innerWidth < 769) {
+                this.scrollDetailToTop();
+            }
         },
 
         markFocused: function (card) {
