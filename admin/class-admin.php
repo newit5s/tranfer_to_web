@@ -186,7 +186,16 @@ class RB_Admin {
             'rb-tables',
             array($this, 'display_tables_page')
         );
-        
+
+        add_submenu_page(
+            'restaurant-booking',
+            rb_t('timeline_view'),
+            rb_t('timeline_view'),
+            'manage_options',
+            'rb-timeline',
+            array($this, 'display_timeline_page')
+        );
+
         add_submenu_page(
             'restaurant-booking',
             rb_t('manage_customers'),
@@ -376,6 +385,21 @@ class RB_Admin {
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="checkout_time"><?php rb_e('checkout_time'); ?> *</label>
+                            </th>
+                            <td>
+                                <select name="checkout_time" id="checkout_time" required>
+                                    <option value=""><?php rb_e('select_time'); ?></option>
+                                    <?php foreach ($time_slots as $slot) : ?>
+                                        <option value="<?php echo esc_attr($slot); ?>"><?php echo esc_html($slot); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="description"><?php echo esc_html__('Checkout time must be at least 1 hour after check-in.', 'restaurant-booking'); ?></p>
                             </td>
                         </tr>
                         
@@ -1056,11 +1080,112 @@ class RB_Admin {
         </div>
         <?php
     }
-    
+
+    public function display_timeline_page() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Unauthorized', 'restaurant-booking'));
+        }
+
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $locations = $rb_location ? $rb_location->all() : array();
+
+        if (empty($locations)) {
+            echo '<div class="notice notice-warning"><p>' . esc_html__('No locations found. Please configure a location before viewing the timeline.', 'restaurant-booking') . '</p></div>';
+            return;
+        }
+
+        $location_ids = array_map('intval', wp_list_pluck($locations, 'id'));
+        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
+
+        if (!$selected_location_id || !in_array($selected_location_id, $location_ids, true)) {
+            $selected_location_id = (int) $location_ids[0];
+        }
+
+        $current_date = function_exists('wp_date') ? wp_date('Y-m-d') : date_i18n('Y-m-d');
+        $timeline_date = isset($_GET['timeline_date']) ? sanitize_text_field(wp_unslash($_GET['timeline_date'])) : $current_date;
+        if (empty($timeline_date)) {
+            $timeline_date = $current_date;
+        }
+
+        $timeline_nonce = wp_create_nonce('rb_timeline_nonce');
+
+        $active_location = null;
+        foreach ($locations as $location) {
+            if ((int) $location->id === $selected_location_id) {
+                $active_location = $location;
+                break;
+            }
+        }
+
+        ?>
+        <div class="wrap rb-timeline-admin" data-timeline-nonce="<?php echo esc_attr($timeline_nonce); ?>">
+            <h1><?php echo esc_html(rb_t('timeline_view', __('Timeline View', 'restaurant-booking'))); ?></h1>
+
+            <div class="rb-timeline-controls" style="margin: 20px 0;">
+                <form method="get" action="" class="rb-timeline-filter" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <input type="hidden" name="page" value="rb-timeline">
+                    <label for="rb-timeline-location" style="font-weight: 600;">
+                        <?php esc_html_e('Location', 'restaurant-booking'); ?>
+                    </label>
+                    <select id="rb-timeline-location" name="location_id">
+                        <?php foreach ($locations as $location) : ?>
+                            <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, (int) $location->id); ?>>
+                                <?php echo esc_html($location->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <label for="rb-timeline-date" style="font-weight: 600;">
+                        <?php esc_html_e('Date', 'restaurant-booking'); ?>
+                    </label>
+                    <input type="date" id="rb-timeline-date" name="timeline_date" value="<?php echo esc_attr($timeline_date); ?>">
+
+                    <button type="submit" class="button button-primary">
+                        <?php esc_html_e('Apply', 'restaurant-booking'); ?>
+                    </button>
+                </form>
+
+                <?php if ($active_location) : ?>
+                    <div class="rb-timeline-location-meta" style="margin-top: 15px; color: #555;">
+                        <strong><?php echo esc_html($active_location->name); ?></strong>
+                        <?php if (!empty($active_location->address)) : ?>
+                            <span style="margin-left: 8px;">
+                                <?php echo esc_html($active_location->address); ?>
+                            </span>
+                        <?php endif; ?>
+                        <?php if (!empty($active_location->hotline)) : ?>
+                            <span style="margin-left: 8px;">
+                                📞 <?php echo esc_html($active_location->hotline); ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div id="rb-timeline-app"
+                 class="rb-timeline-app"
+                 data-ajax-url="<?php echo esc_url(admin_url('admin-ajax.php')); ?>"
+                 data-nonce="<?php echo esc_attr($timeline_nonce); ?>"
+                 data-date="<?php echo esc_attr($timeline_date); ?>"
+                 data-location="<?php echo esc_attr($selected_location_id); ?>">
+                <div class="rb-timeline-loading" style="padding: 40px 0; text-align: center;">
+                    <?php esc_html_e('Loading timeline data…', 'restaurant-booking'); ?>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
     public function display_customers_page() {
         global $wpdb, $rb_customer;
         $customer_table = $wpdb->prefix . 'rb_customers';
-        
+
         // Get filters
         $filter_vip = isset($_GET['filter_vip']) ? sanitize_text_field($_GET['filter_vip']) : '';
         $filter_blacklist = isset($_GET['filter_blacklist']) ? sanitize_text_field($_GET['filter_blacklist']) : '';
@@ -2613,13 +2738,18 @@ class RB_Admin {
             exit;
         }
 
+        $checkin_time = isset($_POST['booking_time']) ? sanitize_text_field($_POST['booking_time']) : '';
+        $checkout_time = isset($_POST['checkout_time']) ? sanitize_text_field($_POST['checkout_time']) : '';
+
         $booking_data = array(
             'customer_name' => sanitize_text_field($_POST['customer_name']),
             'customer_phone' => sanitize_text_field($_POST['customer_phone']),
             'customer_email' => sanitize_email($_POST['customer_email']),
             'guest_count' => intval($_POST['guest_count']),
             'booking_date' => sanitize_text_field($_POST['booking_date']),
-            'booking_time' => sanitize_text_field($_POST['booking_time']),
+            'booking_time' => $checkin_time,
+            'checkin_time' => $checkin_time,
+            'checkout_time' => $checkout_time,
             'booking_source' => sanitize_text_field($_POST['booking_source']),
             'special_requests' => isset($_POST['special_requests']) ? sanitize_textarea_field($_POST['special_requests']) : '',
             'admin_notes' => isset($_POST['admin_notes']) ? sanitize_textarea_field($_POST['admin_notes']) : '',
@@ -2629,12 +2759,45 @@ class RB_Admin {
             'location_id' => $location_id
         );
 
+        $checkin_timestamp = strtotime($booking_data['booking_date'] . ' ' . $checkin_time);
+        $checkout_timestamp = strtotime($booking_data['booking_date'] . ' ' . $checkout_time);
+
+        if (!$checkin_timestamp || !$checkout_timestamp || $checkout_timestamp <= $checkin_timestamp) {
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'rb-create-booking',
+                    'message' => 'invalid_time_range',
+                    'location_id' => $location_id
+                ),
+                admin_url('admin.php')
+            );
+
+            wp_redirect($redirect_url);
+            exit;
+        }
+
+        $duration = $checkout_timestamp - $checkin_timestamp;
+        if ($duration < HOUR_IN_SECONDS || $duration > 6 * HOUR_IN_SECONDS) {
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'rb-create-booking',
+                    'message' => 'invalid_duration',
+                    'location_id' => $location_id
+                ),
+                admin_url('admin.php')
+            );
+
+            wp_redirect($redirect_url);
+            exit;
+        }
+
         $is_available = $rb_booking->is_time_slot_available(
             $booking_data['booking_date'],
-            $booking_data['booking_time'],
+            $booking_data['checkin_time'],
             $booking_data['guest_count'],
             null,
-            $location_id
+            $location_id,
+            $booking_data['checkout_time']
         );
 
         if (!$is_available) {
