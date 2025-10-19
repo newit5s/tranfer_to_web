@@ -1887,6 +1887,24 @@
         width: 100%;
     }
 
+    .rb-gmail-filter-form select,
+    .rb-gmail-filter-form input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .rb-gmail-filter-actions {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .rb-gmail-filter-actions .rb-btn-primary,
+    .rb-gmail-filter-actions .rb-btn-secondary {
+        width: 100% !important;
+    }
+
     .rb-gmail-search {
         width: 100%;
         max-width: none;
@@ -1968,6 +1986,24 @@
     .rb-gmail-filter-actions .rb-btn-primary,
     .rb-gmail-filter-actions .rb-btn-secondary {
         width: 100%;
+    }
+
+    .rb-gmail-filter-form select,
+    .rb-gmail-filter-form input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .rb-gmail-filter-actions {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .rb-gmail-filter-actions .rb-btn-primary,
+    .rb-gmail-filter-actions .rb-btn-secondary {
+        width: 100% !important;
     }
 
     .rb-gmail-search {
