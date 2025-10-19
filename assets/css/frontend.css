@@ -1426,6 +1426,19 @@
     background: rgba(26, 115, 232, 0.08);
 }
 
+.rb-manager-history-table tbody tr:nth-child(even) {
+    background: rgba(26, 115, 232, 0.04);
+}
+
+.rb-manager-history-table tbody tr:hover {
+    background: rgba(26, 115, 232, 0.1);
+}
+
+.rb-manager-history-table td:last-child {
+    font-weight: 600;
+    color: #1a73e8;
+}
+
 .rb-status-available {
     background: rgba(46, 204, 113, 0.2);
     color: #2ecc71;

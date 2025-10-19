@@ -1552,7 +1552,14 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         <div
                             class="rb-inbox-detail rb-customer-detail"
                             id="rb-customer-detail"
+                            aria-hidden="true"
                         >
+                            <button
+                                type="button"
+                                class="rb-gmail-detail-close"
+                                data-rb-close-detail
+                                aria-label="<?php echo esc_attr($this->t('close_detail', __('Close detail panel', 'restaurant-booking'))); ?>"
+                            >&times;</button>
                             <div class="rb-inbox-detail-empty">
                                 <p><?php echo esc_html($this->t('select_customer_to_view', __('Select a customer to see details.', 'restaurant-booking'))); ?></p>
                             </div>
@@ -1625,6 +1632,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         </div>
                     </div>
                 </div>
+                <div class="rb-gmail-overlay" data-rb-close-panels aria-hidden="true"></div>
             </div>
 
             <div id="rb-manager-history" class="rb-manager-history" hidden>
