@@ -13,22 +13,16 @@
             this.sidebar = this.layout.find('.rb-gmail-sidebar');
             this.detail = this.layout.find('.rb-gmail-detail');
             this.header = this.layout.closest('.rb-manager--gmail').find('.rb-manager-header');
-            this.toolbar = this.layout.find('.rb-gmail-toolbar');
-            this.toolbarForms = this.toolbar.find('form');
             this.detailScroll = this.detail.find('.rb-gmail-detail-scroll');
-            this.selectAll = this.layout.find('.rb-gmail-select-all-checkbox');
-            this.selection = new Set();
-            this.lastCheckedIndex = null;
             this.lastFocused = null;
-            this.mobileToolsContainer = null;
-            this.formsInSidebar = false;
             this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
 
-            this.prepareToolbarPlaceholders();
-            this.ensureMobileToolsContainer();
+            if (this.detail.length) {
+                this.detail.attr('aria-hidden', 'true');
+            }
+
             this.bindEvents();
             this.refreshCards();
-            this.syncSelectionUI();
             this.handleResize();
             this.handleScroll();
         },
@@ -44,21 +38,10 @@
                 self.closePanels();
             });
 
-            this.layout.on('click', '.rb-booking-select-checkbox', function (event) {
-                event.stopPropagation();
-                self.handleCheckbox($(this), event);
-            });
-
             this.layout.on('click', '.rb-booking-item', function (event) {
-                if ($(event.target).closest('.rb-booking-select, .rb-gmail-bulk-actions, .rb-gmail-bulk-button').length) {
-                    return;
-                }
-
                 var card = $(this);
                 self.focusCard(card);
-                if (window.innerWidth < 769) {
-                    self.openDetail();
-                }
+                self.openDetail();
             });
 
             this.layout.on('keydown', '.rb-booking-item', function (event) {
@@ -68,27 +51,9 @@
                 }
             });
 
-            this.layout.on('click', '.rb-gmail-bulk-button', function () {
-                var action = $(this).data('bulk-action');
-                if (!action) {
-                    return;
-                }
-                self.performBulkAction(action, $(this));
-            });
-
-            this.layout.on('click', '[data-bulk-clear]', function () {
-                self.clearSelection();
-            });
-
             this.layout.on('click', '[data-rb-close-detail]', function () {
                 self.closeDetail();
             });
-
-            if (this.selectAll.length) {
-                this.selectAll.on('change', function () {
-                    self.toggleSelectAll($(this).prop('checked'));
-                });
-            }
 
             $(document).on('rb:manager:bookingSelected', function (event, element) {
                 if (!element) {
@@ -96,7 +61,7 @@
                 }
                 var card = $(element);
                 self.markFocused(card);
-                if (window.innerWidth < 769 && card.length) {
+                if (card.length) {
                     self.openDetail();
                 }
             });
@@ -150,8 +115,7 @@
                 this.sidebar.toggleClass('is-open', shouldOpen);
                 this.sidebar.toggleClass('is-collapsed', !shouldOpen);
             } else {
-                this.layout.toggleClass('is-sidebar-collapsed');
-                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
+                this.layout.toggleClass('is-sidebar-hidden');
             }
 
             this.revealHeader();
@@ -160,6 +124,13 @@
         openDetail: function () {
             this.closeSidebar();
             this.layout.addClass('has-detail-open');
+            if (this.detail.length) {
+                this.detail.attr('aria-hidden', 'false');
+                if (!this.detail.attr('tabindex')) {
+                    this.detail.attr('tabindex', '-1');
+                }
+                this.detail.trigger('focus');
+            }
             this.scrollDetailToTop();
             this.revealHeader();
 
@@ -173,11 +144,18 @@
         },
 
         closeDetail: function () {
+            var previousFocus = this.lastFocused;
             this.layout.removeClass('has-detail-open');
+            if (this.detail.length) {
+                this.detail.attr('aria-hidden', 'true');
+            }
             this.scrollDetailToTop();
             this.layout.find('.rb-booking-item.active').removeClass('active');
             this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
             this.lastFocused = null;
+            if (previousFocus && previousFocus.length) {
+                previousFocus.trigger('focus');
+            }
             this.revealHeader();
         },
 
@@ -186,27 +164,14 @@
                 this.layout.removeClass('is-sidebar-open');
                 this.sidebar.removeClass('is-open');
                 this.sidebar.addClass('is-collapsed');
-            } else {
-                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
             }
 
             this.revealHeader();
         },
 
         closePanels: function () {
-            this.layout.removeClass('has-detail-open is-sidebar-open');
-            if (window.innerWidth < 769) {
-                this.sidebar.removeClass('is-open');
-                this.sidebar.addClass('is-collapsed');
-            } else {
-                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
-            }
-
-            this.revealHeader();
-            this.scrollDetailToTop();
-            this.layout.find('.rb-booking-item.active').removeClass('active');
-            this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
-            this.lastFocused = null;
+            this.closeDetail();
+            this.closeSidebar();
         },
 
         handleResize: function () {
@@ -215,108 +180,24 @@
             this.layout.toggleClass('is-mobile-ready', isMobile);
 
             if (isMobile) {
-                this.moveToolbarFormsToSidebar();
+                this.layout.removeClass('is-sidebar-hidden');
                 if (this.sidebar.hasClass('is-open')) {
-                    this.sidebar.removeClass('is-collapsed');
                     this.layout.addClass('is-sidebar-open');
+                    this.sidebar.removeClass('is-collapsed');
                 } else {
-                    this.sidebar.addClass('is-collapsed');
                     this.layout.removeClass('is-sidebar-open');
+                    this.sidebar.addClass('is-collapsed');
                 }
             } else {
-                this.restoreToolbarForms();
-                this.layout.removeClass('has-detail-open is-sidebar-open');
-                this.sidebar.removeClass('is-open');
-                this.sidebar.toggleClass('is-collapsed', this.layout.hasClass('is-sidebar-collapsed'));
+                this.layout.removeClass('is-sidebar-open has-detail-open');
+                this.sidebar.removeClass('is-open is-collapsed');
+                if (this.detail.length) {
+                    this.detail.attr('aria-hidden', 'true');
+                }
                 this.revealHeader();
             }
 
             this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
-        },
-
-        prepareToolbarPlaceholders: function () {
-            if (!this.toolbarForms || !this.toolbarForms.length) {
-                return;
-            }
-
-            this.toolbarForms.each(function () {
-                var form = $(this);
-                if (!form.data('rbPlaceholder')) {
-                    var placeholder = $('<div class="rb-gmail-toolbar-placeholder" aria-hidden="true"></div>');
-                    placeholder.insertAfter(form);
-                    form.data('rbPlaceholder', placeholder);
-                }
-            });
-        },
-
-        ensureMobileToolsContainer: function () {
-            if (this.mobileToolsContainer && this.mobileToolsContainer.length) {
-                return;
-            }
-
-            if (!this.sidebar || !this.sidebar.length) {
-                return;
-            }
-
-            var inner = this.sidebar.find('.rb-gmail-sidebar-inner');
-            if (!inner.length) {
-                return;
-            }
-
-            this.mobileToolsContainer = inner.find('.rb-gmail-sidebar-mobile-tools');
-            if (!this.mobileToolsContainer.length) {
-                this.mobileToolsContainer = $('<div class="rb-gmail-sidebar-mobile-tools" aria-hidden="true"></div>');
-                inner.prepend(this.mobileToolsContainer);
-            }
-        },
-
-        moveToolbarFormsToSidebar: function () {
-            if (!this.toolbarForms || !this.toolbarForms.length) {
-                return;
-            }
-
-            this.ensureMobileToolsContainer();
-            if (!this.mobileToolsContainer || !this.mobileToolsContainer.length || this.formsInSidebar) {
-                return;
-            }
-
-            var self = this;
-            this.mobileToolsContainer.attr('aria-hidden', 'false');
-
-            this.toolbarForms.each(function () {
-                var form = $(this);
-                var placeholder = form.data('rbPlaceholder');
-                if (!placeholder || !placeholder.length) {
-                    placeholder = $('<div class="rb-gmail-toolbar-placeholder" aria-hidden="true"></div>');
-                    placeholder.insertAfter(form);
-                    form.data('rbPlaceholder', placeholder);
-                }
-                self.mobileToolsContainer.append(form);
-            });
-
-            this.formsInSidebar = true;
-        },
-
-        restoreToolbarForms: function () {
-            if (!this.toolbarForms || !this.toolbarForms.length || !this.formsInSidebar) {
-                return;
-            }
-
-            var self = this;
-            this.toolbarForms.each(function () {
-                var form = $(this);
-                var placeholder = form.data('rbPlaceholder');
-                if (placeholder && placeholder.length) {
-                    placeholder.before(form);
-                } else if (self.toolbar && self.toolbar.length) {
-                    self.toolbar.append(form);
-                }
-            });
-
-            this.formsInSidebar = false;
-            if (this.mobileToolsContainer && this.mobileToolsContainer.length) {
-                this.mobileToolsContainer.attr('aria-hidden', 'true');
-            }
         },
 
         scrollDetailToTop: function () {
@@ -363,105 +244,6 @@
             this.lastScrollY = currentY;
         },
 
-        handleCheckbox: function (checkbox, event) {
-            var card = checkbox.closest('.rb-booking-item');
-            if (!card.length) {
-                return;
-            }
-
-            var bookingId = String(card.data('bookingId') || card.attr('data-booking-id'));
-            var isChecked = checkbox.prop('checked');
-            var index = Number(card.attr('data-rb-index'));
-
-            if (event.shiftKey && this.lastCheckedIndex !== null) {
-                this.selectRange(this.lastCheckedIndex, index, isChecked);
-            } else {
-                this.updateSelectionState(bookingId, isChecked, card);
-            }
-
-            this.lastCheckedIndex = index;
-            this.syncSelectionUI();
-        },
-
-        selectRange: function (start, end, checked) {
-            if (start === null || start === undefined || end === null || end === undefined) {
-                return;
-            }
-
-            var min = Math.min(start, end);
-            var max = Math.max(start, end);
-            var self = this;
-
-            this.cards.slice(min, max + 1).each(function () {
-                var card = $(this);
-                var bookingId = String(card.data('bookingId') || card.attr('data-booking-id'));
-                card.find('.rb-booking-select-checkbox').prop('checked', checked);
-                self.updateSelectionState(bookingId, checked, card);
-            });
-        },
-
-        updateSelectionState: function (bookingId, isSelected, card) {
-            if (!bookingId) {
-                return;
-            }
-
-            if (isSelected) {
-                this.selection.add(bookingId);
-                if (card) {
-                    card.addClass('is-selected');
-                }
-            } else {
-                this.selection.delete(bookingId);
-                if (card) {
-                    card.removeClass('is-selected');
-                }
-            }
-        },
-
-        toggleSelectAll: function (checked) {
-            var visibleCards = this.layout.find('.rb-booking-item:visible');
-            var self = this;
-
-            visibleCards.each(function () {
-                var card = $(this);
-                var bookingId = String(card.data('bookingId') || card.attr('data-booking-id'));
-                card.find('.rb-booking-select-checkbox').prop('checked', checked);
-                self.updateSelectionState(bookingId, checked, card);
-            });
-
-            this.syncSelectionUI();
-        },
-
-        syncSelectionUI: function () {
-            var count = this.selection.size;
-            var visibleCards = this.layout.find('.rb-booking-item:visible');
-            var selectAllChecked = count > 0 && count === visibleCards.length && visibleCards.length > 0;
-
-            if (this.selectAll.length) {
-                this.selectAll.prop('checked', selectAllChecked);
-                this.selectAll.prop('indeterminate', count > 0 && count < visibleCards.length);
-            }
-
-            var label = this.layout.find('.rb-gmail-selected-count');
-            if (label.length) {
-                var format = label.data('selected-format');
-                if (typeof format === 'string' && format.indexOf('%d') !== -1) {
-                    label.text(format.replace('%d', count));
-                } else {
-                    label.text(count + ' selected');
-                }
-            }
-        },
-
-        clearSelection: function () {
-            var self = this;
-            this.selection.clear();
-            this.layout.find('.rb-booking-select-checkbox').prop('checked', false);
-            this.layout.find('.rb-booking-item').removeClass('is-selected');
-            this.syncSelectionUI();
-            this.lastCheckedIndex = null;
-        },
-
         focusCard: function (card) {
             if (!card || !card.length) {
                 return;
@@ -470,9 +252,7 @@
             this.layout.find('.rb-booking-item.active').removeClass('active');
             card.addClass('active');
             this.markFocused(card);
-            if (window.innerWidth < 769) {
-                this.scrollDetailToTop();
-            }
+            this.scrollDetailToTop();
         },
 
         markFocused: function (card) {
@@ -498,7 +278,7 @@
             }
 
             if (event.key === 'Escape') {
-                if (window.innerWidth < 769) {
+                if (this.layout.hasClass('has-detail-open') || this.layout.hasClass('is-sidebar-open')) {
                     this.closePanels();
                 }
             }
@@ -551,91 +331,6 @@
             }
         },
 
-        performBulkAction: function (action, trigger) {
-            var ids = Array.from(this.selection.values());
-            if (!ids.length) {
-                return;
-            }
-
-            if (action === 'cancel' && !window.confirm(rb_ajax.bulk_cancel_confirm || 'Cancel selected bookings?')) {
-                return;
-            }
-
-            var self = this;
-            var nonce = (window.RBManagerInbox && typeof window.RBManagerInbox.getManagerNonce === 'function') ? window.RBManagerInbox.getManagerNonce() : (rb_ajax ? rb_ajax.nonce : '');
-            var feedback = $('#rb-manager-feedback');
-            var successes = 0;
-            var failures = [];
-            var index = 0;
-
-            trigger.prop('disabled', true);
-
-            function next() {
-                if (index >= ids.length) {
-                    trigger.prop('disabled', false);
-                    self.finishBulkAction(action, successes, failures, feedback);
-                    self.refreshCards();
-                    self.syncSelectionUI();
-                    return;
-                }
-
-                var bookingId = ids[index++];
-
-                $.ajax({
-                    url: rb_ajax.ajax_url,
-                    type: 'POST',
-                    data: {
-                        action: 'rb_manager_update_booking',
-                        booking_id: bookingId,
-                        manager_action: action,
-                        nonce: nonce
-                    }
-                }).done(function (response) {
-                    if (response && response.success) {
-                        successes++;
-                        if (response.data && response.data.booking && window.RBManagerInbox && typeof window.RBManagerInbox.updateBookingRow === 'function') {
-                            var card = self.getCardById(response.data.booking.id);
-                            if (card.length) {
-                                window.RBManagerInbox.updateBookingRow(card, response.data.booking);
-                            }
-                        }
-                        if (response.data && response.data.deleted) {
-                            self.removeCard(bookingId);
-                            $(document).trigger('rb:manager:bookingRemoved', [bookingId]);
-                        }
-                        self.selection.delete(String(bookingId));
-                    } else {
-                        failures.push(bookingId);
-                    }
-                }).fail(function () {
-                    failures.push(bookingId);
-                }).always(function () {
-                    next();
-                });
-            }
-
-            next();
-        },
-
-        finishBulkAction: function (action, successes, failures, feedback) {
-            var total = successes + failures.length;
-            if (!feedback.length) {
-                return;
-            }
-
-            var successMessage = successes > 0 ? successes + ' ' + (rb_ajax.success_text || 'updated successfully') : '';
-            var failureMessage = failures.length > 0 ? failures.length + ' ' + (rb_ajax.error_text || 'failed') : '';
-
-            feedback.removeClass('success error warning');
-            if (successes && !failures.length) {
-                feedback.addClass('success').text(successMessage).removeAttr('hidden').show();
-            } else if (failures.length && !successes) {
-                feedback.addClass('error').text(failureMessage).removeAttr('hidden').show();
-            } else if (total) {
-                feedback.addClass('warning').text(successMessage + (failureMessage ? ' · ' + failureMessage : '')).removeAttr('hidden').show();
-            }
-        },
-
         refreshCardFromResponse: function (booking) {
             var card = this.getCardById(booking.id);
             if (!card.length) {
@@ -675,9 +370,7 @@
                 return;
             }
             card.remove();
-            this.selection.delete(String(bookingId));
             this.refreshCards();
-            this.syncSelectionUI();
             if (this.lastFocused && !this.lastFocused.closest('body').length) {
                 this.lastFocused = null;
             }
