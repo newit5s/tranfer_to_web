@@ -315,22 +315,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 <div class="rb-manager-header-left">
                     <div class="rb-gmail-header-title">
                         <h2><?php echo esc_html($atts['title']); ?></h2>
-                        <form method="get" class="rb-manager-location-switcher">
-                        <?php if (!empty($_GET)) : ?>
-                            <?php foreach ($_GET as $key => $value) : ?>
-                                <?php if (in_array($key, array('location_id'), true)) { continue; } ?>
-                                <input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr($value); ?>" />
-                            <?php endforeach; ?>
+                        <?php if (!empty($active_location)) : ?>
+                            <div class="rb-manager-location-display">
+                                <span class="rb-manager-location-label"><?php echo esc_html($this->t('location', __('Location', 'restaurant-booking'))); ?>:</span>
+                                <strong class="rb-manager-location-name"><?php echo esc_html($active_location['name']); ?></strong>
+                            </div>
                         <?php endif; ?>
-                        <label for="rb-manager-location-select"><?php echo esc_html($this->t('location', __('Location', 'restaurant-booking'))); ?></label>
-                        <select name="location_id" id="rb-manager-location-select" onchange="this.form.submit();">
-                            <?php foreach ($locations as $location) : ?>
-                                <option value="<?php echo esc_attr($location['id']); ?>" <?php selected($selected_location_id, $location['id']); ?>>
-                                    <?php echo esc_html($location['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        </form>
                     </div>
                     <nav class="rb-gmail-header-nav" aria-label="<?php echo esc_attr($this->t('manager_sections', __('Manager sections', 'restaurant-booking'))); ?>">
                         <ul>
@@ -562,32 +552,13 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             'other' => array('label' => $this->t('other', __('Other', 'restaurant-booking')), 'icon' => '❓'),
         );
 
-        $bulk_actions = array(
-            'confirm' => array(
-                'label' => $this->t('confirm', __('Confirm', 'restaurant-booking')),
-                'icon' => '✅',
-            ),
-            'cancel' => array(
-                'label' => $this->t('cancel', __('Cancel', 'restaurant-booking')),
-                'icon' => '✖️',
-            ),
-            'complete' => array(
-                'label' => $this->t('complete', __('Complete', 'restaurant-booking')),
-                'icon' => '✔️',
-            ),
-        );
-
-        $bulk_label = $this->t('bulk_actions', __('Bulk actions', 'restaurant-booking'));
-        $select_all_label = $this->t('select_all', __('Select all', 'restaurant-booking'));
-        $selected_format = $this->t('selected_count', __('%d selected', 'restaurant-booking'));
-
         $search_placeholder = $this->t('search_bookings_placeholder', __('Search bookings…', 'restaurant-booking'));
         $list_count_label = sprintf(__('Bookings (%d)', 'restaurant-booking'), count($bookings));
 
         ob_start();
         ?>
         <div class="rb-manager-dashboard rb-manager-dashboard-gmail">
-            <div class="rb-manager-gmail-layout is-sidebar-collapsed" data-location-id="<?php echo esc_attr($location_id); ?>">
+            <div class="rb-manager-gmail-layout" data-location-id="<?php echo esc_attr($location_id); ?>">
                 <aside class="rb-gmail-sidebar is-collapsed" data-rb-sidebar>
                     <div class="rb-gmail-sidebar-inner">
                         <div class="rb-gmail-sidebar-section rb-gmail-sidebar-nav" role="navigation" aria-label="<?php echo esc_attr($this->t('booking_status_filters', __('Booking status filters', 'restaurant-booking'))); ?>">
@@ -700,12 +671,17 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         <form class="rb-gmail-filter-form" method="get">
                             <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
                             <input type="hidden" name="rb_section" value="dashboard">
-                            <?php if (!empty($filters['filter_status'])) : ?>
-                                <input type="hidden" name="filter_status" value="<?php echo esc_attr($filters['filter_status']); ?>">
-                            <?php endif; ?>
                             <?php if (!empty($filters['search_term'])) : ?>
                                 <input type="hidden" name="search" value="<?php echo esc_attr($filters['search_term']); ?>">
                             <?php endif; ?>
+                            <label class="rb-gmail-filter-form__status">
+                                <span><?php echo esc_html($this->t('status', __('Status', 'restaurant-booking'))); ?></span>
+                                <select name="filter_status">
+                                    <?php foreach ($status_filters as $value => $info) : ?>
+                                        <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['filter_status'], $value); ?>><?php echo esc_html($info['label']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
                             <label>
                                 <span><?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?></span>
                                 <select name="filter_source">
@@ -743,25 +719,6 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 <a class="rb-btn-secondary" href="<?php echo esc_url($reset_url); ?>"><?php echo esc_html($this->t('reset', __('Reset', 'restaurant-booking'))); ?></a>
                             </div>
                         </form>
-                    </div>
-
-                    <div class="rb-gmail-bulk-bar" role="toolbar" aria-label="<?php echo esc_attr($bulk_label); ?>">
-                        <div class="rb-gmail-bulk-left">
-                            <label class="rb-gmail-select-all">
-                                <input type="checkbox" class="rb-gmail-select-all-checkbox" aria-label="<?php echo esc_attr($select_all_label); ?>">
-                                <span><?php echo esc_html($select_all_label); ?></span>
-                            </label>
-                            <span class="rb-gmail-selected-count" data-selected-format="<?php echo esc_attr($selected_format); ?>"><?php echo esc_html(sprintf($selected_format, 0)); ?></span>
-                        </div>
-                        <div class="rb-gmail-bulk-actions">
-                            <?php foreach ($bulk_actions as $action_key => $action_info) : ?>
-                                <button type="button" class="rb-gmail-bulk-button" data-bulk-action="<?php echo esc_attr($action_key); ?>">
-                                    <span aria-hidden="true"><?php echo esc_html($action_info['icon']); ?></span>
-                                    <span><?php echo esc_html($action_info['label']); ?></span>
-                                </button>
-                            <?php endforeach; ?>
-                            <button type="button" class="rb-gmail-bulk-clear" data-bulk-clear><?php echo esc_html($this->t('clear_selection', __('Clear selection', 'restaurant-booking'))); ?></button>
-                        </div>
                     </div>
 
                     <div class="rb-gmail-list" role="list" aria-label="<?php echo esc_attr($list_count_label); ?>">
@@ -803,9 +760,6 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     role="listitem"
                                     tabindex="0"
                                 >
-                                    <div class="rb-booking-select">
-                                        <input type="checkbox" class="rb-booking-select-checkbox" aria-label="<?php echo esc_attr(sprintf($this->t('select_booking', __('Select booking %s', 'restaurant-booking')), '#' . $padded_id)); ?>">
-                                    </div>
                                     <div class="rb-booking-avatar rb-booking-item-avatar" aria-hidden="true"><?php echo esc_html($initials !== '' ? $initials : '•'); ?></div>
                                     <div class="rb-booking-card-body rb-booking-item-content">
                                         <header class="rb-booking-card-header">
