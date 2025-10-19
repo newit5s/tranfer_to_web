@@ -1292,8 +1292,6 @@
                 customerDetail.find('[data-field="no-shows"]').text(formatCustomerNumber(noShows));
 
                 var $tags = customerDetail.find('[data-badge-row]');
-                var badgeVisible = false;
-
                 function toggleBadge(selector, visible) {
                     var $badge = $tags.find(selector);
                     if (!$badge.length) {
@@ -1301,10 +1299,9 @@
                     }
 
                     if (visible) {
-                        $badge.removeAttr('hidden');
-                        badgeVisible = true;
+                        $badge.addClass('is-active').removeClass('is-inactive');
                     } else {
-                        $badge.attr('hidden', 'hidden');
+                        $badge.addClass('is-inactive').removeClass('is-active');
                     }
                 }
 
@@ -1312,12 +1309,6 @@
                 toggleBadge('[data-badge="blacklist"]', isBlacklisted);
                 toggleBadge('[data-badge="loyal"]', isLoyal);
                 toggleBadge('[data-badge="problem"]', isProblem);
-
-                if (badgeVisible) {
-                    $tags.removeAttr('hidden');
-                } else {
-                    $tags.attr('hidden', 'hidden');
-                }
 
                 var $noteField = customerDetail.find('.rb-manager-note-field');
                 $noteField.val(notes).attr('data-customer-id', customerId);
