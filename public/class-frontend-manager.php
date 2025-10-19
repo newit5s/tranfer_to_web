@@ -1509,7 +1509,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     ));
                                     $contact_summary = implode(' • ', $contact_bits);
                                     $note_preview = $notes ? wp_trim_words($notes, 16) : '';
-                                    $has_badges = $is_vip || $is_blacklisted || $is_loyal || $is_problem;
+                                    $vip_badge_classes = 'rb-inbox-badge rb-inbox-badge--vip' . ($is_vip ? ' is-active' : ' is-inactive');
+                                    $blacklist_badge_classes = 'rb-inbox-badge rb-inbox-badge--danger' . ($is_blacklisted ? ' is-active' : ' is-inactive');
+                                    $loyal_badge_classes = 'rb-inbox-badge rb-inbox-badge--success' . ($is_loyal ? ' is-active' : ' is-inactive');
+                                    $problem_badge_classes = 'rb-inbox-badge rb-inbox-badge--warning' . ($is_problem ? ' is-active' : ' is-inactive');
                                     $meta_text = $last_visit
                                         ? sprintf('%s: %s', $this->t('last_visit', __('Last visit', 'restaurant-booking')), $last_visit)
                                         : sprintf('%s: %s', $this->t('total_bookings', __('Total bookings', 'restaurant-booking')), number_format_i18n($total));
@@ -1542,11 +1545,11 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                                 <span class="rb-inbox-item__title"><?php echo esc_html($customer->name); ?></span>
                                                 <span class="rb-inbox-item__meta"><?php echo esc_html($meta_text); ?></span>
                                             </div>
-                                            <div class="rb-inbox-item__row rb-inbox-item__badges" <?php echo $has_badges ? '' : 'hidden'; ?> data-badge-row>
-                                                <span class="rb-inbox-badge rb-inbox-badge--vip" data-badge="vip" <?php echo $is_vip ? '' : 'hidden'; ?>><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
-                                                <span class="rb-inbox-badge rb-inbox-badge--danger" data-badge="blacklist" <?php echo $is_blacklisted ? '' : 'hidden'; ?>><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
-                                                <span class="rb-inbox-badge rb-inbox-badge--success" data-badge="loyal" <?php echo $is_loyal ? '' : 'hidden'; ?>><?php echo esc_html($this->t('loyal_customer', __('Loyal', 'restaurant-booking'))); ?></span>
-                                                <span class="rb-inbox-badge rb-inbox-badge--warning" data-badge="problem" <?php echo $is_problem ? '' : 'hidden'; ?>><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
+                                            <div class="rb-inbox-item__row rb-inbox-item__badges" data-badge-row>
+                                                <span class="<?php echo esc_attr($vip_badge_classes); ?>" data-badge="vip"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
+                                                <span class="<?php echo esc_attr($blacklist_badge_classes); ?>" data-badge="blacklist"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
+                                                <span class="<?php echo esc_attr($loyal_badge_classes); ?>" data-badge="loyal"><?php echo esc_html($this->t('loyal_customer', __('Loyal', 'restaurant-booking'))); ?></span>
+                                                <span class="<?php echo esc_attr($problem_badge_classes); ?>" data-badge="problem"><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
                                             </div>
                                             <div class="rb-inbox-item__row rb-inbox-item__snippet" data-contact-summary <?php echo !empty($contact_summary) ? '' : 'hidden'; ?>>
                                                 <span><?php echo esc_html($contact_summary); ?></span>
@@ -1604,11 +1607,11 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                                 <a href="#" data-field="phone" class="rb-inbox-detail-contact" rel="nofollow"></a>
                                                 <a href="#" data-field="email" class="rb-inbox-detail-contact" rel="nofollow"></a>
                                             </div>
-                                            <div class="rb-inbox-detail-tags" data-badge-row hidden>
-                                                <span class="rb-inbox-badge rb-inbox-badge--vip" data-badge="vip"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
-                                                <span class="rb-inbox-badge rb-inbox-badge--danger" data-badge="blacklist"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
-                                                <span class="rb-inbox-badge rb-inbox-badge--success" data-badge="loyal"><?php echo esc_html($this->t('loyal_customer', __('Loyal', 'restaurant-booking'))); ?></span>
-                                                <span class="rb-inbox-badge rb-inbox-badge--warning" data-badge="problem"><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
+                                            <div class="rb-inbox-detail-tags" data-badge-row>
+                                                <span class="rb-inbox-badge rb-inbox-badge--vip is-inactive" data-badge="vip"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
+                                                <span class="rb-inbox-badge rb-inbox-badge--danger is-inactive" data-badge="blacklist"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
+                                                <span class="rb-inbox-badge rb-inbox-badge--success is-inactive" data-badge="loyal"><?php echo esc_html($this->t('loyal_customer', __('Loyal', 'restaurant-booking'))); ?></span>
+                                                <span class="rb-inbox-badge rb-inbox-badge--warning is-inactive" data-badge="problem"><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
                                             </div>
                                         </div>
                                         <div class="rb-inbox-detail-status rb-customer-detail-stats">
