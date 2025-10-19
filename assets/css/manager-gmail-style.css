@@ -231,6 +231,82 @@
     gap: 32px;
 }
 
+.rb-manager--gmail .rb-manager-gmail-page[data-section="timeline"] {
+    gap: 24px;
+}
+
+.rb-manager--gmail .rb-manager-body--timeline {
+    background: var(--rb-gmail-bg);
+}
+
+.rb-manager--gmail .rb-manager-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rb-manager--gmail .rb-manager-timeline__header {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rb-manager--gmail .rb-manager-timeline__title h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.rb-manager--gmail .rb-manager-timeline__meta {
+    margin: 8px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--rb-gmail-muted);
+}
+
+.rb-manager--gmail .rb-manager-timeline__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    background: var(--rb-gmail-surface);
+    padding: 16px;
+    border-radius: var(--rb-gmail-radius);
+    box-shadow: 0 8px 24px var(--rb-gmail-shadow);
+}
+
+.rb-manager--gmail .rb-manager-timeline__filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--rb-gmail-muted);
+}
+
+.rb-manager--gmail .rb-manager-timeline__filters input[type="date"] {
+    min-width: 200px;
+}
+
+.rb-manager--gmail .rb-manager-timeline__summary {
+    display: grid;
+    gap: 16px;
+}
+
+.rb-manager--gmail .rb-manager-timeline__content {
+    background: var(--rb-gmail-surface);
+    border-radius: var(--rb-gmail-radius);
+    border: 1px solid var(--rb-gmail-border);
+    padding: 16px;
+    box-shadow: 0 12px 24px var(--rb-gmail-shadow);
+    overflow-x: auto;
+}
+
+.rb-manager--gmail .rb-manager-timeline__content .rb-timeline-app {
+    min-height: 320px;
+}
+
 .rb-gmail-location-card {
     background: var(--rb-gmail-surface);
     border: 1px solid var(--rb-gmail-border);
@@ -1543,6 +1619,10 @@
         justify-content: center;
     }
 
+    .rb-manager--gmail .rb-manager-timeline__filters {
+        padding: 14px 18px;
+    }
+
     .rb-manager-gmail-layout {
         grid-template-columns: minmax(0, 1fr);
         gap: 20px;
@@ -1702,6 +1782,39 @@
         gap: 20px;
     }
 
+    .rb-manager--gmail .rb-manager-timeline__header {
+        gap: 12px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px 16px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters label,
+    .rb-manager--gmail .rb-manager-timeline__filters input[type="date"],
+    .rb-manager--gmail .rb-manager-timeline__filters .rb-btn-primary {
+        width: 100%;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters input[type="date"] {
+        min-width: 0;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters .rb-btn-primary {
+        justify-content: center;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__content {
+        padding: 14px;
+    }
+
+    .rb-gmail-location-card {
+        padding: 20px 22px;
+    }
+
     .rb-manager--gmail .rb-manager-add-table {
         flex-direction: column;
         align-items: stretch;
@@ -1829,6 +1942,28 @@
 }
 
 @media (max-width: 640px) {
+    .rb-manager--gmail .rb-manager-timeline__title h3 {
+        font-size: 18px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__meta {
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__content {
+        padding: 12px;
+    }
+
+    .rb-gmail-location-card {
+        padding: 18px;
+    }
+
+    .rb-gmail-location-card__meta {
+        flex-direction: column;
+        gap: 10px;
+    }
+
     .rb-manager--gmail .rb-manager-bookings-table-wrapper {
         border: none;
         box-shadow: none;
@@ -1903,6 +2038,23 @@
 }
 
 @media (max-width: 520px) {
+    .rb-manager--gmail .rb-manager-timeline__filters {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__title h3 {
+        font-size: 17px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__content {
+        padding: 10px;
+    }
+
+    .rb-gmail-location-card {
+        padding: 16px;
+    }
+
     .rb-gmail-toolbar {
         padding: 10px 12px;
     }

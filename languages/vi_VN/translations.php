@@ -115,6 +115,7 @@ return array(
     'cleaning' => 'Đang dọn',
     'reserved' => 'Đã giữ chỗ',
     'timeline_view' => 'Xem dòng thời gian',
+    'update_timeline' => 'Cập nhật dòng thời gian',
     'checkin_time' => 'Giờ check-in',
     'checkout_time' => 'Giờ check-out',
     'current_status' => 'Trạng thái hiện tại',

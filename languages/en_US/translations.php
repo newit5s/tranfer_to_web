@@ -115,6 +115,7 @@ return array(
     'cleaning' => 'Cleaning',
     'reserved' => 'Reserved',
     'timeline_view' => 'Timeline View',
+    'update_timeline' => 'Update Timeline',
     'checkin_time' => 'Check-in Time',
     'checkout_time' => 'Check-out Time',
     'current_status' => 'Current Status',
