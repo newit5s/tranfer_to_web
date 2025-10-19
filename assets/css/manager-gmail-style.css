@@ -1038,6 +1038,10 @@
     min-width: 160px;
 }
 
+.rb-gmail-filter-form__status {
+    min-width: 160px;
+}
+
 .rb-gmail-filter-form select,
 .rb-gmail-filter-form input[type="date"] {
     min-width: 140px;
