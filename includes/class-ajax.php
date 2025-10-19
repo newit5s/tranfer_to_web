@@ -542,19 +542,8 @@ class RB_Ajax {
             $rb_booking = new RB_Booking();
         }
 
-        $conflicts = $rb_booking->check_time_overlap($date, $checkin, $checkout, $location_id, $exclude_booking_id);
-
-        if (!empty($conflicts)) {
-            wp_send_json_error(array(
-                'available' => false,
-                'message' => __('Selected time slot conflicts with another booking.', 'restaurant-booking'),
-                'conflicts' => $conflicts,
-                'suggestions' => $rb_booking->suggest_time_slots($location_id, $date, $checkin, (int) $guest_count),
-            ));
-        }
-
         $is_available = $rb_booking->is_time_slot_available($date, $checkin, $guest_count, $exclude_booking_id, $location_id, $checkout);
-        $tables_available = $rb_booking->available_table_count($date, $checkin, $guest_count, $location_id, $checkout);
+        $tables_available = $rb_booking->available_table_count($date, $checkin, $guest_count, $location_id, $checkout, $exclude_booking_id);
         $suggestions = $rb_booking->suggest_time_slots($location_id, $date, $checkin, (int) $guest_count);
 
         if ($is_available) {
@@ -562,6 +551,18 @@ class RB_Ajax {
                 'available' => true,
                 'tables_available' => $tables_available,
                 'message' => __('A table is available for the selected time.', 'restaurant-booking'),
+                'suggestions' => $suggestions,
+            ));
+        }
+
+        $conflicts = $rb_booking->check_time_overlap($date, $checkin, $checkout, $location_id, $exclude_booking_id);
+
+        if (!empty($conflicts)) {
+            wp_send_json_error(array(
+                'available' => false,
+                'tables_available' => $tables_available,
+                'message' => __('Selected time slot conflicts with another booking.', 'restaurant-booking'),
+                'conflicts' => $conflicts,
                 'suggestions' => $suggestions,
             ));
         }
