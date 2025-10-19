@@ -217,6 +217,125 @@
         };
     };
 
+    TimelineApp.prototype.buildTimelineMeta = function (slots) {
+        var slotHeight = 56;
+        var parsedSlots = [];
+
+        function parseTime(value) {
+            if (!value) {
+                return null;
+            }
+
+            if (typeof value !== 'string') {
+                value = String(value);
+            }
+
+            var trimmed = value.trim();
+            if (!trimmed) {
+                return null;
+            }
+
+            var clean = trimmed.replace(/[^0-9:apm]/gi, '').toLowerCase();
+
+            if (clean.indexOf('am') !== -1 || clean.indexOf('pm') !== -1) {
+                var period = clean.indexOf('pm') !== -1 ? 'pm' : 'am';
+                clean = clean.replace(/(am|pm)/g, '');
+                var parts12 = clean.split(':');
+                var h12 = parseInt(parts12[0], 10);
+                var m12 = parts12.length > 1 ? parseInt(parts12[1], 10) : 0;
+
+                if (isNaN(h12) || isNaN(m12)) {
+                    return null;
+                }
+
+                if (period === 'pm' && h12 < 12) {
+                    h12 += 12;
+                }
+
+                if (period === 'am' && h12 === 12) {
+                    h12 = 0;
+                }
+
+                return h12 * 60 + m12;
+            }
+
+            var parts = clean.split(':');
+            var hours = parseInt(parts[0], 10);
+            var minutes = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+
+            if (isNaN(hours) || isNaN(minutes)) {
+                return null;
+            }
+
+            return hours * 60 + minutes;
+        }
+
+        function formatMinutes(minutes) {
+            var hours = Math.floor(minutes / 60);
+            var mins = minutes % 60;
+            var hourText = hours < 10 ? '0' + hours : String(hours);
+            var minuteText = mins < 10 ? '0' + mins : String(mins);
+            return hourText + ':' + minuteText;
+        }
+
+        slots.forEach(function (slot) {
+            var minutes = parseTime(slot);
+            if (minutes !== null && !isNaN(minutes)) {
+                parsedSlots.push({ label: slot, minutes: minutes });
+            } else {
+                parsedSlots.push({ label: slot, minutes: null });
+            }
+        });
+
+        if (!parsedSlots.length) {
+            for (var hour = 8; hour <= 22; hour++) {
+                var text = (hour < 10 ? '0' : '') + hour + ':00';
+                parsedSlots.push({ label: text, minutes: hour * 60 });
+            }
+        }
+
+        var validMinutes = parsedSlots
+            .map(function (slot) { return slot.minutes; })
+            .filter(function (value) { return value !== null; })
+            .sort(function (a, b) { return a - b; });
+
+        var interval = 60;
+        if (validMinutes.length > 1) {
+            interval = validMinutes[1] - validMinutes[0];
+            for (var i = 1; i < validMinutes.length; i++) {
+                var delta = validMinutes[i] - validMinutes[i - 1];
+                if (delta > 0 && delta < interval) {
+                    interval = delta;
+                }
+            }
+            interval = Math.max(15, interval);
+        }
+
+        var start = validMinutes.length ? validMinutes[0] : 8 * 60;
+        var end = validMinutes.length ? validMinutes[validMinutes.length - 1] + interval : 22 * 60;
+        var intervalCount = Math.max(1, Math.round((end - start) / interval));
+        var slotCount = Math.max(parsedSlots.length, intervalCount);
+        var totalHeight = slotCount * slotHeight;
+
+        if (parsedSlots.length < slotCount) {
+            for (var index = parsedSlots.length; index < slotCount; index++) {
+                var minutesToAdd = start + index * interval;
+                parsedSlots.push({ label: formatMinutes(minutesToAdd), minutes: minutesToAdd });
+            }
+        }
+
+        return {
+            slotHeight: slotHeight,
+            slotCount: slotCount,
+            totalHeight: totalHeight,
+            interval: interval,
+            start: start,
+            end: end,
+            timeSlots: parsedSlots.map(function (slot) { return slot.label; }),
+            parseTime: parseTime
+        };
+    };
+
     TimelineApp.prototype.renderTable = function (table) {
         var self = this;
         var meta = self.timelineMeta || self.buildTimelineMeta([]);
