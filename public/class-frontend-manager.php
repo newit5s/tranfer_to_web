@@ -616,21 +616,25 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                             <div class="rb-gmail-sidebar-section rb-gmail-sidebar-stats">
                                 <h3 class="rb-gmail-sidebar-title"><?php echo esc_html($this->t('today', __('Today', 'restaurant-booking'))); ?></h3>
                                 <dl class="rb-gmail-stat-list">
-                                    <div>
-                                        <dt><?php echo esc_html($this->t('pending', __('Pending', 'restaurant-booking'))); ?></dt>
-                                        <dd><?php echo esc_html(number_format_i18n($stats['pending'] ?? 0)); ?></dd>
+                                    <div class="rb-gmail-stat-item rb-gmail-stat-item--total">
+                                        <dt><?php echo esc_html($this->t('bookings_today', __('Bookings today', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($stats['today'] ?? 0)); ?></dd>
                                     </div>
-                                    <div>
-                                        <dt><?php echo esc_html($this->t('confirmed', __('Confirmed', 'restaurant-booking'))); ?></dt>
-                                        <dd><?php echo esc_html(number_format_i18n($stats['confirmed'] ?? 0)); ?></dd>
+                                    <div class="rb-gmail-stat-item">
+                                        <dt><?php echo esc_html($this->t('pending_today', __('Pending today', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($stats['today_pending'] ?? 0)); ?></dd>
                                     </div>
-                                    <div>
-                                        <dt><?php echo esc_html($this->t('completed', __('Completed', 'restaurant-booking'))); ?></dt>
-                                        <dd><?php echo esc_html(number_format_i18n($stats['completed'] ?? 0)); ?></dd>
+                                    <div class="rb-gmail-stat-item">
+                                        <dt><?php echo esc_html($this->t('confirmed_today', __('Confirmed today', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($stats['today_confirmed'] ?? 0)); ?></dd>
                                     </div>
-                                    <div>
-                                        <dt><?php echo esc_html($this->t('cancelled', __('Cancelled', 'restaurant-booking'))); ?></dt>
-                                        <dd><?php echo esc_html(number_format_i18n($stats['cancelled'] ?? 0)); ?></dd>
+                                    <div class="rb-gmail-stat-item">
+                                        <dt><?php echo esc_html($this->t('completed_today', __('Completed today', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($stats['today_completed'] ?? 0)); ?></dd>
+                                    </div>
+                                    <div class="rb-gmail-stat-item">
+                                        <dt><?php echo esc_html($this->t('cancelled_today', __('Cancelled today', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($stats['today_cancelled'] ?? 0)); ?></dd>
                                     </div>
                                 </dl>
                             </div>

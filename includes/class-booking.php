@@ -119,6 +119,8 @@ class RB_Booking {
             $params[] = (int) $location_id;
         }
 
+        $today = date('Y-m-d');
+
         $stats = array(
             'total' => $this->prepare_and_get_var("SELECT COUNT(*) FROM $table_name WHERE $where", $params),
             'pending' => $this->prepare_and_get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'pending' AND $where", $params),
@@ -127,7 +129,23 @@ class RB_Booking {
             'cancelled' => $this->prepare_and_get_var("SELECT COUNT(*) FROM $table_name WHERE status = 'cancelled' AND $where", $params),
             'today' => $this->prepare_and_get_var(
                 "SELECT COUNT(*) FROM $table_name WHERE $where AND booking_date = %s",
-                array_merge($params, array(date('Y-m-d')))
+                array_merge($params, array($today))
+            ),
+            'today_pending' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'pending' AND $where AND booking_date = %s",
+                array_merge($params, array($today))
+            ),
+            'today_confirmed' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'confirmed' AND $where AND booking_date = %s",
+                array_merge($params, array($today))
+            ),
+            'today_completed' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'completed' AND $where AND booking_date = %s",
+                array_merge($params, array($today))
+            ),
+            'today_cancelled' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'cancelled' AND $where AND booking_date = %s",
+                array_merge($params, array($today))
             ),
         );
 

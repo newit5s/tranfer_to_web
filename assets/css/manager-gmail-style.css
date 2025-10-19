@@ -935,6 +935,18 @@
     font-size: 13px;
 }
 
+.rb-gmail-stat-item--total {
+    background: var(--rb-gmail-primary);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 6px 16px rgba(26, 115, 232, 0.25);
+}
+
+.rb-gmail-stat-item--total dt,
+.rb-gmail-stat-item--total dd {
+    color: inherit;
+}
+
 .rb-gmail-main {
     display: flex;
     flex-direction: column;
@@ -955,6 +967,7 @@
 }
 
 .rb-gmail-toggle {
+    display: none;
     border: none;
     background: none;
     font-size: 20px;
@@ -1810,10 +1823,29 @@
 
     .rb-gmail-filter-form {
         flex-direction: column !important;
+        align-items: stretch !important;
         width: 100% !important;
     }
 
     .rb-gmail-filter-form label {
+        width: 100% !important;
+    }
+
+    .rb-gmail-filter-form select,
+    .rb-gmail-filter-form input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .rb-gmail-filter-actions {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .rb-gmail-filter-actions .rb-btn-primary,
+    .rb-gmail-filter-actions .rb-btn-secondary {
         width: 100% !important;
     }
 
@@ -1885,10 +1917,29 @@
 
     .rb-gmail-filter-form {
         flex-direction: column !important;
+        align-items: stretch !important;
         width: 100% !important;
     }
 
     .rb-gmail-filter-form label {
+        width: 100% !important;
+    }
+
+    .rb-gmail-filter-form select,
+    .rb-gmail-filter-form input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .rb-gmail-filter-actions {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .rb-gmail-filter-actions .rb-btn-primary,
+    .rb-gmail-filter-actions .rb-btn-secondary {
         width: 100% !important;
     }
 
