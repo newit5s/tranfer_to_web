@@ -530,6 +530,7 @@
 
             const updateCheckoutOptions = function() {
                 const checkin = $checkin.val();
+                const currentValue = $checkout.data('current');
                 $checkout.find('option').not(':first').remove();
 
                 if (!checkin || !slots.length) {
@@ -561,11 +562,17 @@
                     }
                 });
 
-                const defaultValue = preferred || fallback;
-                if (defaultValue) {
-                    $checkout.val(defaultValue);
+                if (currentValue && $checkout.find('option[value="' + currentValue + '"]').length) {
+                    $checkout.val(currentValue);
+                    $checkout.removeData('current');
+                    $checkout.removeAttr('data-current');
                 } else {
-                    $checkout.val('');
+                    const defaultValue = preferred || fallback;
+                    if (defaultValue) {
+                        $checkout.val(defaultValue);
+                    } else {
+                        $checkout.val('');
+                    }
                 }
             };
 

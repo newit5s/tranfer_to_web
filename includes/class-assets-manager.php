@@ -324,6 +324,11 @@ class RB_Assets_Manager {
             'occupied' => rb_t('occupied', __('Occupied', 'restaurant-booking')),
             'reserved' => rb_t('reserved', __('Reserved', 'restaurant-booking')),
             'cleaning' => rb_t('cleaning', __('Cleaning', 'restaurant-booking')),
+            'statusPending' => rb_t('pending', __('Pending', 'restaurant-booking')),
+            'statusConfirmed' => rb_t('confirmed', __('Confirmed', 'restaurant-booking')),
+            'statusCancelled' => rb_t('cancelled', __('Cancelled', 'restaurant-booking')),
+            'statusCompleted' => rb_t('completed', __('Completed', 'restaurant-booking')),
+            'statusNoShow' => rb_t('no_show', __('No-show', 'restaurant-booking')),
             'statusUpdated' => __('Table status updated successfully.', 'restaurant-booking'),
             'statusUpdateFailed' => __('Could not update table status. Please try again.', 'restaurant-booking'),
             'noTables' => __('No tables found for the selected date.', 'restaurant-booking'),
@@ -332,6 +337,8 @@ class RB_Assets_Manager {
             'guestsLabel' => rb_t('people', __('people', 'restaurant-booking')),
             'tableLabel' => rb_t('table', __('Table', 'restaurant-booking')),
             'unassigned' => rb_t('unassigned', __('Unassigned', 'restaurant-booking')),
+            'manageTable' => rb_t('manage_table', __('Manage table', 'restaurant-booking')),
+            'bookingsTitle' => rb_t('bookings_for_selected_day', __('Bookings for %s', 'restaurant-booking')),
         );
 
         wp_localize_script('rb-timeline-view', 'rbTimelineConfig', array(
