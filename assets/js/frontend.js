@@ -1354,6 +1354,7 @@
                 $list.find('.rb-inbox-item').removeClass('is-active');
                 $item.addClass('is-active');
                 populateManagerCustomerDetail($item);
+                $(document).trigger('rb:manager:customerSelected', [$item.get(0)]);
             }
 
             function refreshManagerCustomerDetail(customerId) {
@@ -1396,6 +1397,7 @@
                     customerDetail.removeAttr('data-active-id');
                     customerDetail.find('.rb-inbox-detail-body').attr('hidden', true);
                     customerDetail.find('.rb-inbox-detail-empty').show();
+                    $(document).trigger('rb:manager:customerCleared');
                 }
             }
 
