@@ -154,6 +154,7 @@ return array(
     'customer' => 'お客様',
     'date_time' => '日時',
     'table' => 'テーブル',
+    'unassigned' => '未割り当て',
     'source' => 'ソース',
     'no_bookings' => '予約がありません。',
     'created_time' => '作成日時',
