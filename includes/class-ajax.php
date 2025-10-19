@@ -554,7 +554,7 @@ class RB_Ajax {
         }
 
         $is_available = $rb_booking->is_time_slot_available($date, $checkin, $guest_count, $exclude_booking_id, $location_id, $checkout);
-        $tables_available = $rb_booking->available_table_count($date, $checkin, $guest_count, $location_id, $checkout);
+        $tables_available = $rb_booking->available_table_count($date, $checkin, $guest_count, $location_id, $checkout, $exclude_booking_id);
         $suggestions = $rb_booking->suggest_time_slots($location_id, $date, $checkin, (int) $guest_count);
 
         if ($is_available) {

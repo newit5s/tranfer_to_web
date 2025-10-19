@@ -480,7 +480,7 @@ class RB_Booking {
         return null;
     }
 
-    public function available_table_count($date, $checkin, $guest_count, $location_id = 1, $checkout = null) {
+    public function available_table_count($date, $checkin, $guest_count, $location_id = 1, $checkout = null, $exclude_booking_id = null) {
         global $wpdb;
         $tables_table = $wpdb->prefix . 'rb_tables';
 
@@ -501,7 +501,7 @@ class RB_Booking {
 
         $count = 0;
         foreach ($tables as $table) {
-            if ($this->table_is_available((int) $table->table_number, $date, $range, $location_id)) {
+            if ($this->table_is_available((int) $table->table_number, $date, $range, $location_id, $exclude_booking_id)) {
                 $count++;
             }
         }

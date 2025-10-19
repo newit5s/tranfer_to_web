@@ -367,6 +367,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         }
 
         $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
+        $exclude_booking_id = isset($_POST['exclude_booking_id']) ? intval($_POST['exclude_booking_id']) : null;
         if (!$location_id) {
             wp_send_json_error(array('message' => __('Please choose a location before submitting.', 'restaurant-booking')));
             wp_die();
@@ -566,8 +567,8 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             $rb_booking = new RB_Booking();
         }
 
-        $is_available = $rb_booking->is_time_slot_available($date, $checkin, $guests, null, $location_id, $checkout);
-        $count = $rb_booking->available_table_count($date, $checkin, $guests, $location_id, $checkout);
+        $is_available = $rb_booking->is_time_slot_available($date, $checkin, $guests, $exclude_booking_id, $location_id, $checkout);
+        $count = $rb_booking->available_table_count($date, $checkin, $guests, $location_id, $checkout, $exclude_booking_id);
 
         if ($is_available && $count > 0) {
             $message = sprintf(__('We have %1$d tables available for %2$d guests.', 'restaurant-booking'), $count, $guests);
@@ -577,7 +578,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                 'count' => $count
             ));
         } else {
-            $conflicts = $rb_booking->check_time_overlap($date, $checkin, $checkout, $location_id);
+            $conflicts = $rb_booking->check_time_overlap($date, $checkin, $checkout, $location_id, $exclude_booking_id);
             $suggestions = $rb_booking->suggest_time_slots($location_id, $date, $checkin, $guests, 30);
             $message = __('No availability for the selected time. Please consider one of the suggested slots.', 'restaurant-booking');
 
