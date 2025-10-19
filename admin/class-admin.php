@@ -1173,7 +1173,8 @@ class RB_Admin {
                  data-ajax-url="<?php echo esc_url(admin_url('admin-ajax.php')); ?>"
                  data-nonce="<?php echo esc_attr($timeline_nonce); ?>"
                  data-date="<?php echo esc_attr($timeline_date); ?>"
-                 data-location="<?php echo esc_attr($selected_location_id); ?>">
+                 data-location="<?php echo esc_attr($selected_location_id); ?>"
+                 data-context="admin">
                 <div class="rb-timeline-loading" style="padding: 40px 0; text-align: center;">
                     <?php esc_html_e('Loading timeline data…', 'restaurant-booking'); ?>
                 </div>

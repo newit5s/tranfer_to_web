@@ -3,9 +3,10 @@
 
     var TimelineApp = function ($container) {
         this.$container = $container;
-        this.context = (window.rbTimelineConfig && window.rbTimelineConfig.context) || 'admin';
-        this.ajaxUrl = (window.rbTimelineConfig && window.rbTimelineConfig.ajaxUrl) || '';
-        this.nonce = (window.rbTimelineConfig && window.rbTimelineConfig.nonce) || '';
+        var config = window.rbTimelineConfig || {};
+        this.context = this.$container.data('context') || config.context || 'admin';
+        this.ajaxUrl = this.$container.data('ajaxUrl') || config.ajaxUrl || '';
+        this.nonce = this.$container.data('nonce') || config.nonce || '';
         this.strings = (window.rbTimelineConfig && window.rbTimelineConfig.strings) || {};
         this.init();
     };
