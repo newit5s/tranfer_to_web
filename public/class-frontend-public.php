@@ -566,17 +566,6 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             $rb_booking = new RB_Booking();
         }
 
-        $conflicts = $rb_booking->check_time_overlap($date, $checkin, $checkout, $location_id);
-        if (!empty($conflicts)) {
-            wp_send_json_error(array(
-                'available' => false,
-                'message' => __('Selected time slot conflicts with another booking.', 'restaurant-booking'),
-                'conflicts' => $conflicts,
-                'suggestions' => $rb_booking->suggest_time_slots($location_id, $date, $checkin, $guests, 30)
-            ));
-            wp_die();
-        }
-
         $is_available = $rb_booking->is_time_slot_available($date, $checkin, $guests, null, $location_id, $checkout);
         $count = $rb_booking->available_table_count($date, $checkin, $guests, $location_id, $checkout);
 
@@ -588,13 +577,15 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                 'count' => $count
             ));
         } else {
+            $conflicts = $rb_booking->check_time_overlap($date, $checkin, $checkout, $location_id);
             $suggestions = $rb_booking->suggest_time_slots($location_id, $date, $checkin, $guests, 30);
             $message = __('No availability for the selected time. Please consider one of the suggested slots.', 'restaurant-booking');
 
             wp_send_json_success(array(
                 'available' => false,
                 'message' => $message,
-                'suggestions' => $suggestions
+                'suggestions' => $suggestions,
+                'conflicts' => $conflicts
             ));
         }
 
