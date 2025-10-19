@@ -231,64 +231,75 @@
     gap: 32px;
 }
 
-.rb-gmail-location-card {
-    background: var(--rb-gmail-surface);
-    border: 1px solid var(--rb-gmail-border);
-    border-radius: var(--rb-gmail-radius);
-    padding: 24px 28px;
-    box-shadow: 0 18px 40px var(--rb-gmail-shadow);
+.rb-manager--gmail .rb-manager-gmail-page[data-section="timeline"] {
+    gap: 24px;
+}
+
+.rb-manager--gmail .rb-manager-body--timeline {
+    background: var(--rb-gmail-bg);
+}
+
+.rb-manager--gmail .rb-manager-timeline {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 24px;
 }
 
-.rb-gmail-location-card__header {
+.rb-manager--gmail .rb-manager-timeline__header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 16px;
-    flex-wrap: wrap;
 }
 
-.rb-gmail-location-card__header h3 {
+.rb-manager--gmail .rb-manager-timeline__title h3 {
     margin: 0;
     font-size: 20px;
     font-weight: 600;
-    color: var(--rb-gmail-text);
 }
 
-.rb-gmail-location-card__badge {
-    display: inline-flex;
-    align-items: center;
+.rb-manager--gmail .rb-manager-timeline__meta {
+    margin: 8px 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--rb-gmail-muted);
+}
+
+.rb-manager--gmail .rb-manager-timeline__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    background: var(--rb-gmail-surface);
+    padding: 16px;
+    border-radius: var(--rb-gmail-radius);
+    box-shadow: 0 8px 24px var(--rb-gmail-shadow);
+}
+
+.rb-manager--gmail .rb-manager-timeline__filters label {
+    display: flex;
+    flex-direction: column;
     gap: 6px;
     font-size: 13px;
     color: var(--rb-gmail-muted);
-    background: var(--rb-gmail-surface-alt);
-    border-radius: 999px;
-    padding: 6px 12px;
-    border: 1px solid var(--rb-gmail-border);
-    box-shadow: 0 6px 16px rgba(26, 115, 232, 0.12);
 }
 
-.rb-gmail-location-card__meta {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 24px;
-    font-size: 14px;
-    color: var(--rb-gmail-muted);
+.rb-manager--gmail .rb-manager-timeline__filters input[type="date"] {
+    min-width: 200px;
 }
 
-.rb-gmail-location-card__notes {
-    background: var(--rb-gmail-surface-alt);
-    border-radius: 12px;
+.rb-manager--gmail .rb-manager-timeline__content {
+    background: var(--rb-gmail-surface);
+    border-radius: var(--rb-gmail-radius);
     border: 1px solid var(--rb-gmail-border);
-    padding: 16px 18px;
-    color: var(--rb-gmail-text);
-    font-size: 14px;
-    line-height: 1.5;
+    padding: 16px;
+    box-shadow: 0 12px 24px var(--rb-gmail-shadow);
+    overflow-x: auto;
+}
+
+.rb-manager--gmail .rb-manager-timeline__content .rb-timeline-app {
+    min-height: 320px;
 }
 
 .rb-manager--gmail .rb-manager-create,
@@ -1543,6 +1554,10 @@
         justify-content: center;
     }
 
+    .rb-manager--gmail .rb-manager-timeline__filters {
+        padding: 14px 18px;
+    }
+
     .rb-manager-gmail-layout {
         grid-template-columns: minmax(0, 1fr);
         gap: 20px;
@@ -1702,6 +1717,35 @@
         gap: 20px;
     }
 
+    .rb-manager--gmail .rb-manager-timeline__header {
+        gap: 12px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px 16px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters label,
+    .rb-manager--gmail .rb-manager-timeline__filters input[type="date"],
+    .rb-manager--gmail .rb-manager-timeline__filters .rb-btn-primary {
+        width: 100%;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters input[type="date"] {
+        min-width: 0;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__filters .rb-btn-primary {
+        justify-content: center;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__content {
+        padding: 14px;
+    }
+
     .rb-manager--gmail .rb-manager-add-table {
         flex-direction: column;
         align-items: stretch;
@@ -1829,6 +1873,19 @@
 }
 
 @media (max-width: 640px) {
+    .rb-manager--gmail .rb-manager-timeline__title h3 {
+        font-size: 18px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__meta {
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__content {
+        padding: 12px;
+    }
+
     .rb-manager--gmail .rb-manager-bookings-table-wrapper {
         border: none;
         box-shadow: none;
@@ -1903,6 +1960,19 @@
 }
 
 @media (max-width: 520px) {
+    .rb-manager--gmail .rb-manager-timeline__filters {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__title h3 {
+        font-size: 17px;
+    }
+
+    .rb-manager--gmail .rb-manager-timeline__content {
+        padding: 10px;
+    }
+
     .rb-gmail-toolbar {
         padding: 10px 12px;
     }

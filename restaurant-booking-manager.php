@@ -270,6 +270,42 @@ function rb_frontend_enqueue_scripts() {
     ));
 }
 
+add_filter('rb_should_enqueue_timeline_frontend_assets', 'rb_manager_should_enqueue_timeline_assets');
+function rb_manager_should_enqueue_timeline_assets($should_enqueue) {
+    if ($should_enqueue || is_admin()) {
+        return $should_enqueue;
+    }
+
+    $manager_shortcodes = array('restaurant_booking_manager');
+
+    if (is_singular()) {
+        global $post;
+        if ($post && isset($post->post_content)) {
+            foreach ($manager_shortcodes as $shortcode) {
+                if (has_shortcode($post->post_content, $shortcode)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    if (is_front_page() || is_home()) {
+        $queried_id = get_queried_object_id();
+        if ($queried_id) {
+            $content = get_post_field('post_content', $queried_id);
+            if ($content) {
+                foreach ($manager_shortcodes as $shortcode) {
+                    if (has_shortcode($content, $shortcode)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return $should_enqueue;
+}
+
 /**
  * Register shortcode
  */

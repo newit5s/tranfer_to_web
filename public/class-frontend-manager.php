@@ -275,7 +275,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
         $location_settings = $rb_location ? $rb_location->get_settings($selected_location_id) : array();
         $section = isset($_GET['rb_section']) ? sanitize_key($_GET['rb_section']) : 'dashboard';
-        $allowed_sections = array('dashboard', 'create', 'tables', 'customers', 'settings');
+        $allowed_sections = array('dashboard', 'timeline', 'create', 'tables', 'customers', 'settings');
         if (!in_array($section, $allowed_sections, true)) {
             $section = 'dashboard';
         }
@@ -284,6 +284,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
         $nav_items = array(
             'dashboard' => array('icon' => '📊', 'label' => $this->t('dashboard', __('Dashboard', 'restaurant-booking'))),
+            'timeline' => array('icon' => '⏱️', 'label' => $this->t('timeline_view', __('Timeline View', 'restaurant-booking'))),
             'create' => array('icon' => '📝', 'label' => $this->t('create_booking', __('Create Booking', 'restaurant-booking'))),
             'tables' => array('icon' => '🍽️', 'label' => $this->t('manage_tables', __('Manage Tables', 'restaurant-booking'))),
             'customers' => array('icon' => '👥', 'label' => $this->t('customers', __('Customers', 'restaurant-booking'))),
@@ -364,6 +365,14 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             <?php
             $section_markup = '';
             switch ($section) {
+                case 'timeline':
+                    $section_markup = $this->render_section_timeline(
+                        $selected_location_id,
+                        $active_location,
+                        $available_language_labels,
+                        $location_settings
+                    );
+                    break;
                 case 'create':
                     $section_markup = $this->render_section_create_booking($location_settings, $selected_location_id, $active_location, $ajax_nonce);
                     break;
@@ -386,6 +395,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             $body_classes = array('rb-manager-body');
             if ($section === 'dashboard') {
                 $body_classes[] = 'rb-manager-body--dashboard';
+            } elseif ($section === 'timeline') {
+                $body_classes[] = 'rb-manager-body--timeline';
             }
             ?>
 
@@ -403,39 +414,60 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         return ob_get_clean();
     }
 
-    private function render_gmail_location_summary_card($location, $language_labels, $location_settings) {
-        if (empty($location) || !is_array($location)) {
-            return '';
+    private function render_section_timeline($location_id, $active_location, $language_labels, $location_settings) {
+        $current_date = function_exists('wp_date') ? wp_date('Y-m-d') : date_i18n('Y-m-d');
+        $timeline_date = isset($_GET['timeline_date']) ? sanitize_text_field(wp_unslash($_GET['timeline_date'])) : $current_date;
+
+        if (empty($timeline_date)) {
+            $timeline_date = $current_date;
         }
 
-        $shift_notes = isset($location_settings['shift_notes']) ? trim($location_settings['shift_notes']) : '';
+        $timeline_nonce = wp_create_nonce('rb_timeline_nonce');
 
         ob_start();
         ?>
-        <section class="rb-gmail-location-card">
-            <div class="rb-gmail-location-card__header">
-                <h3><?php echo esc_html($location['name']); ?></h3>
-                <?php if (!empty($language_labels)) : ?>
-                    <span class="rb-gmail-location-card__badge">🌐 <?php echo esc_html(implode(', ', $language_labels)); ?></span>
-                <?php endif; ?>
-            </div>
-            <ul class="rb-gmail-location-card__meta">
-                <?php if (!empty($location['address'])) : ?>
-                    <li>📍 <?php echo esc_html($location['address']); ?></li>
-                <?php endif; ?>
-                <?php if (!empty($location['hotline'])) : ?>
-                    <li>📞 <?php echo esc_html($location['hotline']); ?></li>
-                <?php endif; ?>
-                <?php if (!empty($location['email'])) : ?>
-                    <li>✉️ <?php echo esc_html($location['email']); ?></li>
-                <?php endif; ?>
-            </ul>
-            <?php if ($shift_notes !== '') : ?>
-                <div class="rb-gmail-location-card__notes">
-                    <strong><?php echo esc_html($this->t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>:</strong>
-                    <p><?php echo esc_html($shift_notes); ?></p>
+        <section class="rb-manager-timeline">
+            <header class="rb-manager-timeline__header">
+                <div class="rb-manager-timeline__title">
+                    <h3><?php echo esc_html($this->t('timeline_view', __('Timeline View', 'restaurant-booking'))); ?></h3>
+                    <?php if (!empty($active_location['address']) || !empty($active_location['hotline'])) : ?>
+                        <p class="rb-manager-timeline__meta">
+                            <?php if (!empty($active_location['address'])) : ?>
+                                <span>📍 <?php echo esc_html($active_location['address']); ?></span>
+                            <?php endif; ?>
+                            <?php if (!empty($active_location['address']) && !empty($active_location['hotline'])) : ?>
+                                <span aria-hidden="true">·</span>
+                            <?php endif; ?>
+                            <?php if (!empty($active_location['hotline'])) : ?>
+                                <span>📞 <?php echo esc_html($active_location['hotline']); ?></span>
+                            <?php endif; ?>
+                        </p>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+                <form method="get" class="rb-manager-timeline__filters">
+                    <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
+                    <input type="hidden" name="rb_section" value="timeline">
+                    <label>
+                        <span><?php echo esc_html($this->t('date', __('Date', 'restaurant-booking'))); ?></span>
+                        <input type="date" name="timeline_date" value="<?php echo esc_attr($timeline_date); ?>">
+                    </label>
+                    <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('update_timeline', __('Update Timeline', 'restaurant-booking'))); ?></button>
+                </form>
+            </header>
+
+            <div class="rb-manager-timeline__content">
+                <div
+                    class="rb-timeline-app"
+                    data-location="<?php echo esc_attr($location_id); ?>"
+                    data-date="<?php echo esc_attr($timeline_date); ?>"
+                    data-nonce="<?php echo esc_attr($timeline_nonce); ?>"
+                    data-context="frontend"
+                >
+                    <div class="rb-timeline-loading" style="padding: 40px 0; text-align: center;">
+                        <?php esc_html_e('Loading timeline data…', 'restaurant-booking'); ?>
+                    </div>
+                </div>
+            </div>
         </section>
         <?php
         return ob_get_clean();

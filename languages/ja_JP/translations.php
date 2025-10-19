@@ -115,6 +115,7 @@ return array(
     'cleaning' => '清掃中',
     'reserved' => '予約済み',
     'timeline_view' => 'タイムライン表示',
+    'update_timeline' => 'タイムラインを更新',
     'checkin_time' => 'チェックイン時間',
     'checkout_time' => 'チェックアウト時間',
     'current_status' => '現在のステータス',
