@@ -1387,55 +1387,66 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 </div>
 
                 <div class="rb-inbox-layout">
-                    <aside class="rb-inbox-sidebar">
-                        <h4 class="rb-inbox-sidebar__title"><?php echo esc_html($this->t('filters', __('Filters', 'restaurant-booking'))); ?></h4>
-                        <ul class="rb-inbox-sidebar__menu">
-                            <?php foreach ($sidebar_filters as $filter) : ?>
-                                <li class="rb-inbox-sidebar__item <?php echo $filter['active'] ? 'is-active' : ''; ?>">
-                                    <a class="rb-inbox-sidebar__link" href="<?php echo esc_url($filter['url']); ?>">
-                                        <span class="rb-inbox-sidebar__icon" aria-hidden="true"><?php echo esc_html($filter['icon']); ?></span>
-                                        <span class="rb-inbox-sidebar__label"><?php echo esc_html($filter['label']); ?></span>
-                                        <span class="rb-inbox-sidebar__count"><?php echo number_format_i18n($filter['count']); ?></span>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
+                    <aside class="rb-inbox-sidebar rb-gmail-sidebar">
+                        <div class="rb-gmail-sidebar-inner">
+                            <div class="rb-gmail-sidebar-section rb-gmail-sidebar-stats">
+                                <h3 class="rb-gmail-sidebar-title"><?php echo esc_html($this->t('customer_overview', __('Customer overview', 'restaurant-booking'))); ?></h3>
+                                <dl class="rb-gmail-stat-list">
+                                    <div class="rb-gmail-stat-item rb-gmail-stat-item--total">
+                                        <dt><?php echo esc_html($this->t('total_customers', __('Total customers', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($total_stat)); ?></dd>
+                                    </div>
+                                    <div class="rb-gmail-stat-item">
+                                        <dt><?php echo esc_html($this->t('vip_customers', __('VIP customers', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($vip_stat)); ?></dd>
+                                    </div>
+                                    <div class="rb-gmail-stat-item">
+                                        <dt><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($blacklisted_stat)); ?></dd>
+                                    </div>
+                                    <div class="rb-gmail-stat-item">
+                                        <dt><?php echo esc_html($this->t('new_this_month', __('New this month', 'restaurant-booking'))); ?></dt>
+                                        <dd><?php echo esc_html(number_format_i18n($new_stat)); ?></dd>
+                                    </div>
+                                </dl>
+                            </div>
 
-                        <div class="rb-inbox-sidebar__stats">
-                            <div class="rb-inbox-sidebar__stat">
-                                <span class="rb-inbox-sidebar__stat-label"><?php echo esc_html($this->t('total_customers', __('Total customers', 'restaurant-booking'))); ?></span>
-                                <strong><?php echo number_format_i18n($total_stat); ?></strong>
+                            <div class="rb-gmail-sidebar-section rb-gmail-sidebar-nav">
+                                <h3 class="rb-gmail-sidebar-title"><?php echo esc_html($this->t('filters', __('Filters', 'restaurant-booking'))); ?></h3>
+                                <ul class="rb-gmail-status-list">
+                                    <?php foreach ($sidebar_filters as $filter) : ?>
+                                        <li>
+                                            <a class="rb-gmail-status-link <?php echo $filter['active'] ? 'is-active' : ''; ?>" href="<?php echo esc_url($filter['url']); ?>">
+                                                <span class="rb-gmail-status-icon" aria-hidden="true"><?php echo esc_html($filter['icon']); ?></span>
+                                                <span class="rb-gmail-status-label"><?php echo esc_html($filter['label']); ?></span>
+                                                <span class="rb-gmail-status-count"><?php echo esc_html(number_format_i18n($filter['count'])); ?></span>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
                             </div>
-                            <div class="rb-inbox-sidebar__stat">
-                                <span class="rb-inbox-sidebar__stat-label"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
-                                <strong>⭐ <?php echo number_format_i18n($vip_stat); ?></strong>
-                            </div>
-                            <div class="rb-inbox-sidebar__stat">
-                                <span class="rb-inbox-sidebar__stat-label"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
-                                <strong>🚫 <?php echo number_format_i18n($blacklisted_stat); ?></strong>
-                            </div>
-                            <div class="rb-inbox-sidebar__stat">
-                                <span class="rb-inbox-sidebar__stat-label"><?php echo esc_html($this->t('new_this_month', __('New this month', 'restaurant-booking'))); ?></span>
-                                <strong>✨ <?php echo number_format_i18n($new_stat); ?></strong>
-                            </div>
-                        </div>
 
-                        <?php if (!empty($vip_suggestions)) : ?>
-                            <div class="rb-inbox-sidebar__note rb-inbox-sidebar__note--tip">
-                                <strong><?php echo esc_html($this->t('vip_suggestions', __('VIP suggestions:', 'restaurant-booking'))); ?></strong>
-                                <p><?php printf(esc_html__('%d customers are close to VIP status.', 'restaurant-booking'), count($vip_suggestions)); ?></p>
-                            </div>
-                        <?php endif; ?>
+                            <?php if (!empty($vip_suggestions)) : ?>
+                                <div class="rb-gmail-sidebar-section">
+                                    <div class="rb-inbox-sidebar__note rb-inbox-sidebar__note--tip">
+                                        <strong><?php echo esc_html($this->t('vip_suggestions', __('VIP suggestions:', 'restaurant-booking'))); ?></strong>
+                                        <p><?php printf(esc_html__('%d customers are close to VIP status.', 'restaurant-booking'), count($vip_suggestions)); ?></p>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
-                        <?php if (!empty($problematic)) : ?>
-                            <div class="rb-inbox-sidebar__note rb-inbox-sidebar__note--warning">
-                                <strong><?php echo esc_html($this->t('attention', __('Attention:', 'restaurant-booking'))); ?></strong>
-                                <p><?php printf(esc_html__('%d customers frequently cancel or no-show.', 'restaurant-booking'), count($problematic)); ?></p>
-                            </div>
-                        <?php endif; ?>
+                            <?php if (!empty($problematic)) : ?>
+                                <div class="rb-gmail-sidebar-section">
+                                    <div class="rb-inbox-sidebar__note rb-inbox-sidebar__note--warning">
+                                        <strong><?php echo esc_html($this->t('attention', __('Attention:', 'restaurant-booking'))); ?></strong>
+                                        <p><?php printf(esc_html__('%d customers frequently cancel or no-show.', 'restaurant-booking'), count($problematic)); ?></p>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
-                        <div class="rb-inbox-sidebar__footer">
-                            <strong><?php printf(esc_html__('%d customers shown', 'restaurant-booking'), $total_customers); ?></strong>
+                            <div class="rb-gmail-sidebar-section rb-gmail-sidebar-summary">
+                                <strong><?php printf(esc_html__('%d customers shown', 'restaurant-booking'), $total_customers); ?></strong>
+                            </div>
                         </div>
                     </aside>
 
