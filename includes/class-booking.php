@@ -231,12 +231,28 @@ class RB_Booking {
             return new WP_Error('long_booking_duration', __('Maximum booking duration is 6 hours.', 'restaurant-booking'));
         }
 
-        if ($this->check_time_overlap($data['booking_date'], $range['checkin'], $range['checkout'], (int) $data['location_id'])) {
-            return new WP_Error('time_slot_unavailable', __('Selected time slot is not available.', 'restaurant-booking'));
-        }
+        $conflicts = $this->check_time_overlap(
+            $data['booking_date'],
+            $range['checkin'],
+            $range['checkout'],
+            (int) $data['location_id']
+        );
 
-        if (!$this->is_time_slot_available($data['booking_date'], $range['checkin'], (int) $data['guest_count'], null, (int) $data['location_id'], $range['checkout'])) {
-            return new WP_Error('time_slot_unavailable', __('Selected time slot is not available.', 'restaurant-booking'));
+        if (!$this->is_time_slot_available(
+            $data['booking_date'],
+            $range['checkin'],
+            (int) $data['guest_count'],
+            null,
+            (int) $data['location_id'],
+            $range['checkout']
+        )) {
+            $error = new WP_Error('time_slot_unavailable', __('Selected time slot is not available.', 'restaurant-booking'));
+
+            if (!empty($conflicts)) {
+                $error->add_data(array('conflicts' => $conflicts));
+            }
+
+            return $error;
         }
 
         $data['checkin_time'] = $range['checkin'];
