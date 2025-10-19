@@ -1238,6 +1238,7 @@
 
                 var customerId = $item.attr('data-customer-id') || '';
                 customerDetail.attr('data-active-id', customerId);
+                customerDetail.attr('aria-hidden', 'false');
 
                 var $empty = customerDetail.find('.rb-inbox-detail-empty');
                 var $body = customerDetail.find('.rb-inbox-detail-body');
@@ -1354,6 +1355,7 @@
                 $list.find('.rb-inbox-item').removeClass('is-active');
                 $item.addClass('is-active');
                 populateManagerCustomerDetail($item);
+                $(document).trigger('rb:manager:customerSelected', [$item.get(0)]);
             }
 
             function refreshManagerCustomerDetail(customerId) {
@@ -1396,6 +1398,8 @@
                     customerDetail.removeAttr('data-active-id');
                     customerDetail.find('.rb-inbox-detail-body').attr('hidden', true);
                     customerDetail.find('.rb-inbox-detail-empty').show();
+                    customerDetail.attr('aria-hidden', 'true');
+                    $(document).trigger('rb:manager:customerCleared');
                 }
             }
 

@@ -3,19 +3,29 @@
 
     var GmailManager = {
         init: function () {
-            this.layout = $('.rb-manager-gmail-layout');
-            if (!this.layout.length) {
+            this.manager = $('.rb-manager--gmail');
+            if (!this.manager.length) {
                 return;
             }
 
-            this.layout.attr('data-rb-gmail-enhanced', '1');
+            this.layouts = this.manager.find('.rb-manager-gmail-layout, .rb-customer-inbox');
+            if (!this.layouts.length) {
+                this.layouts = this.manager;
+            }
 
-            this.sidebar = this.layout.find('.rb-gmail-sidebar');
-            this.detail = this.layout.find('.rb-gmail-detail');
-            this.header = this.layout.closest('.rb-manager--gmail').find('.rb-manager-header');
-            this.detailScroll = this.detail.find('.rb-gmail-detail-scroll');
+            this.layouts.attr('data-rb-gmail-enhanced', '1');
+            this.layout = this.layouts.first();
+
+            this.sidebar = this.layout.find('.rb-gmail-sidebar, .rb-inbox-sidebar');
+            this.detail = this.layout.find('.rb-gmail-detail, .rb-inbox-detail');
+            if (!this.detail.length) {
+                this.detail = this.manager.find('.rb-gmail-detail, .rb-inbox-detail');
+            }
+            this.header = this.manager.find('.rb-manager-header');
+            this.detailScroll = this.detail.find('.rb-gmail-detail-scroll, .rb-customer-detail-scroll');
             this.lastFocused = null;
             this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            this.cardSelector = '.rb-booking-item, .rb-inbox-item';
 
             if (this.detail.length) {
                 this.detail.attr('aria-hidden', 'true');
@@ -30,28 +40,28 @@
         bindEvents: function () {
             var self = this;
 
-            this.layout.on('click', '[data-rb-toggle-sidebar]', function () {
+            this.layouts.on('click', '[data-rb-toggle-sidebar]', function () {
                 self.toggleSidebar();
             });
 
-            this.layout.on('click', '[data-rb-close-panels]', function () {
+            this.layouts.on('click', '[data-rb-close-panels]', function () {
                 self.closePanels();
             });
 
-            this.layout.on('click', '.rb-booking-item', function (event) {
+            this.layouts.on('click', this.cardSelector, function (event) {
                 var card = $(this);
                 self.focusCard(card);
                 self.openDetail();
             });
 
-            this.layout.on('keydown', '.rb-booking-item', function (event) {
+            this.layouts.on('keydown', this.cardSelector, function (event) {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     $(this).trigger('click');
                 }
             });
 
-            this.layout.on('click', '[data-rb-close-detail]', function () {
+            this.layouts.on('click', '[data-rb-close-detail]', function () {
                 self.closeDetail();
             });
 
@@ -64,6 +74,21 @@
                 if (card.length) {
                     self.openDetail();
                 }
+            });
+
+            $(document).on('rb:manager:customerSelected', function (event, element) {
+                if (!element) {
+                    return;
+                }
+                var card = $(element);
+                self.markFocused(card);
+                if (card.length) {
+                    self.openDetail();
+                }
+            });
+
+            $(document).on('rb:manager:customerCleared', function () {
+                self.closeDetail();
             });
 
             $(document).on('rb:manager:bookingUpdated', function (event, booking) {
@@ -94,7 +119,7 @@
         },
 
         refreshCards: function () {
-            this.cards = this.layout.find('.rb-booking-item');
+            this.cards = this.manager.find(this.cardSelector);
             this.cards.each(function (index, element) {
                 element.setAttribute('data-rb-index', index);
             });
@@ -110,12 +135,12 @@
         toggleSidebar: function () {
             if (window.matchMedia('(max-width: 768px)').matches) {
                 var shouldOpen = !this.sidebar.hasClass('is-open');
-                this.layout.removeClass('has-detail-open');
-                this.layout.toggleClass('is-sidebar-open', shouldOpen);
+                this.layouts.removeClass('has-detail-open');
+                this.layouts.toggleClass('is-sidebar-open', shouldOpen);
                 this.sidebar.toggleClass('is-open', shouldOpen);
                 this.sidebar.toggleClass('is-collapsed', !shouldOpen);
             } else {
-                this.layout.toggleClass('is-sidebar-hidden');
+                this.layouts.toggleClass('is-sidebar-hidden');
             }
 
             this.revealHeader();
@@ -123,7 +148,7 @@
 
         openDetail: function () {
             this.closeSidebar();
-            this.layout.addClass('has-detail-open');
+            this.layouts.addClass('has-detail-open');
             if (this.detail.length) {
                 this.detail.attr('aria-hidden', 'false');
                 if (!this.detail.attr('tabindex')) {
@@ -145,13 +170,21 @@
 
         closeDetail: function () {
             var previousFocus = this.lastFocused;
-            this.layout.removeClass('has-detail-open');
+            this.layouts.removeClass('has-detail-open');
             if (this.detail.length) {
                 this.detail.attr('aria-hidden', 'true');
+                var customerBody = this.detail.find('.rb-inbox-detail-body');
+                var customerEmpty = this.detail.find('.rb-inbox-detail-empty');
+                if (customerBody.length && customerEmpty.length) {
+                    customerBody.attr('hidden', true);
+                    customerEmpty.show();
+                }
             }
             this.scrollDetailToTop();
-            this.layout.find('.rb-booking-item.active').removeClass('active');
-            this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
+            this.manager.find('.rb-booking-item.active').removeClass('active');
+            this.manager.find('.rb-booking-item.is-focused').removeClass('is-focused');
+            this.manager.find('.rb-inbox-item.is-active').removeClass('is-active');
+            this.manager.find('.rb-inbox-item.is-focused').removeClass('is-focused');
             this.lastFocused = null;
             if (previousFocus && previousFocus.length) {
                 previousFocus.trigger('focus');
@@ -161,7 +194,7 @@
 
         closeSidebar: function () {
             if (window.innerWidth < 769) {
-                this.layout.removeClass('is-sidebar-open');
+                this.layouts.removeClass('is-sidebar-open');
                 this.sidebar.removeClass('is-open');
                 this.sidebar.addClass('is-collapsed');
             }
@@ -177,19 +210,19 @@
         handleResize: function () {
             var isMobile = window.innerWidth < 769;
 
-            this.layout.toggleClass('is-mobile-ready', isMobile);
+            this.layouts.toggleClass('is-mobile-ready', isMobile);
 
             if (isMobile) {
-                this.layout.removeClass('is-sidebar-hidden');
+                this.layouts.removeClass('is-sidebar-hidden');
                 if (this.sidebar.hasClass('is-open')) {
-                    this.layout.addClass('is-sidebar-open');
+                    this.layouts.addClass('is-sidebar-open');
                     this.sidebar.removeClass('is-collapsed');
                 } else {
-                    this.layout.removeClass('is-sidebar-open');
+                    this.layouts.removeClass('is-sidebar-open');
                     this.sidebar.addClass('is-collapsed');
                 }
             } else {
-                this.layout.removeClass('is-sidebar-open has-detail-open');
+                this.layouts.removeClass('is-sidebar-open has-detail-open');
                 this.sidebar.removeClass('is-open is-collapsed');
                 if (this.detail.length) {
                     this.detail.attr('aria-hidden', 'true');
@@ -227,7 +260,7 @@
             var currentY = window.pageYOffset || document.documentElement.scrollTop || 0;
             var delta = currentY - this.lastScrollY;
 
-            if (this.layout.hasClass('is-sidebar-open') || this.layout.hasClass('has-detail-open')) {
+            if (this.layouts.filter('.is-sidebar-open').length || this.layouts.filter('.has-detail-open').length) {
                 this.header.removeClass('is-hidden');
                 this.lastScrollY = currentY;
                 return;
@@ -249,14 +282,19 @@
                 return;
             }
 
-            this.layout.find('.rb-booking-item.active').removeClass('active');
-            card.addClass('active');
+            this.manager.find('.rb-booking-item.active').removeClass('active');
+            this.manager.find('.rb-inbox-item.is-active').removeClass('is-active');
+            if (card.hasClass('rb-inbox-item')) {
+                card.addClass('is-active');
+            } else {
+                card.addClass('active');
+            }
             this.markFocused(card);
             this.scrollDetailToTop();
         },
 
         markFocused: function (card) {
-            this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
+            this.manager.find('.rb-booking-item.is-focused, .rb-inbox-item.is-focused').removeClass('is-focused');
             if (card && card.length) {
                 card.addClass('is-focused');
                 this.lastFocused = card;
@@ -285,12 +323,12 @@
         },
 
         navigate: function (direction) {
-            var cards = this.layout.find('.rb-booking-item:visible');
+            var cards = this.manager.find(this.cardSelector + ':visible');
             if (!cards.length) {
                 return;
             }
 
-            var current = cards.index(cards.filter('.active').first());
+            var current = cards.index(cards.filter('.active, .is-active').first());
             if (current === -1) {
                 current = 0;
             } else {
@@ -309,7 +347,7 @@
                 return;
             }
 
-            var container = this.layout.find('.rb-gmail-list');
+            var container = card.closest('.rb-gmail-list, .rb-inbox-list');
             if (!container.length) {
                 return;
             }
