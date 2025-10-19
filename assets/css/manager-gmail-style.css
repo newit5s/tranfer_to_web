@@ -31,13 +31,11 @@
 }
 
 .rb-manager--gmail .rb-manager-header h2,
-.rb-manager--gmail .rb-manager-user,
-.rb-manager--gmail .rb-manager-location-switcher label {
+.rb-manager--gmail .rb-manager-user {
     color: var(--rb-gmail-text);
 }
 
-.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select,
-.rb-manager--gmail .rb-manager-location-switcher select {
+.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select {
     background: var(--rb-gmail-surface);
     color: var(--rb-gmail-text);
     border: 1px solid var(--rb-gmail-border);
@@ -45,15 +43,12 @@
 }
 
 .rb-manager--gmail .rb-manager-language-switcher .rb-lang-select:hover,
-.rb-manager--gmail .rb-manager-location-switcher select:hover,
-.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select:focus,
-.rb-manager--gmail .rb-manager-location-switcher select:focus {
+.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select:focus {
     border-color: var(--rb-gmail-primary);
     box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.16);
     outline: none;
 }
 
-.rb-manager--gmail .rb-manager-location-switcher option,
 .rb-manager--gmail .rb-manager-language-switcher option {
     color: var(--rb-gmail-text);
 }
@@ -116,28 +111,21 @@
     flex-wrap: wrap;
 }
 
-.rb-manager--gmail .rb-manager-location-switcher {
-    display: flex;
+.rb-manager-location-display {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    margin: 0;
-    flex-wrap: wrap;
-}
-
-.rb-manager--gmail .rb-manager-location-switcher label {
+    gap: 8px;
     font-size: 13px;
     color: var(--rb-gmail-muted);
-    margin: 0;
 }
 
-.rb-manager--gmail .rb-manager-location-switcher select {
-    min-width: 220px;
-    border-radius: 999px;
-    background: var(--rb-gmail-surface-alt);
-    border: 1px solid var(--rb-gmail-border);
+.rb-manager-location-label {
+    font-weight: 500;
+}
+
+.rb-manager-location-name {
     color: var(--rb-gmail-text);
-    padding: 8px 16px;
-    font-size: 14px;
+    font-weight: 600;
 }
 
 .rb-manager--gmail .rb-gmail-header-nav {
@@ -761,33 +749,7 @@
     box-sizing: border-box;
 }
 
-.rb-manager--gmail .rb-manager-header h2,
-.rb-manager--gmail .rb-manager-user,
-.rb-manager--gmail .rb-manager-location-switcher label {
-    color: var(--rb-gmail-text);
-}
 
-.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select,
-.rb-manager--gmail .rb-manager-location-switcher select {
-    background: var(--rb-gmail-surface);
-    color: var(--rb-gmail-text);
-    border: 1px solid var(--rb-gmail-border);
-    box-shadow: 0 12px 24px var(--rb-gmail-shadow);
-}
-
-.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select:hover,
-.rb-manager--gmail .rb-manager-location-switcher select:hover,
-.rb-manager--gmail .rb-manager-language-switcher .rb-lang-select:focus,
-.rb-manager--gmail .rb-manager-location-switcher select:focus {
-    border-color: var(--rb-gmail-border-strong);
-    box-shadow: 0 0 0 3px rgba(92, 64, 51, 0.12);
-    outline: none;
-}
-
-.rb-manager--gmail .rb-manager-location-switcher option,
-.rb-manager--gmail .rb-manager-language-switcher option {
-    color: var(--rb-gmail-text);
-}
 
 .rb-manager--gmail .rb-manager-header,
 .rb-manager--gmail .rb-manager-layout {
@@ -831,20 +793,49 @@
 
 .rb-manager-gmail-layout {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-columns: 260px minmax(0, 1fr);
     gap: 24px;
     min-height: calc(100vh - 140px);
     position: relative;
     padding: 0;
-    transition: grid-template-columns 0.3s ease;
+}
+
+.rb-manager-gmail-layout.is-sidebar-hidden {
+    grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.rb-manager-gmail-layout.is-sidebar-hidden .rb-gmail-sidebar {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.rb-manager-gmail-layout.is-sidebar-hidden .rb-gmail-main {
+    grid-column: 1 / -1;
 }
 
 .rb-gmail-overlay {
-    display: none;
+    display: block;
+    position: fixed;
+    inset: 0;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: rgba(32, 33, 36, 0.38);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 35;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    visibility: hidden;
 }
 
-.rb-manager-gmail-layout.is-sidebar-collapsed {
-    grid-template-columns: 84px minmax(0, 1.4fr) minmax(0, 1fr);
+.rb-manager-gmail-layout.is-sidebar-open .rb-gmail-overlay,
+.rb-manager-gmail-layout.has-detail-open .rb-gmail-overlay {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
 }
 
 .rb-gmail-sidebar {
@@ -853,40 +844,9 @@
     border: 1px solid var(--rb-gmail-border);
     box-shadow: 0 12px 32px var(--rb-gmail-shadow);
     overflow: hidden;
-    transition: width 0.3s ease, transform 0.3s ease;
     display: flex;
     position: relative;
     z-index: 2;
-}
-
-.rb-gmail-sidebar.is-collapsed {
-    width: 90px;
-}
-
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar {
-    width: 90px;
-}
-
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar:hover,
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar:focus-within {
-    width: 280px;
-    box-shadow: 0 18px 40px var(--rb-gmail-shadow-strong);
-    z-index: 5;
-}
-
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar:hover .rb-gmail-sidebar-inner,
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar:focus-within .rb-gmail-sidebar-inner {
-    opacity: 1;
-}
-
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar-inner {
-    opacity: 0;
-    transition: opacity 0.25s ease;
-}
-
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar:hover .rb-gmail-sidebar-inner,
-.rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar:focus-within .rb-gmail-sidebar-inner {
-    pointer-events: auto;
 }
 
 .rb-gmail-sidebar-inner {
@@ -895,29 +855,6 @@
     gap: 24px;
     padding: 24px 20px;
     width: 100%;
-}
-
-.rb-gmail-sidebar-mobile-tools {
-    display: none;
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
-    border-radius: var(--rb-gmail-radius);
-    border: 1px solid var(--rb-gmail-border);
-    background: var(--rb-gmail-surface);
-    box-shadow: 0 12px 32px var(--rb-gmail-shadow);
-}
-
-.rb-gmail-sidebar-mobile-tools form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-}
-
-.rb-gmail-sidebar-mobile-tools .rb-gmail-search {
-    width: 100%;
-    max-width: none;
 }
 
 .rb-gmail-sidebar-title {
@@ -998,6 +935,18 @@
     font-size: 13px;
 }
 
+.rb-gmail-stat-item--total {
+    background: var(--rb-gmail-primary);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 6px 16px rgba(26, 115, 232, 0.25);
+}
+
+.rb-gmail-stat-item--total dt,
+.rb-gmail-stat-item--total dd {
+    color: inherit;
+}
+
 .rb-gmail-main {
     display: flex;
     flex-direction: column;
@@ -1008,6 +957,7 @@
 .rb-gmail-toolbar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 16px;
     background: var(--rb-gmail-surface);
     border-radius: var(--rb-gmail-radius);
@@ -1017,6 +967,7 @@
 }
 
 .rb-gmail-toggle {
+    display: none;
     border: none;
     background: none;
     font-size: 20px;
@@ -1079,6 +1030,10 @@
     gap: 4px;
     font-size: 12px;
     color: var(--rb-gmail-muted);
+}
+
+.rb-gmail-filter-form__status {
+    min-width: 160px;
 }
 
 .rb-gmail-filter-form select,
@@ -1145,69 +1100,6 @@
     box-shadow: 0 10px 20px rgba(26, 115, 232, 0.18);
 }
 
-.rb-gmail-bulk-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    border-radius: var(--rb-gmail-radius);
-    border: 1px solid var(--rb-gmail-border);
-    background: var(--rb-gmail-surface);
-    box-shadow: 0 10px 28px var(--rb-gmail-shadow);
-    gap: 16px;
-}
-
-.rb-gmail-select-all {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.rb-gmail-select-all input {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
-
-.rb-gmail-selected-count {
-    font-size: 13px;
-    color: var(--rb-gmail-muted);
-}
-
-.rb-gmail-bulk-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.rb-gmail-bulk-button,
-.rb-gmail-bulk-clear {
-    border: 1px solid transparent;
-    border-radius: 999px;
-    padding: 6px 14px;
-    background: var(--rb-gmail-surface-alt);
-    color: var(--rb-gmail-text);
-    cursor: pointer;
-    font-size: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.2s ease, border 0.2s ease, color 0.2s ease;
-}
-
-.rb-gmail-bulk-button:hover,
-.rb-gmail-bulk-button:focus-visible,
-.rb-gmail-bulk-clear:hover,
-.rb-gmail-bulk-clear:focus-visible {
-    background: rgba(26, 115, 232, 0.1);
-    border-color: var(--rb-gmail-primary);
-    color: var(--rb-gmail-primary);
-    outline: none;
-}
-
 .rb-gmail-list {
     display: flex;
     flex-direction: column;
@@ -1218,7 +1110,7 @@
 
 .rb-booking-card {
     display: grid;
-    grid-template-columns: auto 44px 1fr;
+    grid-template-columns: auto 1fr;
     gap: 16px;
     align-items: flex-start;
     padding: 16px 18px;
@@ -1246,19 +1138,6 @@
 .rb-booking-card.is-unread {
     background: rgba(255, 255, 255, 0.95);
     border-color: rgba(26, 115, 232, 0.24);
-}
-
-.rb-booking-select {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-top: 4px;
-}
-
-.rb-booking-select-checkbox {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
 }
 
 .rb-booking-avatar {
@@ -1386,15 +1265,21 @@
 }
 
 .rb-gmail-detail {
-    position: relative;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, 90vw);
+    max-height: 90vh;
     background: var(--rb-gmail-surface);
     border-radius: var(--rb-gmail-radius);
     border: 1px solid var(--rb-gmail-border);
     box-shadow: 0 18px 40px var(--rb-gmail-shadow);
     overflow: hidden;
-    display: flex;
+    display: none;
     flex-direction: column;
     min-width: 0;
+    z-index: 1040;
 }
 
 .rb-gmail-detail-scroll {
@@ -1416,7 +1301,13 @@
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rb-manager-gmail-layout.has-detail-open .rb-gmail-detail {
+    display: flex;
 }
 
 .rb-detail-empty {
@@ -1496,53 +1387,15 @@
         justify-content: center;
     }
 
-    .rb-manager--gmail .rb-manager-location-switcher {
-        width: 100%;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .rb-manager--gmail .rb-manager-location-switcher label {
-        width: 100%;
-    }
-
-    .rb-manager--gmail .rb-manager-location-switcher select {
-        min-width: 0;
-        width: 100%;
-    }
-
     .rb-manager-gmail-layout {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas:
-            "sidebar"
-            "main"
-            "detail";
         gap: 20px;
     }
 
-    .rb-manager-gmail-layout.is-sidebar-collapsed {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .rb-gmail-sidebar {
-        grid-area: sidebar;
+    .rb-gmail-sidebar,
+    .rb-gmail-main {
         width: 100%;
         max-width: none;
-        position: relative;
-        transform: none;
-    }
-
-    .rb-gmail-sidebar.is-collapsed,
-    .rb-manager-gmail-layout.is-sidebar-collapsed .rb-gmail-sidebar {
-        width: 100%;
-    }
-
-    .rb-gmail-main {
-        grid-area: main;
-    }
-
-    .rb-gmail-detail {
-        grid-area: detail;
     }
 
     .rb-gmail-toolbar {
@@ -1571,14 +1424,6 @@
         flex: 1 1 160px;
     }
 
-    .rb-gmail-bulk-bar {
-        flex-wrap: wrap;
-    }
-
-    .rb-gmail-bulk-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
 }
 
 @media (max-width: 992px) {
@@ -1640,23 +1485,15 @@
         justify-content: center;
     }
 
-    .rb-manager--gmail .rb-manager-location-switcher {
-        display: none !important;
-    }
-
     .rb-manager--gmail .rb-gmail-header-title {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 8px !important;
     }
 
-    .rb-manager--gmail .rb-manager-location-switcher label {
+    .rb-manager-location-display {
         width: 100%;
-    }
-
-    .rb-manager--gmail .rb-manager-location-switcher select {
-        min-width: 0 !important;
-        width: 100% !important;
+        justify-content: flex-start;
     }
 
     .rb-manager--gmail .rb-manager-gmail-page {
@@ -1688,16 +1525,6 @@
     .rb-gmail-search {
         flex: 1 1 100%;
         max-width: none;
-    }
-
-    .rb-gmail-bulk-bar {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .rb-gmail-bulk-actions {
-        width: 100%;
-        justify-content: flex-start;
     }
 
     .rb-manager--gmail .rb-gmail-header-nav ul {
@@ -1787,23 +1614,6 @@
 
     .rb-manager--gmail .rb-manager-settings-tab {
         flex: 0 0 auto;
-    }
-
-    .rb-gmail-overlay {
-        display: block;
-        position: fixed;
-        inset: 0;
-        border: 0;
-        padding: 0;
-        margin: 0;
-        background: rgba(32, 33, 36, 0.38);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-        z-index: 35;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        visibility: hidden;
     }
 
     .rb-manager-gmail-layout.is-sidebar-open .rb-gmail-overlay,
@@ -2002,10 +1812,6 @@
         padding: 64px 20px 24px !important;
     }
 
-    .rb-booking-select {
-        order: -1 !important;
-    }
-
     .rb-booking-card-body {
         grid-column: 1 / -1 !important;
     }
@@ -2017,10 +1823,29 @@
 
     .rb-gmail-filter-form {
         flex-direction: column !important;
+        align-items: stretch !important;
         width: 100% !important;
     }
 
     .rb-gmail-filter-form label {
+        width: 100% !important;
+    }
+
+    .rb-gmail-filter-form select,
+    .rb-gmail-filter-form input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .rb-gmail-filter-actions {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .rb-gmail-filter-actions .rb-btn-primary,
+    .rb-gmail-filter-actions .rb-btn-secondary {
         width: 100% !important;
     }
 
@@ -2070,19 +1895,10 @@
         grid-area: main !important;
     }
 
-    .rb-gmail-detail {
-        grid-area: detail !important;
-        position: static !important;
-    }
-
     .rb-booking-card {
         grid-template-columns: auto 1fr !important;
         gap: 12px !important;
         padding: 12px !important;
-    }
-
-    .rb-booking-select {
-        order: -1 !important;
     }
 
     .rb-booking-card-body {
@@ -2101,10 +1917,29 @@
 
     .rb-gmail-filter-form {
         flex-direction: column !important;
+        align-items: stretch !important;
         width: 100% !important;
     }
 
     .rb-gmail-filter-form label {
+        width: 100% !important;
+    }
+
+    .rb-gmail-filter-form select,
+    .rb-gmail-filter-form input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .rb-gmail-filter-actions {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .rb-gmail-filter-actions .rb-btn-primary,
+    .rb-gmail-filter-actions .rb-btn-secondary {
         width: 100% !important;
     }
 
