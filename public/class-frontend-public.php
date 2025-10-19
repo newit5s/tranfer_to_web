@@ -444,18 +444,10 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             wp_die();
         }
 
-        $conflicts = $rb_booking->check_time_overlap($booking_date, $booking_time, $checkout_time, $location_id);
-        if (!empty($conflicts)) {
-            wp_send_json_error(array(
-                'message' => __('Selected time slot conflicts with another booking.', 'restaurant-booking'),
-                'conflicts' => $conflicts
-            ));
-            wp_die();
-        }
-
-        $is_available = $rb_booking->is_time_slot_available($booking_date, $booking_time, $guest_count, null, $location_id, $checkout_time);
+        $is_available = $rb_booking->is_time_slot_available($booking_date, $booking_time, $guest_count, $exclude_booking_id, $location_id, $checkout_time);
 
         if (!$is_available) {
+            $conflicts = $rb_booking->check_time_overlap($booking_date, $booking_time, $checkout_time, $location_id, $exclude_booking_id);
             $suggestions = $rb_booking->suggest_time_slots(
                 $location_id,
                 $booking_date,
@@ -470,10 +462,17 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                 $booking_time
             );
 
-            wp_send_json_error(array(
+            $error_response = array(
                 'message' => $message,
                 'suggestions' => $suggestions
-            ));
+            );
+
+            if (!empty($conflicts)) {
+                $error_response['conflicts'] = $conflicts;
+                $error_response['message'] = __('Selected time slot conflicts with another booking.', 'restaurant-booking');
+            }
+
+            wp_send_json_error($error_response);
             wp_die();
         }
 
@@ -536,6 +535,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         $checkout = isset($_POST['checkout_time']) ? sanitize_text_field($_POST['checkout_time']) : '';
         $guests = isset($_POST['guest_count']) ? intval($_POST['guest_count']) : (isset($_POST['guests']) ? intval($_POST['guests']) : 0);
         $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
+        $exclude_booking_id = isset($_POST['exclude_booking_id']) ? intval($_POST['exclude_booking_id']) : null;
 
         if (empty($date) || empty($checkin) || empty($checkout) || $guests <= 0 || !$location_id) {
             wp_send_json_error(array('message' => __('Missing data. Please select location, date, time and number of guests.', 'restaurant-booking')));
