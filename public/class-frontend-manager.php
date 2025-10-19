@@ -423,7 +423,6 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         $timeline_nonce = wp_create_nonce('rb_timeline_nonce');
-        $location_card = $this->render_gmail_location_summary_card($active_location, $language_labels, $location_settings);
 
         ob_start();
         ?>
@@ -456,12 +455,6 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                 </form>
             </header>
 
-            <?php if ($location_card !== '') : ?>
-                <div class="rb-manager-timeline__summary">
-                    <?php echo $location_card; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                </div>
-            <?php endif; ?>
-
             <div class="rb-manager-timeline__content">
                 <div
                     class="rb-timeline-app"
@@ -475,44 +468,6 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     </div>
                 </div>
             </div>
-        </section>
-        <?php
-        return ob_get_clean();
-    }
-
-    private function render_gmail_location_summary_card($location, $language_labels, $location_settings) {
-        if (empty($location) || !is_array($location)) {
-            return '';
-        }
-
-        $shift_notes = isset($location_settings['shift_notes']) ? trim($location_settings['shift_notes']) : '';
-
-        ob_start();
-        ?>
-        <section class="rb-gmail-location-card">
-            <div class="rb-gmail-location-card__header">
-                <h3><?php echo esc_html($location['name']); ?></h3>
-                <?php if (!empty($language_labels)) : ?>
-                    <span class="rb-gmail-location-card__badge">🌐 <?php echo esc_html(implode(', ', $language_labels)); ?></span>
-                <?php endif; ?>
-            </div>
-            <ul class="rb-gmail-location-card__meta">
-                <?php if (!empty($location['address'])) : ?>
-                    <li>📍 <?php echo esc_html($location['address']); ?></li>
-                <?php endif; ?>
-                <?php if (!empty($location['hotline'])) : ?>
-                    <li>📞 <?php echo esc_html($location['hotline']); ?></li>
-                <?php endif; ?>
-                <?php if (!empty($location['email'])) : ?>
-                    <li>✉️ <?php echo esc_html($location['email']); ?></li>
-                <?php endif; ?>
-            </ul>
-            <?php if ($shift_notes !== '') : ?>
-                <div class="rb-gmail-location-card__notes">
-                    <strong><?php echo esc_html($this->t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?>:</strong>
-                    <p><?php echo esc_html($shift_notes); ?></p>
-                </div>
-            <?php endif; ?>
         </section>
         <?php
         return ob_get_clean();

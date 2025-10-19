@@ -289,11 +289,6 @@
     min-width: 200px;
 }
 
-.rb-manager--gmail .rb-manager-timeline__summary {
-    display: grid;
-    gap: 16px;
-}
-
 .rb-manager--gmail .rb-manager-timeline__content {
     background: var(--rb-gmail-surface);
     border-radius: var(--rb-gmail-radius);
@@ -305,66 +300,6 @@
 
 .rb-manager--gmail .rb-manager-timeline__content .rb-timeline-app {
     min-height: 320px;
-}
-
-.rb-gmail-location-card {
-    background: var(--rb-gmail-surface);
-    border: 1px solid var(--rb-gmail-border);
-    border-radius: var(--rb-gmail-radius);
-    padding: 24px 28px;
-    box-shadow: 0 18px 40px var(--rb-gmail-shadow);
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.rb-gmail-location-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.rb-gmail-location-card__header h3 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--rb-gmail-text);
-}
-
-.rb-gmail-location-card__badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--rb-gmail-muted);
-    background: var(--rb-gmail-surface-alt);
-    border-radius: 999px;
-    padding: 6px 12px;
-    border: 1px solid var(--rb-gmail-border);
-    box-shadow: 0 6px 16px rgba(26, 115, 232, 0.12);
-}
-
-.rb-gmail-location-card__meta {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 24px;
-    font-size: 14px;
-    color: var(--rb-gmail-muted);
-}
-
-.rb-gmail-location-card__notes {
-    background: var(--rb-gmail-surface-alt);
-    border-radius: 12px;
-    border: 1px solid var(--rb-gmail-border);
-    padding: 16px 18px;
-    color: var(--rb-gmail-text);
-    font-size: 14px;
-    line-height: 1.5;
 }
 
 .rb-manager--gmail .rb-manager-create,
@@ -1811,10 +1746,6 @@
         padding: 14px;
     }
 
-    .rb-gmail-location-card {
-        padding: 20px 22px;
-    }
-
     .rb-manager--gmail .rb-manager-add-table {
         flex-direction: column;
         align-items: stretch;
@@ -1955,15 +1886,6 @@
         padding: 12px;
     }
 
-    .rb-gmail-location-card {
-        padding: 18px;
-    }
-
-    .rb-gmail-location-card__meta {
-        flex-direction: column;
-        gap: 10px;
-    }
-
     .rb-manager--gmail .rb-manager-bookings-table-wrapper {
         border: none;
         box-shadow: none;
@@ -2049,10 +1971,6 @@
 
     .rb-manager--gmail .rb-manager-timeline__content {
         padding: 10px;
-    }
-
-    .rb-gmail-location-card {
-        padding: 16px;
     }
 
     .rb-gmail-toolbar {
