@@ -394,7 +394,6 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     <?php echo $section_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                 <?php else : ?>
                     <div class="rb-manager-gmail-page" data-section="<?php echo esc_attr($section); ?>">
-                        <?php echo $this->render_gmail_location_summary_card($active_location, $available_language_labels, $location_settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                         <?php echo $section_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     </div>
                 <?php endif; ?>
@@ -1558,65 +1557,67 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 <p><?php echo esc_html($this->t('select_customer_to_view', __('Select a customer to see details.', 'restaurant-booking'))); ?></p>
                             </div>
                             <div class="rb-inbox-detail-body" hidden>
-                                <div class="rb-inbox-detail-header">
-                                    <div>
-                                        <h2 data-field="name"></h2>
-                                        <div class="rb-inbox-detail-subtitle">
-                                            <a href="#" data-field="phone" class="rb-inbox-detail-contact" rel="nofollow"></a>
-                                            <a href="#" data-field="email" class="rb-inbox-detail-contact" rel="nofollow"></a>
+                                <div class="rb-gmail-detail-scroll rb-customer-detail-scroll">
+                                    <div class="rb-inbox-detail-header">
+                                        <div>
+                                            <h2 data-field="name"></h2>
+                                            <div class="rb-inbox-detail-subtitle">
+                                                <a href="#" data-field="phone" class="rb-inbox-detail-contact" rel="nofollow"></a>
+                                                <a href="#" data-field="email" class="rb-inbox-detail-contact" rel="nofollow"></a>
+                                            </div>
+                                            <div class="rb-inbox-detail-tags" data-badge-row hidden>
+                                                <span class="rb-inbox-badge rb-inbox-badge--vip" data-badge="vip"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
+                                                <span class="rb-inbox-badge rb-inbox-badge--danger" data-badge="blacklist"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
+                                                <span class="rb-inbox-badge rb-inbox-badge--success" data-badge="loyal"><?php echo esc_html($this->t('loyal_customer', __('Loyal', 'restaurant-booking'))); ?></span>
+                                                <span class="rb-inbox-badge rb-inbox-badge--warning" data-badge="problem"><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
+                                            </div>
                                         </div>
-                                        <div class="rb-inbox-detail-tags" data-badge-row hidden>
-                                            <span class="rb-inbox-badge rb-inbox-badge--vip" data-badge="vip"><?php echo esc_html($this->t('vip', __('VIP', 'restaurant-booking'))); ?></span>
-                                            <span class="rb-inbox-badge rb-inbox-badge--danger" data-badge="blacklist"><?php echo esc_html($this->t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
-                                            <span class="rb-inbox-badge rb-inbox-badge--success" data-badge="loyal"><?php echo esc_html($this->t('loyal_customer', __('Loyal', 'restaurant-booking'))); ?></span>
-                                            <span class="rb-inbox-badge rb-inbox-badge--warning" data-badge="problem"><?php echo esc_html($this->t('risk', __('Risk', 'restaurant-booking'))); ?></span>
-                                        </div>
-                                    </div>
-                                    <div class="rb-inbox-detail-status rb-customer-detail-stats">
-                                        <div class="rb-inbox-detail-stat">
-                                            <strong data-field="total">0</strong>
-                                            <span><?php echo esc_html($this->t('total_bookings', __('Total bookings', 'restaurant-booking'))); ?></span>
-                                        </div>
-                                        <div class="rb-inbox-detail-stat">
-                                            <strong data-field="completed">0</strong>
-                                            <span><?php echo esc_html($this->t('completed_bookings', __('Completed', 'restaurant-booking'))); ?></span>
-                                            <small data-field="success-rate"></small>
-                                        </div>
-                                        <div class="rb-inbox-detail-stat">
-                                            <strong data-field="problem-count">0</strong>
-                                            <span><?php echo esc_html($this->t('problem_rate', __('Problem rate', 'restaurant-booking'))); ?></span>
-                                            <small data-field="problem-rate"></small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="rb-inbox-detail-body__content">
-                                    <div class="rb-inbox-detail-meta-grid rb-customer-detail-grid">
-                                        <div><strong><?php echo esc_html($this->t('last_visit', __('Last visit', 'restaurant-booking'))); ?>:</strong> <span data-field="last-visit"></span></div>
-                                        <div><strong><?php echo esc_html($this->t('first_visit', __('First visit', 'restaurant-booking'))); ?>:</strong> <span data-field="first-visit"></span></div>
-                                        <div><strong><?php echo esc_html($this->t('cancelled', __('Cancelled', 'restaurant-booking'))); ?>:</strong> <span data-field="cancelled"></span></div>
-                                        <div><strong><?php echo esc_html($this->t('no_show', __('No-show', 'restaurant-booking'))); ?>:</strong> <span data-field="no-shows"></span></div>
-                                    </div>
-                                    <div class="rb-inbox-detail-section rb-customer-notes">
-                                        <h4><?php echo esc_html($this->t('notes', __('Notes', 'restaurant-booking'))); ?></h4>
-                                        <textarea class="rb-manager-note-field" rows="5" data-customer-id="" placeholder="<?php echo esc_attr($this->t('add_internal_note', __('Add internal note...', 'restaurant-booking'))); ?>"></textarea>
-                                        <div class="rb-manager-note-actions">
-                                            <button type="button" class="rb-btn-primary rb-manager-save-note" data-customer-id=""><?php echo esc_html($this->t('save_note', __('Save note', 'restaurant-booking'))); ?></button>
-                                            <span class="rb-manager-note-status" aria-live="polite"></span>
+                                        <div class="rb-inbox-detail-status rb-customer-detail-stats">
+                                            <div class="rb-inbox-detail-stat">
+                                                <strong data-field="total">0</strong>
+                                                <span><?php echo esc_html($this->t('total_bookings', __('Total bookings', 'restaurant-booking'))); ?></span>
+                                            </div>
+                                            <div class="rb-inbox-detail-stat">
+                                                <strong data-field="completed">0</strong>
+                                                <span><?php echo esc_html($this->t('completed_bookings', __('Completed', 'restaurant-booking'))); ?></span>
+                                                <small data-field="success-rate"></small>
+                                            </div>
+                                            <div class="rb-inbox-detail-stat">
+                                                <strong data-field="problem-count">0</strong>
+                                                <span><?php echo esc_html($this->t('problem_rate', __('Problem rate', 'restaurant-booking'))); ?></span>
+                                                <small data-field="problem-rate"></small>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="rb-inbox-detail-section rb-customer-actions">
-                                        <h4><?php echo esc_html($this->t('actions', __('Actions', 'restaurant-booking'))); ?></h4>
-                                        <div class="rb-manager-detail-actions">
-                                            <button type="button" class="rb-btn-secondary rb-manager-view-history" data-customer-id="" data-phone=""><?php echo esc_html($this->t('history', __('History', 'restaurant-booking'))); ?></button>
-                                            <button type="button" class="rb-btn-primary rb-manager-set-vip" data-customer-id="" style="display:none;">
-                                                <?php echo esc_html($this->t('set_vip', __('Set VIP', 'restaurant-booking'))); ?>
-                                            </button>
-                                            <button type="button" class="rb-btn-danger rb-manager-blacklist" data-customer-id="" style="display:none;">
-                                                <?php echo esc_html($this->t('blacklist', __('Blacklist', 'restaurant-booking'))); ?>
-                                            </button>
-                                            <button type="button" class="rb-btn-secondary rb-manager-unblacklist" data-customer-id="" style="display:none;">
-                                                <?php echo esc_html($this->t('remove_blacklist', __('Remove blacklist', 'restaurant-booking'))); ?>
-                                            </button>
+                                    <div class="rb-inbox-detail-body__content">
+                                        <div class="rb-inbox-detail-meta-grid rb-customer-detail-grid">
+                                            <div><strong><?php echo esc_html($this->t('last_visit', __('Last visit', 'restaurant-booking'))); ?>:</strong> <span data-field="last-visit"></span></div>
+                                            <div><strong><?php echo esc_html($this->t('first_visit', __('First visit', 'restaurant-booking'))); ?>:</strong> <span data-field="first-visit"></span></div>
+                                            <div><strong><?php echo esc_html($this->t('cancelled', __('Cancelled', 'restaurant-booking'))); ?>:</strong> <span data-field="cancelled"></span></div>
+                                            <div><strong><?php echo esc_html($this->t('no_show', __('No-show', 'restaurant-booking'))); ?>:</strong> <span data-field="no-shows"></span></div>
+                                        </div>
+                                        <div class="rb-inbox-detail-section rb-customer-notes">
+                                            <h4><?php echo esc_html($this->t('notes', __('Notes', 'restaurant-booking'))); ?></h4>
+                                            <textarea class="rb-manager-note-field" rows="5" data-customer-id="" placeholder="<?php echo esc_attr($this->t('add_internal_note', __('Add internal note...', 'restaurant-booking'))); ?>"></textarea>
+                                            <div class="rb-manager-note-actions">
+                                                <button type="button" class="rb-btn-primary rb-manager-save-note" data-customer-id=""><?php echo esc_html($this->t('save_note', __('Save note', 'restaurant-booking'))); ?></button>
+                                                <span class="rb-manager-note-status" aria-live="polite"></span>
+                                            </div>
+                                        </div>
+                                        <div class="rb-inbox-detail-section rb-customer-actions">
+                                            <h4><?php echo esc_html($this->t('actions', __('Actions', 'restaurant-booking'))); ?></h4>
+                                            <div class="rb-manager-detail-actions">
+                                                <button type="button" class="rb-btn-secondary rb-manager-view-history" data-customer-id="" data-phone=""><?php echo esc_html($this->t('history', __('History', 'restaurant-booking'))); ?></button>
+                                                <button type="button" class="rb-btn-primary rb-manager-set-vip" data-customer-id="" style="display:none;">
+                                                    <?php echo esc_html($this->t('set_vip', __('Set VIP', 'restaurant-booking'))); ?>
+                                                </button>
+                                                <button type="button" class="rb-btn-danger rb-manager-blacklist" data-customer-id="" style="display:none;">
+                                                    <?php echo esc_html($this->t('blacklist', __('Blacklist', 'restaurant-booking'))); ?>
+                                                </button>
+                                                <button type="button" class="rb-btn-secondary rb-manager-unblacklist" data-customer-id="" style="display:none;">
+                                                    <?php echo esc_html($this->t('remove_blacklist', __('Remove blacklist', 'restaurant-booking'))); ?>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -11,11 +11,12 @@
             this.layout.attr('data-rb-gmail-enhanced', '1');
 
             this.sidebar = this.layout.find('.rb-gmail-sidebar');
-            this.detail = this.layout.find('.rb-gmail-detail');
+            this.detail = this.layout.find('.rb-gmail-detail, .rb-inbox-detail');
             this.header = this.layout.closest('.rb-manager--gmail').find('.rb-manager-header');
             this.detailScroll = this.detail.find('.rb-gmail-detail-scroll');
             this.lastFocused = null;
             this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            this.cardSelector = '.rb-booking-item, .rb-inbox-item';
 
             if (this.detail.length) {
                 this.detail.attr('aria-hidden', 'true');
@@ -38,13 +39,13 @@
                 self.closePanels();
             });
 
-            this.layout.on('click', '.rb-booking-item', function (event) {
+            this.layout.on('click', this.cardSelector, function (event) {
                 var card = $(this);
                 self.focusCard(card);
                 self.openDetail();
             });
 
-            this.layout.on('keydown', '.rb-booking-item', function (event) {
+            this.layout.on('keydown', this.cardSelector, function (event) {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     $(this).trigger('click');
@@ -64,6 +65,21 @@
                 if (card.length) {
                     self.openDetail();
                 }
+            });
+
+            $(document).on('rb:manager:customerSelected', function (event, element) {
+                if (!element) {
+                    return;
+                }
+                var card = $(element);
+                self.markFocused(card);
+                if (card.length) {
+                    self.openDetail();
+                }
+            });
+
+            $(document).on('rb:manager:customerCleared', function () {
+                self.closeDetail();
             });
 
             $(document).on('rb:manager:bookingUpdated', function (event, booking) {
@@ -94,7 +110,7 @@
         },
 
         refreshCards: function () {
-            this.cards = this.layout.find('.rb-booking-item');
+            this.cards = this.layout.find(this.cardSelector);
             this.cards.each(function (index, element) {
                 element.setAttribute('data-rb-index', index);
             });
@@ -152,6 +168,8 @@
             this.scrollDetailToTop();
             this.layout.find('.rb-booking-item.active').removeClass('active');
             this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
+            this.layout.find('.rb-inbox-item.is-active').removeClass('is-active');
+            this.layout.find('.rb-inbox-item.is-focused').removeClass('is-focused');
             this.lastFocused = null;
             if (previousFocus && previousFocus.length) {
                 previousFocus.trigger('focus');
@@ -250,13 +268,18 @@
             }
 
             this.layout.find('.rb-booking-item.active').removeClass('active');
-            card.addClass('active');
+            this.layout.find('.rb-inbox-item.is-active').removeClass('is-active');
+            if (card.hasClass('rb-inbox-item')) {
+                card.addClass('is-active');
+            } else {
+                card.addClass('active');
+            }
             this.markFocused(card);
             this.scrollDetailToTop();
         },
 
         markFocused: function (card) {
-            this.layout.find('.rb-booking-item.is-focused').removeClass('is-focused');
+            this.layout.find('.rb-booking-item.is-focused, .rb-inbox-item.is-focused').removeClass('is-focused');
             if (card && card.length) {
                 card.addClass('is-focused');
                 this.lastFocused = card;
@@ -285,12 +308,12 @@
         },
 
         navigate: function (direction) {
-            var cards = this.layout.find('.rb-booking-item:visible');
+            var cards = this.layout.find(this.cardSelector + ':visible');
             if (!cards.length) {
                 return;
             }
 
-            var current = cards.index(cards.filter('.active').first());
+            var current = cards.index(cards.filter('.active, .is-active').first());
             if (current === -1) {
                 current = 0;
             } else {
@@ -309,7 +332,7 @@
                 return;
             }
 
-            var container = this.layout.find('.rb-gmail-list');
+            var container = card.closest('.rb-gmail-list, .rb-inbox-list');
             if (!container.length) {
                 return;
             }
