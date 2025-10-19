@@ -182,7 +182,9 @@ class RB_Booking {
             'location_id' => 1,
             'language' => rb_get_current_language(),
             'confirmation_token' => $this->generate_confirmation_token(),
-            'confirmation_token_expires' => gmdate('Y-m-d H:i:s', current_time('timestamp', true) + DAY_IN_SECONDS)
+            'confirmation_token_expires' => gmdate('Y-m-d H:i:s', current_time('timestamp', true) + DAY_IN_SECONDS),
+            'checkin_time' => null,
+            'checkout_time' => null,
         );
 
         $data = wp_parse_args($data, $defaults);
@@ -199,6 +201,47 @@ class RB_Booking {
         if (!empty($data['customer_email']) && !is_email($data['customer_email'])) {
             return new WP_Error('invalid_email', __('Customer email is invalid', 'restaurant-booking'));
         }
+
+        $data['booking_time'] = $this->sanitize_time_value($data['booking_time']);
+        if (!$data['booking_time']) {
+            return new WP_Error('invalid_time', __('Invalid booking time provided.', 'restaurant-booking'));
+        }
+
+        $checkin_time = $this->sanitize_time_value(isset($data['checkin_time']) ? $data['checkin_time'] : $data['booking_time']);
+        if (!$checkin_time) {
+            $checkin_time = $data['booking_time'];
+        }
+
+        $checkout_time = $this->sanitize_time_value(isset($data['checkout_time']) ? $data['checkout_time'] : null);
+        if (!$checkout_time) {
+            $checkout_time = $this->get_default_checkout_for_time($checkin_time);
+        }
+
+        $range = $this->get_time_range($data['booking_date'], $checkin_time, $checkout_time);
+        if (!$range) {
+            return new WP_Error('invalid_time_range', __('Unable to calculate booking duration. Please try again.', 'restaurant-booking'));
+        }
+
+        $duration = $range['end'] - $range['start'];
+        if ($duration < HOUR_IN_SECONDS) {
+            return new WP_Error('short_booking_duration', __('Minimum booking duration is 1 hour.', 'restaurant-booking'));
+        }
+
+        if ($duration > 6 * HOUR_IN_SECONDS) {
+            return new WP_Error('long_booking_duration', __('Maximum booking duration is 6 hours.', 'restaurant-booking'));
+        }
+
+        if ($this->check_time_overlap($data['booking_date'], $range['checkin'], $range['checkout'], (int) $data['location_id'])) {
+            return new WP_Error('time_slot_unavailable', __('Selected time slot is not available.', 'restaurant-booking'));
+        }
+
+        if (!$this->is_time_slot_available($data['booking_date'], $range['checkin'], (int) $data['guest_count'], null, (int) $data['location_id'], $range['checkout'])) {
+            return new WP_Error('time_slot_unavailable', __('Selected time slot is not available.', 'restaurant-booking'));
+        }
+
+        $data['checkin_time'] = $range['checkin'];
+        $data['checkout_time'] = $range['checkout'];
+        $data['booking_time'] = $range['checkin'];
 
         $result = $this->wpdb->insert($table_name, $data);
 
@@ -260,7 +303,9 @@ class RB_Booking {
         }
 
         // Chọn bàn nhỏ nhất đủ chỗ
-        $slot_table = $this->get_smallest_available_table($bk->booking_date, $bk->booking_time, (int)$bk->guest_count, (int)$bk->location_id);
+        $checkin = !empty($bk->checkin_time) ? $bk->checkin_time : $bk->booking_time;
+        $checkout = !empty($bk->checkout_time) ? $bk->checkout_time : $this->get_default_checkout_for_time($checkin);
+        $slot_table = $this->get_smallest_available_table($bk->booking_date, $checkin, (int)$bk->guest_count, (int)$bk->location_id, $bk->id, $checkout);
         if (!$slot_table) {
             return new WP_Error('rb_no_table', 'Hết bàn phù hợp để xác nhận ở khung giờ này.');
         }
@@ -355,12 +400,16 @@ class RB_Booking {
         return $result;
     }
     
-    public function is_time_slot_available($date, $time, $guest_count, $exclude_booking_id = null, $location_id = 1) {
+    public function is_time_slot_available($date, $checkin, $guest_count, $exclude_booking_id = null, $location_id = 1, $checkout = null) {
         global $wpdb;
         $tables_table = $wpdb->prefix . 'rb_tables';
         $bookings_table = $wpdb->prefix . 'rb_bookings';
 
-        // Tính tổng sức chứa
+        $range = $this->get_time_range($date, $checkin, $checkout);
+        if (!$range) {
+            return false;
+        }
+
         $total_capacity = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT SUM(capacity) FROM {$tables_table} WHERE is_available = 1 AND location_id = %d",
             $location_id
@@ -370,95 +419,310 @@ class RB_Booking {
             return false;
         }
 
-        // Tính tổng số khách đã book (pending + confirmed)
-        $exclude_sql = '';
-        if (null !== $exclude_booking_id) {
-            $exclude_sql = $wpdb->prepare(' AND id != %d', (int) $exclude_booking_id);
-        }
-
-        $booked_guests = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT SUM(guest_count)
-            FROM {$bookings_table}
-            WHERE booking_date = %s
-            AND booking_time = %s
-            AND location_id = %d
-            AND status IN ('pending', 'confirmed')
-            {$exclude_sql}",
-            $date, $time, $location_id
+        $bookings = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, guest_count, checkin_time, checkout_time, booking_time
+             FROM {$bookings_table}
+             WHERE booking_date = %s
+               AND location_id = %d
+               AND status IN ('pending', 'confirmed')",
+            $date,
+            $location_id
         ));
+
+        $booked_guests = 0;
+        foreach ($bookings as $booking) {
+            if (null !== $exclude_booking_id && (int) $booking->id === (int) $exclude_booking_id) {
+                continue;
+            }
+
+            $existing_range = $this->get_time_range($date, !empty($booking->checkin_time) ? $booking->checkin_time : $booking->booking_time, !empty($booking->checkout_time) ? $booking->checkout_time : null);
+            if ($existing_range && $this->ranges_overlap_with_buffer($range, $existing_range)) {
+                $booked_guests += (int) $booking->guest_count;
+            }
+        }
 
         $remaining_capacity = $total_capacity - $booked_guests;
         if ($remaining_capacity < $guest_count) {
             return false;
         }
 
-        // Đảm bảo còn bàn phù hợp với số lượng khách
-        $available_table = $this->get_smallest_available_table($date, $time, $guest_count, $location_id, $exclude_booking_id);
+        $available_table = $this->get_smallest_available_table($date, $range['checkin'], $guest_count, $location_id, $exclude_booking_id, $range['checkout']);
 
         return !empty($available_table);
     }
 
-    public function get_smallest_available_table($date, $time, $guest_count, $location_id = 1, $exclude_booking_id = null) {
+    public function get_smallest_available_table($date, $checkin, $guest_count, $location_id = 1, $exclude_booking_id = null, $checkout = null) {
         global $wpdb;
-        $t = $wpdb->prefix . 'rb_tables';
-        $b = $wpdb->prefix . 'rb_bookings';
+        $tables_table = $wpdb->prefix . 'rb_tables';
 
-        $exclude_sql = '';
-        $params = array((int)$location_id, (int)$guest_count, $date, $time, (int)$location_id);
-
-        if (null !== $exclude_booking_id) {
-            $exclude_sql = ' AND b.id != %d';
-            $params[] = (int) $exclude_booking_id;
+        $range = $this->get_time_range($date, $checkin, $checkout);
+        if (!$range) {
+            return null;
         }
 
-        $sql = $wpdb->prepare(
-            "SELECT t.table_number, t.capacity
-             FROM {$t} t
-             WHERE t.is_available = 1
-               AND t.location_id = %d
-               AND t.capacity >= %d
-               AND t.table_number NOT IN (
-                 SELECT b.table_number
-                 FROM {$b} b
-                 WHERE b.booking_date = %s
-                   AND b.booking_time = %s
-                   AND b.location_id = %d
-                   AND b.status IN ('confirmed', 'pending')
-                   AND b.table_number IS NOT NULL
-                   {$exclude_sql}
-               )
-             ORDER BY t.capacity ASC, t.table_number ASC
-             LIMIT 1",
-            $params
-        );
+        $tables = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, table_number, capacity
+             FROM {$tables_table}
+             WHERE is_available = 1
+               AND location_id = %d
+               AND capacity >= %d
+             ORDER BY capacity ASC, table_number ASC",
+            (int) $location_id,
+            (int) $guest_count
+        ));
 
-        return $wpdb->get_row($sql);
+        foreach ($tables as $table) {
+            if ($this->table_is_available((int) $table->table_number, $date, $range, $location_id, $exclude_booking_id)) {
+                return $table;
+            }
+        }
+
+        return null;
     }
 
-    public function available_table_count($date, $time, $guest_count, $location_id = 1) {
+    public function available_table_count($date, $checkin, $guest_count, $location_id = 1, $checkout = null) {
         global $wpdb;
-        $t = $wpdb->prefix . 'rb_tables';
-        $b = $wpdb->prefix . 'rb_bookings';
+        $tables_table = $wpdb->prefix . 'rb_tables';
 
-        $sql = $wpdb->prepare(
-            "SELECT COUNT(*)
-             FROM {$t} x
-             WHERE x.is_available = 1
-               AND x.location_id = %d
-               AND x.capacity >= %d
-               AND x.table_number NOT IN (
-                 SELECT y.table_number
-                 FROM {$b} y
-                 WHERE y.booking_date = %s
-                   AND y.booking_time = %s
-                   AND y.location_id = %d
-                   AND y.status IN ('confirmed', 'pending')
-                   AND y.table_number IS NOT NULL
-               )",
-            (int)$location_id, (int)$guest_count, $date, $time, (int)$location_id
+        $range = $this->get_time_range($date, $checkin, $checkout);
+        if (!$range) {
+            return 0;
+        }
+
+        $tables = $wpdb->get_results($wpdb->prepare(
+            "SELECT table_number, capacity
+             FROM {$tables_table}
+             WHERE is_available = 1
+               AND location_id = %d
+               AND capacity >= %d",
+            (int) $location_id,
+            (int) $guest_count
+        ));
+
+        $count = 0;
+        foreach ($tables as $table) {
+            if ($this->table_is_available((int) $table->table_number, $date, $range, $location_id)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    public function check_time_overlap($date, $checkin, $checkout, $location_id, $exclude_booking_id = null) {
+        global $wpdb;
+        $bookings_table = $wpdb->prefix . 'rb_bookings';
+
+        $range = $this->get_time_range($date, $checkin, $checkout);
+        if (!$range) {
+            return array();
+        }
+
+        $bookings = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, customer_name, customer_phone, checkin_time, checkout_time, booking_time, guest_count, table_number
+             FROM {$bookings_table}
+             WHERE booking_date = %s
+               AND location_id = %d
+               AND status IN ('pending', 'confirmed')",
+            $date,
+            (int) $location_id
+        ));
+
+        $conflicts = array();
+
+        foreach ($bookings as $booking) {
+            if (null !== $exclude_booking_id && (int) $booking->id === (int) $exclude_booking_id) {
+                continue;
+            }
+
+            $existing_range = $this->get_time_range($date, !empty($booking->checkin_time) ? $booking->checkin_time : $booking->booking_time, !empty($booking->checkout_time) ? $booking->checkout_time : null);
+
+            if ($existing_range && $this->ranges_overlap_with_buffer($range, $existing_range)) {
+                $conflicts[] = array(
+                    'id' => (int) $booking->id,
+                    'table_number' => null !== $booking->table_number ? (int) $booking->table_number : null,
+                    'guest_count' => (int) $booking->guest_count,
+                    'checkin_time' => $existing_range['checkin'],
+                    'checkout_time' => $existing_range['checkout'],
+                    'customer_name' => $booking->customer_name,
+                    'customer_phone' => $booking->customer_phone,
+                );
+            }
+        }
+
+        return $conflicts;
+    }
+
+    public function get_timeline_data($date, $location_id) {
+        $date = sanitize_text_field($date);
+        $location_id = (int) $location_id;
+
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $settings = $rb_location ? $rb_location->get_settings($location_id) : array();
+
+        $opening_time = isset($settings['opening_time']) ? substr($settings['opening_time'], 0, 5) : '09:00';
+        $closing_time = isset($settings['closing_time']) ? substr($settings['closing_time'], 0, 5) : '22:00';
+        $interval = isset($settings['time_slot_interval']) ? (int) $settings['time_slot_interval'] : 30;
+        if ($interval <= 0) {
+            $interval = 30;
+        }
+
+        $time_slots = $this->generate_time_slots_for_location($opening_time, $closing_time, $interval);
+
+        $tables_table = $this->wpdb->prefix . 'rb_tables';
+        $bookings_table = $this->wpdb->prefix . 'rb_bookings';
+
+        $tables = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT id, table_number, capacity, current_status, status_updated_at, last_booking_id
+             FROM {$tables_table}
+             WHERE location_id = %d
+             ORDER BY table_number ASC",
+            $location_id
+        ));
+
+        $tables_map = array();
+        foreach ($tables as $table) {
+            $tables_map[(int) $table->table_number] = array(
+                'table_id' => (int) $table->id,
+                'table_number' => (int) $table->table_number,
+                'capacity' => (int) $table->capacity,
+                'current_status' => !empty($table->current_status) ? $table->current_status : 'available',
+                'status_updated_at' => $table->status_updated_at,
+                'last_booking_id' => $table->last_booking_id ? (int) $table->last_booking_id : null,
+                'bookings' => array(),
+            );
+        }
+
+        $bookings = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT id, customer_name, customer_phone, guest_count, status, table_number, checkin_time, checkout_time, booking_time
+             FROM {$bookings_table}
+             WHERE booking_date = %s
+               AND location_id = %d",
+            $date,
+            $location_id
+        ));
+
+        $unassigned = array();
+
+        foreach ($bookings as $booking) {
+            $range = $this->get_time_range($date, !empty($booking->checkin_time) ? $booking->checkin_time : $booking->booking_time, !empty($booking->checkout_time) ? $booking->checkout_time : null);
+
+            $entry = array(
+                'booking_id' => (int) $booking->id,
+                'customer_name' => $booking->customer_name,
+                'phone' => $booking->customer_phone,
+                'guest_count' => (int) $booking->guest_count,
+                'status' => $booking->status,
+                'checkin_time' => $range ? $range['checkin'] : $this->sanitize_time_value($booking->booking_time),
+                'checkout_time' => $range ? $range['checkout'] : $this->get_default_checkout_for_time($booking->booking_time),
+                'table_number' => null !== $booking->table_number ? (int) $booking->table_number : null,
+            );
+
+            if (null !== $entry['table_number'] && isset($tables_map[$entry['table_number']])) {
+                $tables_map[$entry['table_number']]['bookings'][] = $entry;
+            } else {
+                $unassigned[] = $entry;
+            }
+        }
+
+        foreach ($tables_map as &$table_data) {
+            if (!empty($table_data['bookings'])) {
+                usort($table_data['bookings'], function ($a, $b) {
+                    return strcmp($a['checkin_time'], $b['checkin_time']);
+                });
+            }
+        }
+        unset($table_data);
+
+        ksort($tables_map, SORT_NUMERIC);
+        $tables_list = array_values($tables_map);
+
+        if (!empty($unassigned)) {
+            $tables_list[] = array(
+                'table_id' => 0,
+                'table_number' => null,
+                'capacity' => 0,
+                'current_status' => 'available',
+                'status_updated_at' => null,
+                'last_booking_id' => null,
+                'bookings' => $unassigned,
+            );
+        }
+
+        return array(
+            'date' => $date,
+            'location_id' => $location_id,
+            'time_slots' => $time_slots,
+            'tables' => $tables_list,
+            'cleanup_buffer' => $this->get_cleanup_buffer_seconds(),
+        );
+    }
+
+    public function update_table_status($table_id, $status, $booking_id = null) {
+        global $wpdb;
+
+        $table_id = (int) $table_id;
+        $tables_table = $wpdb->prefix . 'rb_tables';
+
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$tables_table} WHERE id = %d",
+            $table_id
+        ));
+
+        if (!$table_exists) {
+            return new WP_Error('table_not_found', __('Table not found.', 'restaurant-booking'));
+        }
+
+        $status = sanitize_key($status);
+        $allowed_status = array('available', 'occupied', 'cleaning', 'reserved');
+        if (!in_array($status, $allowed_status, true)) {
+            return new WP_Error('invalid_status', __('Invalid table status provided.', 'restaurant-booking'));
+        }
+
+        $data = array(
+            'current_status' => $status,
+            'status_updated_at' => current_time('mysql'),
+        );
+        $format = array('%s', '%s');
+
+        if ($booking_id) {
+            $data['last_booking_id'] = (int) $booking_id;
+            $format[] = '%d';
+        } else {
+            $data['last_booking_id'] = null;
+            $format[] = '%d';
+        }
+
+        $updated = $wpdb->update(
+            $tables_table,
+            $data,
+            array('id' => $table_id),
+            $format,
+            array('%d')
         );
 
-        return (int) $wpdb->get_var($sql);
+        if (false === $updated) {
+            return new WP_Error('db_error', __('Unable to update table status.', 'restaurant-booking'));
+        }
+
+        if (!$booking_id) {
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$tables_table} SET last_booking_id = NULL WHERE id = %d",
+                $table_id
+            ));
+        }
+
+        if ($booking_id) {
+            $this->update_booking_timestamps_for_status((int) $booking_id, $status);
+        }
+
+        return true;
     }
 
     public function suggest_time_slots($location_id, $date, $time, $guest_count, $range_minutes = 30) {
@@ -529,6 +793,158 @@ class RB_Booking {
         return array_map(function($candidate) {
             return $candidate['time'];
         }, $limited);
+    }
+
+    private function table_is_available($table_number, $date, array $range, $location_id, $exclude_booking_id = null) {
+        global $wpdb;
+        $bookings_table = $wpdb->prefix . 'rb_bookings';
+
+        $bookings = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, checkin_time, checkout_time, booking_time
+             FROM {$bookings_table}
+             WHERE booking_date = %s
+               AND location_id = %d
+               AND table_number = %d
+               AND status IN ('pending', 'confirmed')",
+            $date,
+            (int) $location_id,
+            (int) $table_number
+        ));
+
+        foreach ($bookings as $booking) {
+            if (null !== $exclude_booking_id && (int) $booking->id === (int) $exclude_booking_id) {
+                continue;
+            }
+
+            $existing_range = $this->get_time_range($date, !empty($booking->checkin_time) ? $booking->checkin_time : $booking->booking_time, !empty($booking->checkout_time) ? $booking->checkout_time : null);
+            if ($existing_range && $this->ranges_overlap_with_buffer($range, $existing_range)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function ranges_overlap_with_buffer(array $range_a, array $range_b) {
+        $buffer = $this->get_cleanup_buffer_seconds();
+
+        $start_a = $range_a['start'];
+        $end_a = $range_a['end'] + $buffer;
+        $start_b = $range_b['start'];
+        $end_b = $range_b['end'] + $buffer;
+
+        return ($start_a < $end_b) && ($end_a > $start_b);
+    }
+
+    private function get_cleanup_buffer_seconds() {
+        return HOUR_IN_SECONDS;
+    }
+
+    private function update_booking_timestamps_for_status($booking_id, $status) {
+        $booking_id = (int) $booking_id;
+        if (!$booking_id) {
+            return;
+        }
+
+        $table = $this->wpdb->prefix . 'rb_bookings';
+        $now = current_time('mysql');
+
+        if ('occupied' === $status) {
+            $this->wpdb->update($table, array('actual_checkin' => $now), array('id' => $booking_id), array('%s'), array('%d'));
+        } elseif ('cleaning' === $status) {
+            $this->wpdb->update($table, array('actual_checkout' => $now), array('id' => $booking_id), array('%s'), array('%d'));
+        } elseif ('available' === $status) {
+            $this->wpdb->update($table, array('cleanup_completed_at' => $now), array('id' => $booking_id), array('%s'), array('%d'));
+        }
+    }
+
+    private function sanitize_time_value($time) {
+        if (null === $time) {
+            return null;
+        }
+
+        $time = trim((string) $time);
+        if ($time === '') {
+            return null;
+        }
+
+        $timezone = function_exists('wp_timezone') ? wp_timezone() : null;
+        $formats = array('H:i:s', 'H:i');
+
+        foreach ($formats as $format) {
+            $date_time = $timezone
+                ? DateTime::createFromFormat($format, $time, $timezone)
+                : DateTime::createFromFormat($format, $time);
+
+            if ($date_time instanceof DateTime) {
+                return $date_time->format('H:i:s');
+            }
+        }
+
+        $timestamp = strtotime($time);
+        if (false !== $timestamp) {
+            $seconds = $timestamp % DAY_IN_SECONDS;
+            if ($seconds < 0) {
+                $seconds += DAY_IN_SECONDS;
+            }
+            return gmdate('H:i:s', $seconds);
+        }
+
+        return null;
+    }
+
+    private function get_default_checkout_for_time($checkin_time) {
+        $checkin_time = $this->sanitize_time_value($checkin_time);
+        if (!$checkin_time) {
+            return '00:00:00';
+        }
+
+        $parts = explode(':', $checkin_time);
+        $hours = isset($parts[0]) ? (int) $parts[0] : 0;
+        $minutes = isset($parts[1]) ? (int) $parts[1] : 0;
+        $seconds = isset($parts[2]) ? (int) $parts[2] : 0;
+
+        $total_seconds = ($hours * HOUR_IN_SECONDS) + ($minutes * MINUTE_IN_SECONDS) + $seconds + (2 * HOUR_IN_SECONDS);
+
+        if ($total_seconds >= DAY_IN_SECONDS) {
+            $total_seconds = DAY_IN_SECONDS - MINUTE_IN_SECONDS;
+        }
+
+        $hours = (int) floor($total_seconds / HOUR_IN_SECONDS);
+        $minutes = (int) floor(($total_seconds % HOUR_IN_SECONDS) / MINUTE_IN_SECONDS);
+        $seconds = (int) ($total_seconds % MINUTE_IN_SECONDS);
+
+        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    }
+
+    private function get_time_range($date, $checkin, $checkout = null) {
+        $checkin_time = $this->sanitize_time_value($checkin);
+        if (!$checkin_time) {
+            return null;
+        }
+
+        $checkout_time = $this->sanitize_time_value($checkout);
+        if (!$checkout_time) {
+            $checkout_time = $this->get_default_checkout_for_time($checkin_time);
+        }
+
+        $start = strtotime($date . ' ' . $checkin_time);
+        if (false === $start) {
+            return null;
+        }
+
+        $end = strtotime($date . ' ' . $checkout_time);
+        if (false === $end || $end <= $start) {
+            $end = $start + HOUR_IN_SECONDS;
+            $checkout_time = date('H:i:s', $end);
+        }
+
+        return array(
+            'checkin' => $checkin_time,
+            'checkout' => $checkout_time,
+            'start' => $start,
+            'end' => $end,
+        );
     }
 
     private function generate_time_slots_for_location($opening_time, $closing_time, $interval) {

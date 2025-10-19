@@ -111,6 +111,14 @@ return array(
     'inactive' => 'Tạm ngưng',
     'available' => 'Còn bàn',
     'not_available' => 'Hết bàn',
+    'occupied' => 'Đang sử dụng',
+    'cleaning' => 'Đang dọn',
+    'reserved' => 'Đã giữ chỗ',
+    'timeline_view' => 'Xem dòng thời gian',
+    'checkin_time' => 'Giờ check-in',
+    'checkout_time' => 'Giờ check-out',
+    'current_status' => 'Trạng thái hiện tại',
+    'cleanup_time' => 'Thời gian dọn dẹp',
     
     // ========== BOOKING SOURCES ==========
     'website' => 'Website',

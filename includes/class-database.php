@@ -40,6 +40,8 @@ class RB_Database {
         $accounts_table = $this->wpdb->prefix . 'rb_portal_accounts';
         $locations_table = $this->wpdb->prefix . 'rb_portal_account_locations';
 
+        $this->migrate_to_timeline_schema();
+
         if ($this->table_exists($accounts_table)) {
             $this->maybe_add_column($accounts_table, 'password_hash', "ALTER TABLE {$accounts_table} ADD COLUMN password_hash varchar(255) NOT NULL AFTER username");
             $this->maybe_add_column($accounts_table, 'display_name', "ALTER TABLE {$accounts_table} ADD COLUMN display_name varchar(100) DEFAULT '' AFTER password_hash");
@@ -60,6 +62,41 @@ class RB_Database {
             $this->maybe_add_index($locations_table, 'location_id', "ALTER TABLE {$locations_table} ADD KEY location_id (location_id)");
         } else {
             $this->create_portal_account_locations_table();
+        }
+    }
+
+    public function migrate_to_timeline_schema() {
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+
+        $bookings = $this->wpdb->prefix . 'rb_bookings';
+        $tables   = $this->wpdb->prefix . 'rb_tables';
+
+        if ($this->table_exists($bookings)) {
+            $this->maybe_add_column($bookings, 'checkin_time', "ALTER TABLE {$bookings} ADD COLUMN checkin_time TIME NOT NULL DEFAULT '00:00:00' AFTER booking_time");
+            $this->maybe_add_column($bookings, 'checkout_time', "ALTER TABLE {$bookings} ADD COLUMN checkout_time TIME NOT NULL DEFAULT '00:00:00' AFTER checkin_time");
+            $this->maybe_add_column($bookings, 'actual_checkin', "ALTER TABLE {$bookings} ADD COLUMN actual_checkin DATETIME NULL AFTER checkout_time");
+            $this->maybe_add_column($bookings, 'actual_checkout', "ALTER TABLE {$bookings} ADD COLUMN actual_checkout DATETIME NULL AFTER actual_checkin");
+            $this->maybe_add_column($bookings, 'cleanup_completed_at', "ALTER TABLE {$bookings} ADD COLUMN cleanup_completed_at DATETIME NULL AFTER actual_checkout");
+
+            $this->maybe_add_index($bookings, 'booking_date_checkin', "ALTER TABLE {$bookings} ADD KEY booking_date_checkin (booking_date, checkin_time)");
+            $this->maybe_add_index($bookings, 'booking_date_checkout', "ALTER TABLE {$bookings} ADD KEY booking_date_checkout (booking_date, checkout_time)");
+
+            $this->backfill_booking_times($bookings);
+        }
+
+        if ($this->table_exists($tables)) {
+            $this->maybe_add_column($tables, 'current_status', "ALTER TABLE {$tables} ADD COLUMN current_status ENUM('available','occupied','cleaning','reserved') DEFAULT 'available' AFTER is_available");
+            $this->maybe_add_column($tables, 'status_updated_at', "ALTER TABLE {$tables} ADD COLUMN status_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER current_status");
+            $this->maybe_add_column($tables, 'last_booking_id', "ALTER TABLE {$tables} ADD COLUMN last_booking_id INT NULL AFTER status_updated_at");
+
+            $this->maybe_add_index($tables, 'current_status', "ALTER TABLE {$tables} ADD KEY current_status (current_status)");
+            $this->maybe_add_index($tables, 'last_booking_id', "ALTER TABLE {$tables} ADD KEY last_booking_id (last_booking_id)");
+
+            $this->maybe_add_foreign_key(
+                $tables,
+                'fk_rb_tables_last_booking',
+                "ALTER TABLE {$tables} ADD CONSTRAINT fk_rb_tables_last_booking FOREIGN KEY (last_booking_id) REFERENCES {$bookings}(id) ON DELETE SET NULL"
+            );
         }
     }
 
@@ -254,6 +291,43 @@ class RB_Database {
         if (empty($index_exists)) {
             $this->wpdb->query($sql);
         }
+    }
+
+    private function maybe_add_foreign_key($table, $constraint, $sql) {
+        $schema = $this->wpdb->get_var('SELECT DATABASE()');
+        if (!$schema) {
+            return;
+        }
+
+        $constraint_exists = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND CONSTRAINT_NAME = %s",
+            $schema,
+            $table,
+            $constraint
+        ));
+
+        if (empty($constraint_exists)) {
+            $this->wpdb->query($sql);
+        }
+    }
+
+    private function backfill_booking_times($bookings_table) {
+        $has_checkin = $this->wpdb->get_var(
+            $this->wpdb->prepare("SHOW COLUMNS FROM {$bookings_table} LIKE %s", 'checkin_time')
+        );
+        if (empty($has_checkin)) {
+            return;
+        }
+
+        $default_update = "UPDATE {$bookings_table}
+            SET checkin_time = booking_time
+            WHERE (checkin_time IS NULL OR checkin_time = '' OR checkin_time = '00:00:00')";
+        $this->wpdb->query($default_update);
+
+        $checkout_update = "UPDATE {$bookings_table}
+            SET checkout_time = SEC_TO_TIME(LEAST(TIME_TO_SEC(booking_time) + 7200, 86399))
+            WHERE (checkout_time IS NULL OR checkout_time = '' OR checkout_time = '00:00:00')";
+        $this->wpdb->query($checkout_update);
     }
 
     private function maybe_drop_index($table, $index) {

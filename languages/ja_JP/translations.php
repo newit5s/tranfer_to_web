@@ -111,6 +111,14 @@ return array(
     'inactive' => '非アクティブ',
     'available' => '利用可能',
     'not_available' => '利用不可',
+    'occupied' => '使用中',
+    'cleaning' => '清掃中',
+    'reserved' => '予約済み',
+    'timeline_view' => 'タイムライン表示',
+    'checkin_time' => 'チェックイン時間',
+    'checkout_time' => 'チェックアウト時間',
+    'current_status' => '現在のステータス',
+    'cleanup_time' => '清掃時間',
     
     // ========== BOOKING SOURCES ==========
     'website' => 'ウェブサイト',

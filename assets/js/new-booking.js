@@ -12,6 +12,7 @@
         currentStep: 1,
         selectedData: {},
         currentLanguage: '',
+        availableSlots: [],
         
         // Localized strings (will be populated by WordPress)
         strings: window.rbBookingStrings || {
@@ -73,6 +74,9 @@
 
             // Date/location change - update time slots
             $(document).on('change', '#rb-new-date, #rb-new-location, #rb-new-guests', this.updateTimeSlots.bind(this));
+
+            // Check-in change - update checkout options
+            $(document).on('change', '#rb-new-time', this.updateCheckoutSelect.bind(this));
 
             // Suggestion buttons
             $(document).on('click', '.rb-new-suggestion-btn', this.selectSuggestedTime.bind(this));
@@ -287,7 +291,7 @@
         },
 
         validateAvailabilityForm: function() {
-            const requiredFields = ['#rb-new-location', '#rb-new-date', '#rb-new-time', '#rb-new-guests'];
+            const requiredFields = ['#rb-new-location', '#rb-new-date', '#rb-new-time', '#rb-new-checkout', '#rb-new-guests'];
             let isValid = true;
 
             requiredFields.forEach(selector => {
@@ -309,26 +313,35 @@
 
         getAvailabilityFormData: function() {
             return {
-                action: 'rb_check_availability',
+                action: 'rb_check_availability_extended',
                 nonce: window.rbBookingAjax.nonce,
                 location_id: $('#rb-new-location').val(),
                 date: $('#rb-new-date').val(),
-                time: $('#rb-new-time').val(),
-                guests: $('#rb-new-guests').val()
+                checkin_time: $('#rb-new-time').val(),
+                checkout_time: $('#rb-new-checkout').val(),
+                guest_count: $('#rb-new-guests').val()
             };
         },
 
         handleAvailabilityResponse: function(response) {
-            if (response.success) {
-                if (response.data.available) {
-                    this.showAvailabilitySuccess(response.data);
-                    this.storeSelectedData();
-                    this.goToStep2();
-                } else {
-                    this.showSuggestions(response.data);
-                }
+            const data = response && response.data ? response.data : {};
+
+            if (response && response.success && data.available) {
+                this.showAvailabilitySuccess(data);
+                this.storeSelectedData();
+                this.goToStep2();
+                return;
+            }
+
+            if (data.suggestions && data.suggestions.length) {
+                this.showSuggestions(data);
+                return;
+            }
+
+            if (data.message) {
+                this.showError(data.message);
             } else {
-                this.showError(response.data.message);
+                this.showError(this.strings.connectionError || 'Connection error. Please try again.');
             }
         },
 
@@ -336,7 +349,7 @@
             $('#rb-new-availability-result')
                 .removeClass('error')
                 .addClass('success')
-                .html('<p>✓ ' + data.message + '</p>')
+                .html('<p>✓ ' + (data.message || this.strings.processing || 'Available') + '</p>')
                 .removeAttr('hidden')
                 .show();
             $('#rb-new-suggestions').attr('hidden', true).hide();
@@ -346,7 +359,7 @@
             $('#rb-new-availability-result')
                 .removeClass('success')
                 .addClass('error')
-                .html('<p>' + data.message + '</p>')
+                .html('<p>' + (data.message || this.strings.connectionError || 'Unavailable') + '</p>')
                 .removeAttr('hidden')
                 .show();
 
@@ -370,11 +383,12 @@
         selectSuggestedTime: function(e) {
             const suggestedTime = $(e.target).data('time');
             $('#rb-new-time').val(suggestedTime);
-            
+            this.updateCheckoutSelect();
+
             // Highlight the selected suggestion
             $('.rb-new-suggestion-btn').removeClass('selected');
             $(e.target).addClass('selected');
-            
+
             // Auto-submit after selection
             setTimeout(() => {
                 $('#rb-new-availability-form').submit();
@@ -386,7 +400,8 @@
                 locationId: $('#rb-new-location').val(),
                 locationName: $('#rb-new-location option:selected').text(),
                 date: $('#rb-new-date').val(),
-                time: $('#rb-new-time').val(),
+                checkin: $('#rb-new-time').val(),
+                checkout: $('#rb-new-checkout').val(),
                 guests: $('#rb-new-guests').val()
             };
         },
@@ -415,19 +430,20 @@
         },
 
         updateBookingSummary: function() {
-            const { locationName, date, time, guests } = this.selectedData;
-            
+            const { locationName, date, checkin, checkout, guests } = this.selectedData;
+
             $('#rb-new-summary-location').text(locationName);
-            $('#rb-new-summary-datetime').text(`${date} ${time}`);
+            $('#rb-new-summary-datetime').text(`${date} ${checkin} – ${checkout}`);
             $('#rb-new-summary-guests').text(`${guests} ${this.strings.people}`);
         },
 
         setHiddenFields: function() {
-            const { locationId, date, time, guests } = this.selectedData;
+            const { locationId, date, checkin, checkout, guests } = this.selectedData;
 
             $('#rb-new-hidden-location').val(locationId);
             $('#rb-new-hidden-date').val(date);
-            $('#rb-new-hidden-time').val(time);
+            $('#rb-new-hidden-time').val(checkin);
+            $('#rb-new-hidden-checkout').val(checkout);
             $('#rb-new-hidden-guests').val(guests);
             if (this.currentLanguage) {
                 $('#rb-new-hidden-language').val(this.currentLanguage);
@@ -610,18 +626,91 @@
             if (response.success && response.data.slots) {
                 const $timeSelect = $('#rb-new-time');
                 const currentTime = $timeSelect.val();
-                
+
                 $timeSelect.empty().append(`<option value="">${this.strings.selectTime}</option>`);
-                
-                response.data.slots.forEach(slot => {
+
+                this.availableSlots = response.data.slots;
+
+                this.availableSlots.forEach(slot => {
                     $timeSelect.append(`<option value="${slot}">${slot}</option>`);
                 });
 
                 // Restore selection if still available
-                if (currentTime && response.data.slots.includes(currentTime)) {
+                if (currentTime && this.availableSlots.includes(currentTime)) {
                     $timeSelect.val(currentTime);
                 }
+
+                this.updateCheckoutSelect();
             }
+        },
+
+        updateCheckoutSelect: function() {
+            const $checkout = $('#rb-new-checkout');
+            if (!$checkout.length) {
+                return;
+            }
+
+            const checkin = $('#rb-new-time').val();
+            $checkout.empty().append(`<option value="">${this.strings.selectTime}</option>`);
+
+            if (!checkin || !Array.isArray(this.availableSlots) || !this.availableSlots.length) {
+                return;
+            }
+
+            const checkinSeconds = this.timeStringToSeconds(checkin);
+            if (checkinSeconds === null) {
+                return;
+            }
+
+            const minSeconds = checkinSeconds + 3600; // 1 hour minimum duration
+            const maxSeconds = checkinSeconds + (6 * 3600); // 6 hours maximum duration
+            let fallbackValue = null;
+            let preferredValue = null;
+
+            this.availableSlots.forEach(slot => {
+                const slotSeconds = this.timeStringToSeconds(slot);
+                if (slotSeconds === null) {
+                    return;
+                }
+
+                if (slotSeconds >= minSeconds && slotSeconds <= maxSeconds) {
+                    $checkout.append(`<option value="${slot}">${slot}</option>`);
+
+                    if (!fallbackValue) {
+                        fallbackValue = slot;
+                    }
+
+                    if (!preferredValue && slotSeconds >= checkinSeconds + (2 * 3600)) {
+                        preferredValue = slot;
+                    }
+                }
+            });
+
+            const defaultValue = preferredValue || fallbackValue;
+            if (defaultValue) {
+                $checkout.val(defaultValue);
+            }
+        },
+
+        timeStringToSeconds: function(time) {
+            if (!time || typeof time !== 'string') {
+                return null;
+            }
+
+            const segments = time.split(':');
+            if (segments.length < 2) {
+                return null;
+            }
+
+            const hours = parseInt(segments[0], 10);
+            const minutes = parseInt(segments[1], 10);
+            const seconds = segments.length > 2 ? parseInt(segments[2], 10) : 0;
+
+            if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) {
+                return null;
+            }
+
+            return (hours * 3600) + (minutes * 60) + seconds;
         },
 
         handleAjaxError: function() {
@@ -679,6 +768,8 @@
             $('.rb-new-form-group input, .rb-new-form-group select, .rb-new-form-group textarea')
                 .removeClass('error')
                 .css('border-color', '');
+            this.availableSlots = [];
+            $('#rb-new-checkout').empty().append(`<option value="">${this.strings.selectTime}</option>`);
         }
     };
 

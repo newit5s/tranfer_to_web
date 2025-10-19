@@ -237,6 +237,13 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                                 </div>
 
                                 <div class="rb-new-form-group">
+                                    <label for="rb-new-checkout"><?php echo esc_html(rb_t('checkout_time', __('Check-out Time', 'restaurant-booking'))); ?></label>
+                                    <select id="rb-new-checkout" name="checkout_time" required>
+                                        <option value=""><?php echo esc_html(rb_t('select_time', __('Select time', 'restaurant-booking'))); ?></option>
+                                    </select>
+                                </div>
+
+                                <div class="rb-new-form-group">
                                     <label for="rb-new-guests"><?php echo esc_html(rb_t('number_of_guests', __('Guests', 'restaurant-booking'))); ?></label>
                                     <select id="rb-new-guests" name="guest_count" required>
                                         <?php for ($i = 1; $i <= 20; $i++) : ?>
@@ -293,6 +300,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                             <input type="hidden" name="location_id" id="rb-new-hidden-location">
                             <input type="hidden" name="booking_date" id="rb-new-hidden-date">
                             <input type="hidden" name="booking_time" id="rb-new-hidden-time">
+                            <input type="hidden" name="checkout_time" id="rb-new-hidden-checkout">
                             <input type="hidden" name="guest_count" id="rb-new-hidden-guests">
                             <input type="hidden" name="language" id="rb-new-hidden-language" value="<?php echo esc_attr($current_language); ?>">
 
@@ -372,7 +380,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
         $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : rb_get_current_language();
 
-        $required_fields = array('customer_name', 'customer_phone', 'customer_email', 'guest_count', 'booking_date', 'booking_time');
+        $required_fields = array('customer_name', 'customer_phone', 'customer_email', 'guest_count', 'booking_date', 'booking_time', 'checkout_time');
 
         foreach ($required_fields as $field) {
             if (empty($_POST[$field])) {
@@ -402,6 +410,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
         $booking_date_raw = sanitize_text_field($_POST['booking_date']);
         $booking_time = sanitize_text_field($_POST['booking_time']);
+        $checkout_time = sanitize_text_field($_POST['checkout_time']);
 
         if (!$this->is_booking_allowed_on_date($booking_date_raw, $location_id)) {
             wp_send_json_error(array('message' => __('This date is not available for reservations. Please choose another day.', 'restaurant-booking')));
@@ -409,7 +418,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         }
 
         $booking_date = date('Y-m-d', strtotime($booking_date_raw));
-        if (!$booking_date || !$booking_time) {
+        if (!$booking_date || !$booking_time || !$checkout_time) {
             wp_send_json_error(array('message' => __('Please choose a valid booking date and time.', 'restaurant-booking')));
             wp_die();
         }
@@ -420,7 +429,30 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             $rb_booking = new RB_Booking();
         }
 
-        $is_available = $rb_booking->is_time_slot_available($booking_date, $booking_time, $guest_count, null, $location_id);
+        $checkin_timestamp = strtotime($booking_date . ' ' . $booking_time);
+        $checkout_timestamp = strtotime($booking_date . ' ' . $checkout_time);
+
+        if (!$checkin_timestamp || !$checkout_timestamp || $checkout_timestamp <= $checkin_timestamp) {
+            wp_send_json_error(array('message' => __('Checkout time must be after check-in time.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $duration = $checkout_timestamp - $checkin_timestamp;
+        if ($duration < HOUR_IN_SECONDS || $duration > 6 * HOUR_IN_SECONDS) {
+            wp_send_json_error(array('message' => __('Please select a duration between 1 and 6 hours.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $conflicts = $rb_booking->check_time_overlap($booking_date, $booking_time, $checkout_time, $location_id);
+        if (!empty($conflicts)) {
+            wp_send_json_error(array(
+                'message' => __('Selected time slot conflicts with another booking.', 'restaurant-booking'),
+                'conflicts' => $conflicts
+            ));
+            wp_die();
+        }
+
+        $is_available = $rb_booking->is_time_slot_available($booking_date, $booking_time, $guest_count, null, $location_id, $checkout_time);
 
         if (!$is_available) {
             $suggestions = $rb_booking->suggest_time_slots(
@@ -451,6 +483,8 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             'guest_count' => $guest_count,
             'booking_date' => $booking_date_raw,
             'booking_time' => $booking_time,
+            'checkin_time' => $booking_time,
+            'checkout_time' => $checkout_time,
             'special_requests' => isset($_POST['special_requests']) ? sanitize_textarea_field($_POST['special_requests']) : '',
             'status' => 'pending',
             'booking_source' => 'website',
@@ -497,11 +531,12 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         }
 
         $date = isset($_POST['date']) ? sanitize_text_field($_POST['date']) : '';
-        $time = isset($_POST['time']) ? sanitize_text_field($_POST['time']) : '';
-        $guests = isset($_POST['guests']) ? intval($_POST['guests']) : 0;
+        $checkin = isset($_POST['checkin_time']) ? sanitize_text_field($_POST['checkin_time']) : (isset($_POST['time']) ? sanitize_text_field($_POST['time']) : '');
+        $checkout = isset($_POST['checkout_time']) ? sanitize_text_field($_POST['checkout_time']) : '';
+        $guests = isset($_POST['guest_count']) ? intval($_POST['guest_count']) : (isset($_POST['guests']) ? intval($_POST['guests']) : 0);
         $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
 
-        if (empty($date) || empty($time) || $guests <= 0 || !$location_id) {
+        if (empty($date) || empty($checkin) || empty($checkout) || $guests <= 0 || !$location_id) {
             wp_send_json_error(array('message' => __('Missing data. Please select location, date, time and number of guests.', 'restaurant-booking')));
             wp_die();
         }
@@ -511,14 +546,39 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             wp_die();
         }
 
+        $checkin_timestamp = strtotime($date . ' ' . $checkin);
+        $checkout_timestamp = strtotime($date . ' ' . $checkout);
+
+        if (!$checkin_timestamp || !$checkout_timestamp || $checkout_timestamp <= $checkin_timestamp) {
+            wp_send_json_error(array('message' => __('Checkout time must be after check-in time.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $duration = $checkout_timestamp - $checkin_timestamp;
+        if ($duration < HOUR_IN_SECONDS || $duration > 6 * HOUR_IN_SECONDS) {
+            wp_send_json_error(array('message' => __('Please select a duration between 1 and 6 hours.', 'restaurant-booking')));
+            wp_die();
+        }
+
         global $rb_booking;
         if (!$rb_booking) {
             require_once RB_PLUGIN_DIR . 'includes/class-booking.php';
             $rb_booking = new RB_Booking();
         }
 
-        $is_available = $rb_booking->is_time_slot_available($date, $time, $guests, null, $location_id);
-        $count = $rb_booking->available_table_count($date, $time, $guests, $location_id);
+        $conflicts = $rb_booking->check_time_overlap($date, $checkin, $checkout, $location_id);
+        if (!empty($conflicts)) {
+            wp_send_json_error(array(
+                'available' => false,
+                'message' => __('Selected time slot conflicts with another booking.', 'restaurant-booking'),
+                'conflicts' => $conflicts,
+                'suggestions' => $rb_booking->suggest_time_slots($location_id, $date, $checkin, $guests, 30)
+            ));
+            wp_die();
+        }
+
+        $is_available = $rb_booking->is_time_slot_available($date, $checkin, $guests, null, $location_id, $checkout);
+        $count = $rb_booking->available_table_count($date, $checkin, $guests, $location_id, $checkout);
 
         if ($is_available && $count > 0) {
             $message = sprintf(__('We have %1$d tables available for %2$d guests.', 'restaurant-booking'), $count, $guests);
@@ -528,7 +588,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                 'count' => $count
             ));
         } else {
-            $suggestions = $rb_booking->suggest_time_slots($location_id, $date, $time, $guests, 30);
+            $suggestions = $rb_booking->suggest_time_slots($location_id, $date, $checkin, $guests, 30);
             $message = __('No availability for the selected time. Please consider one of the suggested slots.', 'restaurant-booking');
 
             wp_send_json_success(array(
