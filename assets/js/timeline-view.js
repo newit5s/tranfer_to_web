@@ -9,6 +9,13 @@
         this.nonce = this.$container.data('nonce') || config.nonce || '';
         this.strings = (window.rbTimelineConfig && window.rbTimelineConfig.strings) || {};
         this.nowTimer = null;
+        this.activeDate = null;
+        this.activeLocation = null;
+        this.$modal = null;
+        this.$modalBody = null;
+        this.$modalActions = null;
+        this.$modalTitle = null;
+        this.$modalSubtitle = null;
         this.init();
     };
 
@@ -58,6 +65,9 @@
     TimelineApp.prototype.render = function (data) {
         var self = this;
         self.$container.empty();
+
+        self.activeDate = data && data.date ? data.date : null;
+        self.activeLocation = data && data.location_id ? data.location_id : null;
 
         if (!data || !data.tables || !data.tables.length) {
             self.clearNowTimer();
@@ -341,15 +351,37 @@
         var meta = self.timelineMeta || self.buildTimelineMeta([]);
         var $column = $('<div class="rb-timeline-column" />');
         var title = table.table_number ? (self.strings.tableLabel || 'Table') + ' ' + table.table_number : (self.strings.unassigned || 'Unassigned');
-        var statusLabel = table.current_status || 'available';
+        var statusLabel = self.getStatusLabel(table.current_status || 'available');
 
         var $header = $('<div class="rb-timeline-column-header" />');
         var $title = $('<div class="rb-timeline-column-title" />').text(title);
         var $meta = $('<div class="rb-timeline-column-meta" />');
         $meta.append($('<span class="rb-timeline-column-status" />').text((self.strings.currentStatus || 'Current Status') + ': ' + statusLabel));
 
-        if (self.context === 'admin' && table.table_id) {
-            $meta.append(self.renderStatusControls(table));
+        if (self.context === 'admin') {
+            $header.addClass('rb-timeline-column-header--interactive').attr('tabindex', '0');
+            $header.on('click', function (event) {
+                if ($(event.target).closest('.rb-timeline-column-action').length) {
+                    return;
+                }
+                self.openTableModal(table);
+            });
+            $header.on('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    self.openTableModal(table);
+                }
+            });
+
+            if (table.table_id) {
+                var $manageButton = $('<button type="button" class="button button-small rb-timeline-column-action" />')
+                    .text(self.strings.manageTable || 'Manage table')
+                    .on('click', function (event) {
+                        event.preventDefault();
+                        self.openTableModal(table);
+                    });
+                $meta.append($manageButton);
+            }
         }
 
         $header.append($title).append($meta);
@@ -384,8 +416,9 @@
         var $wrapper = $('<div class="rb-timeline-status-control" />');
 
         statuses.forEach(function (status) {
+            var label = self.getStatusLabel(status);
             var $button = $('<button type="button" class="button button-small" />')
-                .text(status)
+                .text(label)
                 .attr('data-status', status)
                 .attr('data-table-id', table.table_id)
                 .attr('data-booking-id', table.last_booking_id || '')
@@ -402,6 +435,19 @@
         });
 
         return $wrapper;
+    };
+
+    TimelineApp.prototype.getStatusLabel = function (status) {
+        if (!status) {
+            return this.strings.available || 'available';
+        }
+
+        var key = String(status).toLowerCase();
+        if (this.strings && this.strings[key]) {
+            return this.strings[key];
+        }
+
+        return status;
     };
 
     TimelineApp.prototype.renderBooking = function (booking) {
@@ -451,6 +497,150 @@
         return $card;
     };
 
+    TimelineApp.prototype.getBookingStatusLabel = function (status) {
+        if (!status) {
+            return '';
+        }
+
+        var normalized = String(status).toLowerCase();
+        if (normalized === 'no_show') {
+            normalized = 'no-show';
+        }
+
+        var map = {
+            'pending': this.strings.statusPending,
+            'confirmed': this.strings.statusConfirmed,
+            'cancelled': this.strings.statusCancelled,
+            'completed': this.strings.statusCompleted,
+            'no-show': this.strings.statusNoShow
+        };
+
+        return map[normalized] || status;
+    };
+
+    TimelineApp.prototype.ensureModal = function () {
+        if (this.$modal) {
+            return this.$modal;
+        }
+
+        var self = this;
+        var $modal = $('<div class="rb-timeline-modal" />');
+        var $backdrop = $('<div class="rb-timeline-modal-backdrop" />');
+        var $dialog = $('<div class="rb-timeline-modal-dialog" />');
+        var $header = $('<div class="rb-timeline-modal-header" />');
+        var $title = $('<h3 class="rb-timeline-modal-title" />');
+        var $subtitle = $('<div class="rb-timeline-modal-subtitle" />');
+        var $close = $('<button type="button" class="rb-timeline-modal-close" aria-label="Close" />').html('&times;');
+        var $body = $('<div class="rb-timeline-modal-body" />');
+        var $actions = $('<div class="rb-timeline-modal-actions" />');
+
+        $header.append($title).append($subtitle).append($close);
+        $dialog.append($header).append($body).append($actions);
+        $modal.append($backdrop).append($dialog);
+        $('body').append($modal);
+
+        $backdrop.add($close).on('click', function (event) {
+            event.preventDefault();
+            self.closeModal();
+        });
+
+        $(document).on('keydown.rbTimelineModal', function (event) {
+            if (event.key === 'Escape' && $modal.hasClass('is-visible')) {
+                self.closeModal();
+            }
+        });
+
+        this.$modal = $modal;
+        this.$modalBody = $body;
+        this.$modalActions = $actions;
+        this.$modalTitle = $title;
+        this.$modalSubtitle = $subtitle;
+
+        return $modal;
+    };
+
+    TimelineApp.prototype.openTableModal = function (table) {
+        if (!table || !table.table_id) {
+            return;
+        }
+
+        var self = this;
+        var $modal = self.ensureModal();
+        var title = table.table_number ? (self.strings.tableLabel || 'Table') + ' ' + table.table_number : (self.strings.unassigned || 'Unassigned');
+        self.$modalTitle.text(title);
+
+        var subtitle = '';
+        if (self.strings.bookingsTitle && self.activeDate) {
+            subtitle = self.strings.bookingsTitle.replace('%s', self.activeDate);
+        }
+        self.$modalSubtitle.text(subtitle);
+        self.$modalSubtitle.toggle(!!subtitle);
+
+        self.$modalBody.empty();
+
+        var statusBadge = $('<span class="rb-timeline-modal-status-badge status-' + (table.current_status || 'available') + '" />').text(self.getStatusLabel(table.current_status || 'available'));
+        var $info = $('<div class="rb-timeline-modal-info" />');
+        $info.append(statusBadge);
+        if (table.capacity) {
+            $info.append($('<span class="rb-timeline-modal-capacity" />').text((self.strings.guestsLabel || 'guests') + ': ' + table.capacity));
+        }
+        self.$modalBody.append($info);
+
+        if (Array.isArray(table.bookings) && table.bookings.length) {
+            var $list = $('<div class="rb-timeline-modal-bookings" />');
+            table.bookings.forEach(function (booking) {
+                var $item = $('<div class="rb-timeline-modal-booking-item" />');
+                var timeText = '';
+                if (booking.checkin_time && booking.checkout_time) {
+                    timeText = booking.checkin_time + ' – ' + booking.checkout_time;
+                } else if (booking.checkin_time) {
+                    timeText = booking.checkin_time;
+                }
+                if (timeText) {
+                    $item.append($('<div class="rb-timeline-modal-booking-time" />').text(timeText));
+                }
+                if (booking.customer_name) {
+                    $item.append($('<div class="rb-timeline-modal-booking-name" />').text(booking.customer_name));
+                }
+                var details = [];
+                if (booking.phone) {
+                    details.push(booking.phone);
+                }
+                if (booking.guest_count) {
+                    details.push(booking.guest_count + ' ' + (self.strings.guestsLabel || 'guests'));
+                }
+                if (details.length) {
+                    $item.append($('<div class="rb-timeline-modal-booking-meta" />').text(details.join(' • ')));
+                }
+                if (booking.status) {
+                    $item.append($('<span class="rb-timeline-modal-booking-status status-' + booking.status + '" />').text(self.getBookingStatusLabel(booking.status)));
+                }
+                $list.append($item);
+            });
+            self.$modalBody.append($list);
+        } else {
+            self.$modalBody.append($('<p class="rb-timeline-modal-empty" />').text(self.strings.noBookings || 'No bookings for this table.'));
+        }
+
+        self.$modalActions.empty();
+
+        if (self.context === 'admin' && table.table_id) {
+            var $label = $('<div class="rb-timeline-modal-actions-label" />').text((self.strings.currentStatus || 'Current Status') + ':');
+            var $controls = self.renderStatusControls(table).addClass('rb-timeline-modal-status-control');
+            self.$modalActions.append($label).append($controls);
+        }
+
+        $modal.addClass('is-visible');
+        $('body').addClass('rb-timeline-modal-open');
+    };
+
+    TimelineApp.prototype.closeModal = function () {
+        if (this.$modal) {
+            this.$modal.removeClass('is-visible');
+        }
+        $('body').removeClass('rb-timeline-modal-open');
+    };
+
     TimelineApp.prototype.updateStatus = function ($button) {
         var self = this;
         var status = $button.data('status');
@@ -471,6 +661,7 @@
             booking_id: bookingId
         }).done(function (response) {
             if (response && response.success) {
+                self.closeModal();
                 self.fetchData();
             } else {
                 alert((self.strings.statusUpdateFailed) || 'Unable to update status.');

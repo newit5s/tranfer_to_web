@@ -525,6 +525,21 @@ class RB_Booking {
         return $count;
     }
 
+    public function can_assign_table($table_number, $date, $checkin, $checkout = null, $location_id = 1, $exclude_booking_id = null) {
+        $table_number = (int) $table_number;
+
+        if ($table_number <= 0) {
+            return false;
+        }
+
+        $range = $this->get_time_range($date, $checkin, $checkout);
+        if (!$range) {
+            return false;
+        }
+
+        return $this->table_is_available($table_number, $date, $range, (int) $location_id, $exclude_booking_id);
+    }
+
     public function check_time_overlap($date, $checkin, $checkout, $location_id, $exclude_booking_id = null) {
         global $wpdb;
         $bookings_table = $wpdb->prefix . 'rb_bookings';
