@@ -1,0 +1,297 @@
+Implementation Guide - Restaurant Booking Timeline Enhancement
+📋 OVERVIEW
+Integrate advanced table management with check-in/checkout times into existing WordPress Restaurant Booking Manager plugin. Follow existing architecture patterns and maintain backward compatibility.
+🎯 IMPLEMENTATION PHASES
+Phase 1: Database Schema Enhancement
+Task: Extend existing database tables with time management fields
+Instructions:
+
+Update includes/class-database.php:
+
+Add new method migrate_to_timeline_schema()
+Modify ensure_portal_schema() to call timeline migration
+Add these columns to wp_rb_bookings:
+
+
+
+sql     checkin_time TIME NOT NULL AFTER booking_time
+     checkout_time TIME NOT NULL AFTER checkin_time  
+     actual_checkin DATETIME NULL
+     actual_checkout DATETIME NULL
+     cleanup_completed_at DATETIME NULL
+
+Add these columns to wp_rb_tables:
+
+sql     current_status ENUM('available','occupied','cleaning','reserved') DEFAULT 'available'
+     status_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+     last_booking_id INT NULL
+
+Include proper indexes and foreign key constraints
+Handle existing data migration safely
+
+
+Key Requirements:
+
+Use $wpdb->get_var() to check if columns exist before adding
+Provide default values for existing bookings (checkin = booking_time, checkout = booking_time + 2 hours)
+Maintain existing table structure compatibility
+
+
+
+Phase 2: Backend Logic Enhancement
+Task: Extend booking and availability logic for time-based conflicts
+Instructions:
+
+Update includes/class-booking.php:
+
+Add method check_time_overlap($date, $checkin, $checkout, $location_id, $exclude_booking_id = null)
+Modify is_time_slot_available() to consider checkin/checkout windows + 1-hour cleanup buffer
+Add method get_timeline_data($date, $location_id) returning structured array for calendar view
+Add method update_table_status($table_id, $status, $booking_id = null)
+Update create_booking() to validate and store checkin/checkout times
+Ensure all existing methods remain backward compatible
+
+
+Validation Rules:
+
+Checkout time must be after checkin time
+Minimum booking duration: 1 hour
+Maximum booking duration: 6 hours
+No overlapping bookings with 1-hour cleanup buffer
+Respect existing working hours constraints
+
+
+Timeline Data Structure:
+
+php   return array(
+       'date' => $date,
+       'time_slots' => array('09:00', '09:30', '10:00', ...),
+       'tables' => array(
+           'table_id' => array(
+               'table_number' => 1,
+               'capacity' => 4,
+               'bookings' => array(
+                   array(
+                       'booking_id' => 123,
+                       'customer_name' => 'John Doe',
+                       'phone' => '0123456789',
+                       'checkin_time' => '10:00',
+                       'checkout_time' => '12:00',
+                       'status' => 'confirmed',
+                       'guest_count' => 4
+                   )
+               )
+           )
+       )
+   );
+Phase 3: AJAX Endpoints Integration
+Task: Extend existing AJAX class with new timeline-specific endpoints
+Instructions:
+
+Update includes/class-ajax.php:
+
+Add action wp_ajax_rb_get_timeline_data and wp_ajax_nopriv_rb_get_timeline_data
+Add action wp_ajax_rb_update_table_status
+Add action wp_ajax_rb_check_availability_extended
+Modify existing check_availability to handle checkin/checkout times when provided
+Add proper nonce verification and capability checks
+Return consistent JSON response format
+
+
+New AJAX Methods:
+
+php   public function get_timeline_data() {
+       // Verify nonce, get date/location from $_POST
+       // Call RB_Booking::get_timeline_data()
+       // Return wp_send_json_success($data)
+   }
+   
+   public function update_table_status() {
+       // Verify nonce and permissions
+       // Call RB_Booking::update_table_status()
+       // Return success/error response
+   }
+
+Response Format:
+
+Success: wp_send_json_success($data)
+Error: wp_send_json_error(array('message' => $error_message))
+Include relevant data for frontend updates
+
+
+
+Phase 4: Admin Interface Integration
+Task: Add Timeline View to existing admin interface
+Instructions:
+
+Update admin/class-admin.php:
+
+Add submenu page in add_admin_menu():
+
+
+
+php     add_submenu_page(
+         'restaurant-booking',
+         rb_t('timeline_view'),
+         rb_t('timeline_view'),
+         'manage_options', 
+         'rb-timeline',
+         array($this, 'display_timeline_page')
+     );
+
+Create display_timeline_page() method
+Add location switcher (reuse existing pattern from other admin pages)
+Include date picker and real-time refresh controls
+
+
+Timeline Page Requirements:
+
+Location selector (consistent with other admin pages)
+Date navigation (prev/next day, date picker)
+Auto-refresh every 30 seconds option
+Manual table status update buttons
+Responsive grid layout for tables × time slots
+Color coding: Available (green), Occupied (red), Cleaning (yellow), Reserved (blue)
+
+
+Maintain Consistency:
+
+Use same styling patterns as existing admin pages
+Include language switcher in top-right corner
+Follow existing admin notice system for status updates
+
+
+
+Phase 5: Frontend Booking Form Enhancement
+Task: Add time selection to existing booking widget
+Instructions:
+
+Update booking form logic:
+
+Modify existing booking form to include checkin/checkout time selectors
+Add client-side validation for time selection
+Update AJAX availability checking to send checkin/checkout times
+Enhance conflict detection and alternative time suggestions
+
+
+Form Fields to Add:
+
+Check-in time dropdown (based on location working hours)
+Check-out time dropdown (dynamic based on checkin + duration constraints)
+Duration display/calculator
+Real-time availability feedback
+
+
+Frontend Validation:
+
+Ensure checkout > checkin
+Respect minimum/maximum duration limits
+Show availability status in real-time
+Provide alternative time suggestions when requested slot unavailable
+
+
+
+Phase 6: Assets and Styling
+Task: Create and integrate timeline-specific CSS/JS
+Instructions:
+
+Create assets/css/timeline.css:
+
+Grid layout for timeline view
+Responsive design for mobile/tablet
+Status color coding
+Hover effects and animations
+Integration with existing admin.css
+
+
+Create assets/js/timeline-view.js:
+
+Timeline component class
+Auto-refresh functionality
+AJAX calls for status updates
+Drag-and-drop table assignments (optional)
+Real-time data updates
+
+
+Update includes/class-assets-manager.php:
+
+Detect timeline shortcode/admin page
+Enqueue timeline assets conditionally
+Include proper script localization
+
+
+
+Phase 7: Language Support Integration
+Task: Add timeline-related translations
+Instructions:
+
+Update translation files:
+
+Add timeline-specific translation keys to languages/*/translations.php
+Include: timeline_view, checkin_time, checkout_time, table_status, cleanup_time
+Ensure all new UI text uses rb_t() function calls
+
+
+Translation Keys to Add:
+
+php   'timeline_view' => 'Timeline View',
+   'checkin_time' => 'Check-in Time', 
+   'checkout_time' => 'Check-out Time',
+   'current_status' => 'Current Status',
+   'occupied' => 'Occupied',
+   'cleaning' => 'Cleaning',
+   'reserved' => 'Reserved',
+   'available' => 'Available'
+🔧 TECHNICAL REQUIREMENTS
+Code Standards:
+
+Follow existing plugin architecture patterns
+Use same coding style as current codebase
+Maintain WordPress coding standards
+Include proper sanitization and validation
+Add inline documentation for new methods
+
+Compatibility:
+
+Maintain backward compatibility with existing shortcodes
+Don't break existing booking functionality
+Ensure existing data remains accessible
+Test with existing location/table configurations
+
+Performance:
+
+Use proper database indexing
+Implement efficient queries for timeline data
+Add caching where appropriate
+Minimize AJAX requests through smart batching
+
+Security:
+
+Proper nonce verification on all AJAX calls
+Capability checks for admin functions
+Input sanitization and validation
+SQL injection prevention using prepared statements
+
+🚨 CRITICAL SUCCESS FACTORS
+
+Don't Break Existing Functionality: Every existing feature must continue working
+Follow Existing Patterns: Use same architecture, naming conventions, and code organization
+Maintain Data Integrity: Existing bookings must remain valid and accessible
+Responsive Design: Timeline view must work on all device sizes
+Real-time Updates: Status changes should reflect immediately across all views
+Intuitive UX: Timeline should be easy to understand and use for restaurant staff
+
+🎯 DELIVERABLES CHECKLIST
+
+ Database migration working without data loss
+ Timeline view integrated in admin menu
+ Enhanced booking form with time selection
+ AJAX endpoints responding correctly
+ Timeline CSS/JS properly enqueued
+ All translations properly integrated
+ Backward compatibility verified
+ No PHP errors or JavaScript console errors
+ Responsive design tested on mobile/tablet
+ Documentation updated for new features
+
+Success Metric: Restaurant staff can view real-time table status, customers can select specific check-in/out times, and no existing functionality is broken.
