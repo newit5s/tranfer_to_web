@@ -474,7 +474,8 @@ class RB_Ajax {
             wp_send_json_error(array('message' => __('Security check failed', 'restaurant-booking')));
         }
 
-        $date = isset($_POST['date']) ? sanitize_text_field(wp_unslash($_POST['date'])) : wp_date('Y-m-d');
+        $current_date = function_exists('wp_date') ? wp_date('Y-m-d') : date_i18n('Y-m-d');
+        $date = isset($_POST['date']) ? sanitize_text_field(wp_unslash($_POST['date'])) : $current_date;
         $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 1;
 
         global $rb_booking;

@@ -15,3 +15,4 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Missing default timeline data for existing bookings via database migration backfill.
+- Fatal error on activation by falling back to `date_i18n()` when `wp_date()` is unavailable on older WordPress versions.

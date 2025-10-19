@@ -1107,9 +1107,10 @@ class RB_Admin {
             $selected_location_id = (int) $location_ids[0];
         }
 
-        $timeline_date = isset($_GET['timeline_date']) ? sanitize_text_field(wp_unslash($_GET['timeline_date'])) : wp_date('Y-m-d');
+        $current_date = function_exists('wp_date') ? wp_date('Y-m-d') : date_i18n('Y-m-d');
+        $timeline_date = isset($_GET['timeline_date']) ? sanitize_text_field(wp_unslash($_GET['timeline_date'])) : $current_date;
         if (empty($timeline_date)) {
-            $timeline_date = wp_date('Y-m-d');
+            $timeline_date = $current_date;
         }
 
         $timeline_nonce = wp_create_nonce('rb_timeline_nonce');
