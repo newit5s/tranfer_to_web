@@ -24,9 +24,12 @@
         
         // Settings page
         initSettings();
-        
+
         // Charts and reports
         initReports();
+
+        // Create booking form enhancements
+        initCreateBookingForm();
         
         /**
          * Initialize tooltips
@@ -473,17 +476,101 @@
                 e.preventDefault();
                 exportToCSV();
             });
-            
+
             $('#rb-export-pdf').on('click', function(e) {
                 e.preventDefault();
                 exportToPDF();
             });
-            
+
             // Refresh stats
             $('#rb-refresh-stats').on('click', function(e) {
                 e.preventDefault();
                 refreshStatistics();
             });
+        }
+
+        function initCreateBookingForm() {
+            const $form = $('#rb-admin-create-booking-form');
+            if (!$form.length) {
+                return;
+            }
+
+            const $checkin = $form.find('#booking_time');
+            const $checkout = $form.find('#checkout_time');
+
+            if (!$checkout.length) {
+                return;
+            }
+
+            const slots = $checkin.find('option').map(function() {
+                const value = $(this).val();
+                return value ? value : null;
+            }).get();
+
+            const timeToSeconds = function(time) {
+                if (!time) {
+                    return null;
+                }
+
+                const parts = time.split(':');
+                if (parts.length < 2) {
+                    return null;
+                }
+
+                const hours = parseInt(parts[0], 10);
+                const minutes = parseInt(parts[1], 10);
+                const seconds = parts.length > 2 ? parseInt(parts[2], 10) : 0;
+
+                if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+                    return null;
+                }
+
+                return (hours * 3600) + (minutes * 60) + seconds;
+            };
+
+            const updateCheckoutOptions = function() {
+                const checkin = $checkin.val();
+                $checkout.find('option').not(':first').remove();
+
+                if (!checkin || !slots.length) {
+                    return;
+                }
+
+                const checkinSeconds = timeToSeconds(checkin);
+                if (checkinSeconds === null) {
+                    return;
+                }
+
+                const minSeconds = checkinSeconds + 3600;
+                const maxSeconds = checkinSeconds + (6 * 3600);
+                let fallback = null;
+                let preferred = null;
+
+                slots.forEach(function(slot) {
+                    const slotSeconds = timeToSeconds(slot);
+                    if (slotSeconds !== null && slotSeconds >= minSeconds && slotSeconds <= maxSeconds) {
+                        $checkout.append($('<option />').val(slot).text(slot));
+
+                        if (!fallback) {
+                            fallback = slot;
+                        }
+
+                        if (!preferred && slotSeconds >= checkinSeconds + (2 * 3600)) {
+                            preferred = slot;
+                        }
+                    }
+                });
+
+                const defaultValue = preferred || fallback;
+                if (defaultValue) {
+                    $checkout.val(defaultValue);
+                } else {
+                    $checkout.val('');
+                }
+            };
+
+            $checkin.on('change', updateCheckoutOptions);
+            updateCheckoutOptions();
         }
         
         /**

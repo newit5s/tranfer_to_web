@@ -24,6 +24,13 @@ class RB_Assets_Manager {
     private $should_enqueue = null;
 
     /**
+     * Flag to prevent loading timeline assets multiple times.
+     *
+     * @var bool
+     */
+    private $timeline_enqueued = false;
+
+    /**
      * Get singleton instance.
      *
      * @return self
@@ -39,12 +46,17 @@ class RB_Assets_Manager {
     private function __construct() {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
         add_action('wp_head', array($this, 'print_inline_styles'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
     }
 
     /**
      * Enqueue CSS/JS for the booking widget.
      */
     public function enqueue_frontend_assets() {
+        if ($this->should_enqueue_timeline_frontend_assets()) {
+            $this->enqueue_timeline_assets('frontend');
+        }
+
         if (!$this->should_enqueue_assets()) {
             return;
         }
@@ -96,6 +108,12 @@ class RB_Assets_Manager {
             'languageSwitched' => rb_t('language_switched', __('Language switched', 'restaurant-booking')),
             'languageSwitchFailed' => rb_t('language_switch_failed', __('Could not change language. Please try again.', 'restaurant-booking')),
         ));
+    }
+
+    public function enqueue_admin_assets($hook) {
+        if ($this->should_enqueue_timeline_admin_assets($hook)) {
+            $this->enqueue_timeline_assets('admin');
+        }
     }
 
     /**
@@ -216,6 +234,112 @@ class RB_Assets_Manager {
 
         $this->should_enqueue = false;
         return false;
+    }
+
+    private function should_enqueue_timeline_frontend_assets() {
+        $should_enqueue = apply_filters('rb_should_enqueue_timeline_frontend_assets', false);
+
+        if ($should_enqueue) {
+            return true;
+        }
+
+        $shortcodes = array('rb_timeline', 'restaurant_booking_timeline');
+
+        if (is_singular()) {
+            global $post;
+            if ($post && isset($post->post_content)) {
+                foreach ($shortcodes as $shortcode) {
+                    if (has_shortcode($post->post_content, $shortcode)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (is_front_page() || is_home()) {
+            $queried_id = get_queried_object_id();
+            if ($queried_id) {
+                $content = get_post_field('post_content', $queried_id);
+                if ($content) {
+                    foreach ($shortcodes as $shortcode) {
+                        if (has_shortcode($content, $shortcode)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function should_enqueue_timeline_admin_assets($hook) {
+        $should_enqueue = apply_filters('rb_should_enqueue_timeline_admin_assets', false, $hook);
+
+        if ($should_enqueue) {
+            return true;
+        }
+
+        if (empty($hook)) {
+            return false;
+        }
+
+        if (false !== strpos($hook, 'rb-timeline')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function enqueue_timeline_assets($context = 'admin') {
+        if ($this->timeline_enqueued) {
+            return;
+        }
+
+        $style_path = RB_PLUGIN_DIR . 'assets/css/timeline.css';
+        $style_version = file_exists($style_path) ? filemtime($style_path) : RB_VERSION;
+        wp_enqueue_style(
+            'rb-timeline',
+            RB_PLUGIN_URL . 'assets/css/timeline.css',
+            array(),
+            $style_version
+        );
+
+        $script_path = RB_PLUGIN_DIR . 'assets/js/timeline-view.js';
+        $script_version = file_exists($script_path) ? filemtime($script_path) : RB_VERSION;
+        wp_enqueue_script(
+            'rb-timeline-view',
+            RB_PLUGIN_URL . 'assets/js/timeline-view.js',
+            array('jquery'),
+            $script_version,
+            true
+        );
+
+        $strings = array(
+            'currentStatus' => rb_t('current_status', __('Current Status', 'restaurant-booking')),
+            'checkin' => rb_t('checkin_time', __('Check-in Time', 'restaurant-booking')),
+            'checkout' => rb_t('checkout_time', __('Check-out Time', 'restaurant-booking')),
+            'cleanup' => rb_t('cleanup_time', __('Cleanup Time', 'restaurant-booking')),
+            'available' => rb_t('available', __('Available', 'restaurant-booking')),
+            'occupied' => rb_t('occupied', __('Occupied', 'restaurant-booking')),
+            'reserved' => rb_t('reserved', __('Reserved', 'restaurant-booking')),
+            'cleaning' => rb_t('cleaning', __('Cleaning', 'restaurant-booking')),
+            'statusUpdated' => __('Table status updated successfully.', 'restaurant-booking'),
+            'statusUpdateFailed' => __('Could not update table status. Please try again.', 'restaurant-booking'),
+            'noTables' => __('No tables found for the selected date.', 'restaurant-booking'),
+            'noBookings' => __('No bookings for this table.', 'restaurant-booking'),
+            'loadingError' => __('Unable to load timeline data.', 'restaurant-booking'),
+            'guestsLabel' => rb_t('people', __('people', 'restaurant-booking')),
+        );
+
+        wp_localize_script('rb-timeline-view', 'rbTimelineConfig', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('rb_timeline_nonce'),
+            'context' => $context,
+            'strings' => $strings,
+        ));
+
+        $this->timeline_enqueued = true;
     }
 }
 

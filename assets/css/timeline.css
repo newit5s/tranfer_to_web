@@ -1,0 +1,118 @@
+/* Timeline view styles */
+.rb-timeline-admin {
+    max-width: 100%;
+}
+
+.rb-timeline-app {
+    background: #fff;
+    border: 1px solid #dcdcdc;
+    border-radius: 6px;
+    padding: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.rb-timeline-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 12px;
+}
+
+.rb-timeline-timeslots {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+.rb-timeline-tables {
+    overflow-x: auto;
+}
+
+.rb-timeline-table {
+    margin-bottom: 24px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 16px;
+}
+
+.rb-timeline-table:last-child {
+    border-bottom: none;
+}
+
+.rb-timeline-table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.rb-timeline-bookings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+}
+
+.rb-timeline-booking {
+    border-radius: 4px;
+    padding: 10px;
+    color: #fff;
+    position: relative;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.rb-timeline-booking .rb-timeline-time {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.rb-timeline-booking.status-confirmed {
+    background: #2b8a3e;
+}
+
+.rb-timeline-booking.status-pending {
+    background: #e0a800;
+}
+
+.rb-timeline-booking.status-cancelled {
+    background: #c82333;
+}
+
+.rb-timeline-booking.status-completed {
+    background: #007cba;
+}
+
+.rb-timeline-booking.status-reserved {
+    background: #6f42c1;
+}
+
+.rb-timeline-status-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rb-timeline-status-control button.button {
+    padding: 0 10px;
+    height: 28px;
+    line-height: 26px;
+}
+
+.rb-timeline-empty {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+    border: 1px dashed #e5e5e5;
+    border-radius: 4px;
+}
+
+@media (max-width: 782px) {
+    .rb-timeline-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rb-timeline-bookings {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+}

@@ -111,7 +111,15 @@ return array(
     'inactive' => 'Inactive',
     'available' => 'Available',
     'not_available' => 'Not Available',
-    
+    'occupied' => 'Occupied',
+    'cleaning' => 'Cleaning',
+    'reserved' => 'Reserved',
+    'timeline_view' => 'Timeline View',
+    'checkin_time' => 'Check-in Time',
+    'checkout_time' => 'Check-out Time',
+    'current_status' => 'Current Status',
+    'cleanup_time' => 'Cleanup Time',
+
     // ========== BOOKING SOURCES ==========
     'website' => 'Website',
     'facebook' => 'Facebook',
