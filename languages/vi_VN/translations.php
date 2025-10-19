@@ -154,6 +154,7 @@ return array(
     'customer' => 'Khách hàng',
     'date_time' => 'Ngày/Giờ',
     'table' => 'Bàn',
+    'unassigned' => 'Chưa gán',
     'source' => 'Nguồn',
     'no_bookings' => 'Không có đặt bàn nào.',
     'created_time' => 'Thời gian tạo',

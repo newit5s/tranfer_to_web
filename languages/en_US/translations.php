@@ -154,6 +154,7 @@ return array(
     'customer' => 'Customer',
     'date_time' => 'Date/Time',
     'table' => 'Table',
+    'unassigned' => 'Unassigned',
     'source' => 'Source',
     'no_bookings' => 'No bookings found.',
     'created_time' => 'Created Time',

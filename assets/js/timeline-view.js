@@ -8,6 +8,7 @@
         this.ajaxUrl = this.$container.data('ajaxUrl') || config.ajaxUrl || '';
         this.nonce = this.$container.data('nonce') || config.nonce || '';
         this.strings = (window.rbTimelineConfig && window.rbTimelineConfig.strings) || {};
+        this.nowTimer = null;
         this.init();
     };
 
@@ -22,6 +23,7 @@
     };
 
     TimelineApp.prototype.renderError = function (message) {
+        this.clearNowTimer();
         this.$container.empty().append(
             $('<div class="rb-timeline-empty" />').text(message || 'An unexpected error occurred.')
         );
@@ -58,53 +60,203 @@
         self.$container.empty();
 
         if (!data || !data.tables || !data.tables.length) {
+            self.clearNowTimer();
             self.$container.append($('<div class="rb-timeline-empty" />').text(self.strings.noTables || 'No tables found for the selected date.'));
             return;
         }
 
-        var $grid = $('<div class="rb-timeline-grid" />');
-        var $timeslots = $('<div class="rb-timeline-timeslots" />');
-        var $tablesWrapper = $('<div class="rb-timeline-tables" />');
+        self.timelineMeta = self.buildTimelineMeta(data.time_slots || []);
+        self.nowOffset = self.calculateNowOffset();
 
-        if (data.time_slots && data.time_slots.length) {
-            data.time_slots.forEach(function (slot) {
-                $timeslots.append($('<div />').text(slot));
-            });
+        var $grid = $('<div class="rb-timeline-grid" />');
+        var $timesColumn = $('<div class="rb-timeline-times" />');
+        var $columnsScroll = $('<div class="rb-timeline-columns-scroll" />');
+        var $columnsWrapper = $('<div class="rb-timeline-columns" />');
+
+        $timesColumn.css('--slot-height', self.timelineMeta.slotHeight + 'px');
+        $timesColumn.css('height', self.timelineMeta.totalHeight + 'px');
+        $columnsWrapper.css('--slot-height', self.timelineMeta.slotHeight + 'px');
+
+        self.timelineMeta.timeSlots.forEach(function (slot) {
+            $timesColumn.append($('<div class="rb-timeline-timeslot" />').text(slot));
+        });
+
+        if (typeof self.nowOffset === 'number') {
+            var $railMarker = self.buildNowMarker('rail');
+            if ($railMarker) {
+                $timesColumn.append($railMarker);
+            }
         }
 
         data.tables.forEach(function (table) {
-            $tablesWrapper.append(self.renderTable(table));
+            $columnsWrapper.append(self.renderTable(table));
         });
 
-        $grid.append($timeslots).append($tablesWrapper);
+        $columnsScroll.append($columnsWrapper);
+        $grid.append($timesColumn).append($columnsScroll);
         self.$container.append($grid);
+        self.ensureNowTimer();
+    };
+
+    TimelineApp.prototype.buildTimelineMeta = function (slots) {
+        var slotHeight = 56;
+        var parsedSlots = [];
+
+        function parseTime(value) {
+            if (!value) {
+                return null;
+            }
+
+            if (typeof value !== 'string') {
+                value = String(value);
+            }
+
+            var trimmed = value.trim();
+            if (!trimmed) {
+                return null;
+            }
+
+            var clean = trimmed.replace(/[^0-9:apm]/gi, '').toLowerCase();
+
+            if (clean.indexOf('am') !== -1 || clean.indexOf('pm') !== -1) {
+                var period = clean.indexOf('pm') !== -1 ? 'pm' : 'am';
+                clean = clean.replace(/(am|pm)/g, '');
+                var parts12 = clean.split(':');
+                var h12 = parseInt(parts12[0], 10);
+                var m12 = parts12.length > 1 ? parseInt(parts12[1], 10) : 0;
+
+                if (isNaN(h12) || isNaN(m12)) {
+                    return null;
+                }
+
+                if (period === 'pm' && h12 < 12) {
+                    h12 += 12;
+                }
+
+                if (period === 'am' && h12 === 12) {
+                    h12 = 0;
+                }
+
+                return h12 * 60 + m12;
+            }
+
+            var parts = clean.split(':');
+            var hours = parseInt(parts[0], 10);
+            var minutes = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+
+            if (isNaN(hours) || isNaN(minutes)) {
+                return null;
+            }
+
+            return hours * 60 + minutes;
+        }
+
+        function formatMinutes(minutes) {
+            var hours = Math.floor(minutes / 60);
+            var mins = minutes % 60;
+            var hourText = hours < 10 ? '0' + hours : String(hours);
+            var minuteText = mins < 10 ? '0' + mins : String(mins);
+            return hourText + ':' + minuteText;
+        }
+
+        slots.forEach(function (slot) {
+            var minutes = parseTime(slot);
+            if (minutes !== null && !isNaN(minutes)) {
+                parsedSlots.push({ label: slot, minutes: minutes });
+            } else {
+                parsedSlots.push({ label: slot, minutes: null });
+            }
+        });
+
+        if (!parsedSlots.length) {
+            for (var hour = 8; hour <= 22; hour++) {
+                var text = (hour < 10 ? '0' : '') + hour + ':00';
+                parsedSlots.push({ label: text, minutes: hour * 60 });
+            }
+        }
+
+        var validMinutes = parsedSlots
+            .map(function (slot) { return slot.minutes; })
+            .filter(function (value) { return value !== null; })
+            .sort(function (a, b) { return a - b; });
+
+        var interval = 60;
+        if (validMinutes.length > 1) {
+            interval = validMinutes[1] - validMinutes[0];
+            for (var i = 1; i < validMinutes.length; i++) {
+                var delta = validMinutes[i] - validMinutes[i - 1];
+                if (delta > 0 && delta < interval) {
+                    interval = delta;
+                }
+            }
+            interval = Math.max(15, interval);
+        }
+
+        var start = validMinutes.length ? validMinutes[0] : 8 * 60;
+        var end = validMinutes.length ? validMinutes[validMinutes.length - 1] + interval : 22 * 60;
+        var intervalCount = Math.max(1, Math.round((end - start) / interval));
+        var slotCount = Math.max(parsedSlots.length, intervalCount);
+        var totalHeight = slotCount * slotHeight;
+
+        if (parsedSlots.length < slotCount) {
+            for (var index = parsedSlots.length; index < slotCount; index++) {
+                var minutesToAdd = start + index * interval;
+                parsedSlots.push({ label: formatMinutes(minutesToAdd), minutes: minutesToAdd });
+            }
+        }
+
+        return {
+            slotHeight: slotHeight,
+            slotCount: slotCount,
+            totalHeight: totalHeight,
+            interval: interval,
+            start: start,
+            end: end,
+            timeSlots: parsedSlots.map(function (slot) { return slot.label; }),
+            parseTime: parseTime
+        };
     };
 
     TimelineApp.prototype.renderTable = function (table) {
         var self = this;
-        var $table = $('<div class="rb-timeline-table" />');
-        var title = table.table_number ? 'Table ' + table.table_number : 'Unassigned';
+        var meta = self.timelineMeta || self.buildTimelineMeta([]);
+        var $column = $('<div class="rb-timeline-column" />');
+        var title = table.table_number ? (self.strings.tableLabel || 'Table') + ' ' + table.table_number : (self.strings.unassigned || 'Unassigned');
         var statusLabel = table.current_status || 'available';
-        var headerText = title + ' · ' + (self.strings.currentStatus || 'Current Status') + ': ' + statusLabel;
 
-        var $header = $('<div class="rb-timeline-table-header" />');
-        $header.append($('<div />').text(headerText));
+        var $header = $('<div class="rb-timeline-column-header" />');
+        var $title = $('<div class="rb-timeline-column-title" />').text(title);
+        var $meta = $('<div class="rb-timeline-column-meta" />');
+        $meta.append($('<span class="rb-timeline-column-status" />').text((self.strings.currentStatus || 'Current Status') + ': ' + statusLabel));
 
         if (self.context === 'admin' && table.table_id) {
-            $header.append(self.renderStatusControls(table));
+            $meta.append(self.renderStatusControls(table));
         }
 
-        var $bookings = $('<div class="rb-timeline-bookings" />');
-        if (table.bookings && table.bookings.length) {
-            table.bookings.forEach(function (booking) {
-                $bookings.append(self.renderBooking(booking));
+        $header.append($title).append($meta);
+
+        var $body = $('<div class="rb-timeline-column-body" />');
+        $body.css('height', meta.totalHeight + 'px');
+
+        var bookings = Array.isArray(table.bookings) ? table.bookings.slice() : [];
+        if (bookings.length) {
+            bookings = self.sortBookings(bookings);
+            bookings.forEach(function (booking) {
+                $body.append(self.renderBooking(booking));
             });
         } else {
-            $bookings.append($('<div class="rb-timeline-empty" />').text(self.strings.noBookings || 'No bookings for this table.'));
+            $body.append($('<div class="rb-timeline-column-placeholder" />').text(self.strings.noBookings || 'No bookings for this table.'));
         }
 
-        $table.append($header).append($bookings);
-        return $table;
+        if (typeof self.nowOffset === 'number') {
+            var $columnMarker = self.buildNowMarker('column');
+            if ($columnMarker) {
+                $body.append($columnMarker);
+            }
+        }
+
+        $column.append($header).append($body);
+        return $column;
     };
 
     TimelineApp.prototype.renderStatusControls = function (table) {
@@ -134,20 +286,47 @@
     };
 
     TimelineApp.prototype.renderBooking = function (booking) {
+        var meta = this.timelineMeta || this.buildTimelineMeta([]);
         var $card = $('<div class="rb-timeline-booking" />');
         $card.addClass('status-' + (booking.status || 'pending'));
 
-        var timeText = (booking.checkin_time || '') + ' – ' + (booking.checkout_time || '');
+        var startMinutes = this.getBookingStartMinutes(booking, meta);
+        if (startMinutes === null) {
+            startMinutes = meta.start;
+        }
+
+        var endMinutes = this.getBookingEndMinutes(booking, meta);
+
+        if (!endMinutes || endMinutes <= startMinutes) {
+            endMinutes = startMinutes + meta.interval;
+        }
+
+        var minuteHeight = meta.interval > 0 ? (meta.slotHeight / meta.interval) : (meta.slotHeight / 30);
+        var topOffset = Math.max(0, Math.round((startMinutes - meta.start) * minuteHeight));
+        var duration = Math.max(meta.interval, endMinutes - startMinutes);
+        var height = Math.max(32, Math.round(duration * minuteHeight));
+        height = Math.min(height, Math.max(meta.totalHeight - topOffset, 32));
+
+        $card.css({
+            top: topOffset + 'px',
+            height: height + 'px'
+        });
+
+        var checkin = booking.checkin_time || booking.start_time || booking.time || '';
+        var checkout = booking.checkout_time || booking.end_time || '';
+        var timeText = checkin && checkout ? (checkin + ' – ' + checkout) : (checkin || checkout || '');
         var name = booking.customer_name || '';
         var guests = booking.guest_count ? booking.guest_count + ' ' + (this.strings.guestsLabel || 'guests') : '';
 
-        $card.append($('<span class="rb-timeline-time" />').text(timeText));
-        $card.append($('<div />').text(name));
+        if (timeText) {
+            $card.append($('<span class="rb-timeline-time" />').text(timeText));
+        }
+        $card.append($('<div class="rb-timeline-booking-name" />').text(name));
         if (booking.phone) {
-            $card.append($('<div />').text(booking.phone));
+            $card.append($('<div class="rb-timeline-booking-phone" />').text(booking.phone));
         }
         if (guests) {
-            $card.append($('<div />').text(guests));
+            $card.append($('<div class="rb-timeline-booking-guests" />').text(guests));
         }
 
         return $card;
@@ -182,6 +361,130 @@
         }).always(function () {
             $button.prop('disabled', false).removeClass('updating');
         });
+    };
+
+    TimelineApp.prototype.sortBookings = function (bookings) {
+        var self = this;
+        var meta = self.timelineMeta || self.buildTimelineMeta([]);
+
+        return bookings.sort(function (a, b) {
+            var aStart = self.getBookingStartMinutes(a, meta);
+            var bStart = self.getBookingStartMinutes(b, meta);
+
+            if (aStart === bStart) {
+                return 0;
+            }
+
+            if (aStart === null) {
+                return 1;
+            }
+
+            if (bStart === null) {
+                return -1;
+            }
+
+            return aStart - bStart;
+        });
+    };
+
+    TimelineApp.prototype.getBookingStartMinutes = function (booking, meta) {
+        meta = meta || this.timelineMeta || this.buildTimelineMeta([]);
+        return meta.parseTime(booking.checkin_time || booking.start_time || booking.time || '');
+    };
+
+    TimelineApp.prototype.getBookingEndMinutes = function (booking, meta) {
+        meta = meta || this.timelineMeta || this.buildTimelineMeta([]);
+        return meta.parseTime(booking.checkout_time || booking.end_time || '');
+    };
+
+    TimelineApp.prototype.calculateNowOffset = function () {
+        var meta = this.timelineMeta;
+
+        if (!meta) {
+            return null;
+        }
+
+        var now = new Date();
+        var minutes = now.getHours() * 60 + now.getMinutes();
+
+        if (minutes < meta.start || minutes > meta.end) {
+            return null;
+        }
+
+        var minuteHeight = meta.interval > 0 ? (meta.slotHeight / meta.interval) : (meta.slotHeight / 30);
+        return Math.round((minutes - meta.start) * minuteHeight);
+    };
+
+    TimelineApp.prototype.buildNowMarker = function (variant) {
+        if (typeof this.nowOffset !== 'number') {
+            return null;
+        }
+
+        var $marker = $('<div class="rb-timeline-now" />').css('top', this.nowOffset + 'px');
+
+        if (variant === 'rail') {
+            $marker.addClass('rb-timeline-now--rail');
+        }
+
+        return $marker;
+    };
+
+    TimelineApp.prototype.ensureNowTimer = function () {
+        var self = this;
+
+        if (self.nowTimer) {
+            clearInterval(self.nowTimer);
+            self.nowTimer = null;
+        }
+
+        self.updateNowMarker();
+
+        self.nowTimer = setInterval(function () {
+            self.updateNowMarker();
+        }, 60000);
+    };
+
+    TimelineApp.prototype.clearNowTimer = function () {
+        if (this.nowTimer) {
+            clearInterval(this.nowTimer);
+            this.nowTimer = null;
+        }
+    };
+
+    TimelineApp.prototype.updateNowMarker = function () {
+        if (!this.timelineMeta) {
+            return;
+        }
+
+        var offset = this.calculateNowOffset();
+        this.nowOffset = offset;
+
+        var $markers = this.$container.find('.rb-timeline-now');
+
+        if (typeof offset !== 'number') {
+            $markers.remove();
+            return;
+        }
+
+        if (!$markers.length) {
+            var $times = this.$container.find('.rb-timeline-times');
+            var $railMarker = this.buildNowMarker('rail');
+            if ($times.length && $railMarker) {
+                $times.append($railMarker);
+            }
+
+            var self = this;
+            this.$container.find('.rb-timeline-column-body').each(function () {
+                var $columnMarker = self.buildNowMarker('column');
+                if ($columnMarker) {
+                    $(this).append($columnMarker);
+                }
+            });
+
+            return;
+        }
+
+        $markers.css('top', offset + 'px');
     };
 
     function bootstrapTimeline() {

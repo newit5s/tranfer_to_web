@@ -330,6 +330,8 @@ class RB_Assets_Manager {
             'noBookings' => __('No bookings for this table.', 'restaurant-booking'),
             'loadingError' => __('Unable to load timeline data.', 'restaurant-booking'),
             'guestsLabel' => rb_t('people', __('people', 'restaurant-booking')),
+            'tableLabel' => rb_t('table', __('Table', 'restaurant-booking')),
+            'unassigned' => rb_t('unassigned', __('Unassigned', 'restaurant-booking')),
         );
 
         wp_localize_script('rb-timeline-view', 'rbTimelineConfig', array(
