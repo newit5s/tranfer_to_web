@@ -1018,10 +1018,11 @@
 }
 
 .rb-gmail-filter-form {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
+    align-items: end;
+    width: 100%;
 }
 
 .rb-gmail-filter-form label {
@@ -1030,6 +1031,11 @@
     gap: 4px;
     font-size: 12px;
     color: var(--rb-gmail-muted);
+    width: 100%;
+}
+
+.rb-gmail-filter-form__status {
+    min-width: 160px;
 }
 
 .rb-gmail-filter-form__status {
@@ -1044,12 +1050,16 @@
     padding: 6px 10px;
     font-size: 13px;
     background: var(--rb-gmail-surface-alt);
+    width: 100%;
 }
 
 .rb-gmail-filter-actions {
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: flex-end;
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
 }
 
 .rb-gmail-filter-actions .rb-btn-primary,
@@ -1401,6 +1411,7 @@
     .rb-gmail-toolbar {
         flex-wrap: wrap;
         gap: 12px;
+        align-items: stretch;
     }
 
     .rb-gmail-search {
@@ -1409,14 +1420,11 @@
     }
 
     .rb-gmail-filter-form {
-        width: 100%;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
 
     .rb-gmail-filter-actions {
-        width: 100%;
         justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 8px;
     }
 
     .rb-gmail-filter-actions .rb-btn-primary,
@@ -1515,16 +1523,20 @@
     }
 
     .rb-gmail-toolbar {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
     }
 
     .rb-gmail-filter-form {
         width: 100%;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 
     .rb-gmail-search {
-        flex: 1 1 100%;
+        flex: 1 1 auto;
         max-width: none;
+        width: 100%;
     }
 
     .rb-manager--gmail .rb-gmail-header-nav ul {
@@ -1703,10 +1715,6 @@
         padding: 10px 12px;
     }
 
-    .rb-gmail-filter-form label {
-        flex: 1 1 48%;
-    }
-
     .rb-booking-card {
         grid-template-columns: auto 1fr !important;
         gap: 10px !important;
@@ -1822,9 +1830,8 @@
     }
 
     .rb-gmail-filter-form {
-        flex-direction: column !important;
-        align-items: stretch !important;
         width: 100% !important;
+        grid-template-columns: 1fr !important;
     }
 
     .rb-gmail-filter-form label {
@@ -1912,13 +1919,13 @@
 
     .rb-gmail-toolbar {
         flex-direction: column !important;
+        align-items: stretch !important;
         gap: 12px !important;
     }
 
     .rb-gmail-filter-form {
-        flex-direction: column !important;
-        align-items: stretch !important;
         width: 100% !important;
+        grid-template-columns: 1fr !important;
     }
 
     .rb-gmail-filter-form label {
