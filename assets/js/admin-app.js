@@ -20,9 +20,10 @@
         ? (props) => h(wp.components.Badge, props)
         : (props) => h('span', { className: `rb-admin-app__badge rb-admin-app__badge--${props.status || 'info'}` }, props.children);
     const apiFetch = wp.apiFetch;
+    const restRoot = settings && settings.root ? settings.root : settings.legacyRoot;
 
-    if (settings && settings.root) {
-        apiFetch.use(apiFetch.createRootURLMiddleware(settings.root));
+    if (restRoot && apiFetch && typeof apiFetch.createRootURLMiddleware === 'function') {
+        apiFetch.use(apiFetch.createRootURLMiddleware(restRoot));
     }
 
     if (settings && settings.nonce) {

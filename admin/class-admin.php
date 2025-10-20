@@ -281,6 +281,7 @@ class RB_Admin {
             'RBAdminSettings',
             array(
                 'root'         => esc_url_raw(rest_url(RB_REST_Controller::REST_NAMESPACE . '/')),
+                'legacyRoot'   => esc_url_raw(rest_url(RB_REST_Controller::LEGACY_NAMESPACE . '/')),
                 'nonce'        => wp_create_nonce('wp_rest'),
                 'locations'    => $locations,
                 'statusLabels' => $status_labels,
@@ -305,7 +306,16 @@ class RB_Admin {
             )
         );
     }
-    
+
+    public function display_dashboard_page() {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        wp_safe_redirect(add_query_arg(array('page' => 'restaurant-booking'), admin_url('admin.php')));
+        exit;
+    }
+
     public function display_create_booking_page() {
         global $wpdb, $rb_booking, $rb_location;
         $settings = get_option('rb_settings', array());
