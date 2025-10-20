@@ -681,13 +681,13 @@
 
 /* Manager Portal Styles */
 .rb-manager {
-    background: linear-gradient(145deg, #111111 0%, #1c1814 100%);
-    border: 1px solid rgba(120, 90, 60, 0.45);
-    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
     padding: 28px;
-    color: #f5f3ef;
+    color: #1d2327;
     margin: 30px auto;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     max-width: 1200px;
     width: 100%;
     box-sizing: border-box;
@@ -696,17 +696,17 @@
 .rb-manager-login {
     max-width: 420px;
     padding: 32px;
-    border-radius: 20px;
+    border-radius: 12px;
     margin: 40px auto;
-    background: linear-gradient(160deg, #121212 0%, #1f1a17 100%);
-    border: 1px solid rgba(120, 90, 60, 0.35);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    box-shadow: 0 12px 30px rgba(30, 30, 30, 0.12);
 }
 
 .rb-manager-login h2 {
     font-size: 26px;
     margin-bottom: 24px;
-    color: #f7f3e9;
+    color: #1d2327;
     text-align: center;
 }
 
@@ -720,21 +720,28 @@
 .rb-manager-login label {
     font-size: 14px;
     font-weight: 600;
-    color: #d9d2c7;
+    color: #2c3338;
 }
 
 .rb-manager-login input,
 .rb-manager-login select {
     width: 100%;
     min-height: 46px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(18, 18, 18, 0.9);
-    color: #f5f3ef;
+    border-radius: 8px;
+    border: 1px solid #c3c4c7;
+    background: #ffffff;
+    color: #2c3338;
     padding: 12px 14px;
     font-size: 15px;
     line-height: 1.45;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rb-manager-login input:focus,
+.rb-manager-login select:focus {
+    border-color: var(--wp-admin-theme-color, #2271b1);
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.2);
+    outline: none;
 }
 
 .rb-manager-login .rb-portal-actions {
@@ -781,10 +788,10 @@
 
 .rb-manager-language-switcher .rb-lang-select {
     width: 100%;
-    background: rgba(20, 20, 20, 0.92);
-    color: #f5f3ef;
-    border: 1px solid rgba(181, 145, 106, 0.35);
-    border-radius: 12px;
+    background: #ffffff;
+    color: #1d2327;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
     padding: 10px 14px;
     min-height: 44px;
     line-height: 1.45;
@@ -792,24 +799,24 @@
 }
 
 .rb-manager-language-switcher .rb-lang-select:hover {
-    border-color: rgba(181, 145, 106, 0.55);
+    border-color: #8c8f94;
 }
 
 .rb-manager-language-switcher .rb-lang-select:focus {
     outline: none;
-    border-color: #b5916a;
-    box-shadow: 0 0 0 2px rgba(181, 145, 106, 0.25);
+    border-color: var(--wp-admin-theme-color, #2271b1);
+    box-shadow: 0 0 0 1px rgba(34, 113, 177, 0.25);
 }
 
 .rb-manager-header h2 {
     margin: 0;
     font-size: 26px;
-    color: #f7f3e9;
+    color: #1d2327;
 }
 
 .rb-manager-user {
     font-size: 15px;
-    color: #d8cfc0;
+    color: #50575e;
 }
 
 .rb-manager-location-switcher form {
@@ -823,10 +830,10 @@
     flex: 1 1 200px;
     min-width: 200px;
     width: 100%;
-    background: rgba(20, 20, 20, 0.92);
-    color: #f5f3ef;
-    border: 1px solid rgba(181, 145, 106, 0.35);
-    border-radius: 12px;
+    background: #ffffff;
+    color: #1d2327;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
     padding: 10px 14px;
     min-height: 44px;
     line-height: 1.45;
@@ -835,12 +842,12 @@
 
 .rb-manager-location-switcher select:focus {
     outline: none;
-    border-color: #b5916a;
-    box-shadow: 0 0 0 2px rgba(181, 145, 106, 0.25);
+    border-color: var(--wp-admin-theme-color, #2271b1);
+    box-shadow: 0 0 0 1px rgba(34, 113, 177, 0.25);
 }
 
 .rb-manager-location-languages {
-    color: #d8cfc0;
+    color: #50575e;
     margin: 0;
 }
 
@@ -849,15 +856,16 @@
     align-items: center;
     gap: 12px;
     padding: 12px 18px;
-    border-radius: 12px;
+    border-radius: 8px;
     text-decoration: none;
     transition: all 0.2s ease-in-out;
-    border: 1px solid rgba(181, 145, 106, 0.28);
-    background: rgba(22, 22, 22, 0.94);
-    color: #f8f6f2;
+    border: 1px solid #dcdcde;
+    background: #f6f7f7;
+    color: #1d2327;
     font-weight: 600;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
 }
+
 
 .rb-manager-layout {
     display: flex;
@@ -871,27 +879,28 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(181, 145, 106, 0.25);
-    border-radius: 14px;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
     padding: 22px;
     flex: 1 1 260px;
 }
 
 .rb-manager-location-card {
-    background: linear-gradient(155deg, rgba(18, 18, 18, 0.95) 0%, rgba(33, 27, 22, 0.9) 100%);
-    border: 1px solid rgba(181, 145, 106, 0.3);
-    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
     padding: 20px;
     font-size: 14px;
-    color: #e4ded3;
+    color: #1d2327;
     line-height: 1.6;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
 .rb-manager-location-card h3 {
     margin: 0 0 12px;
     font-size: 18px;
-    color: #f7f3e9;
+    color: #1d2327;
 }
 
 .rb-manager-location-card p {
@@ -901,9 +910,9 @@
 .rb-manager-location-notes {
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid #dcdcde;
     font-size: 13px;
-    color: #c5bbac;
+    color: #50575e;
 }
 
 .rb-manager-nav ul {
@@ -917,9 +926,9 @@
 
 .rb-manager-nav li.active a,
 .rb-manager-nav li a:hover {
-    background: linear-gradient(135deg, #8b6f47, #c7a97a);
-    color: #12110f;
-    border-color: rgba(255, 255, 255, 0.35);
+    background: var(--wp-admin-theme-color, #2271b1);
+    color: #ffffff;
+    border-color: var(--wp-admin-theme-color, #2271b1);
 }
 
 .rb-manager-add-table {
@@ -927,16 +936,16 @@
     flex-wrap: wrap;
     gap: 16px;
     align-items: flex-end;
-    background: rgba(24, 24, 24, 0.92);
-    border: 1px solid rgba(181, 145, 106, 0.25);
-    border-radius: 14px;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
     padding: 18px;
     margin-bottom: 18px;
 }
 
 .rb-manager-add-table label {
     flex: 1 1 160px;
-    color: #f6eddd;
+    color: #1d2327;
     font-weight: 600;
 }
 
@@ -953,53 +962,54 @@
     margin-top: 10px;
 }
 
+
 .rb-manager-bookings-table {
     width: 100%;
     border-collapse: collapse;
-    background: rgba(18, 18, 18, 0.9);
-    border-radius: 14px;
+    background: #ffffff;
+    border-radius: 12px;
     overflow: hidden;
-    border: 1px solid rgba(181, 145, 106, 0.25);
+    border: 1px solid #dcdcde;
 }
 
 .rb-manager-bookings-table th,
 .rb-manager-bookings-table td {
     padding: 16px 18px;
-    border-bottom: 1px solid rgba(181, 145, 106, 0.15);
+    border-bottom: 1px solid #e0e0e2;
     text-align: left;
 }
 
 .rb-manager-bookings-table td {
-    color: #f6f3ee;
+    color: #1d2327;
     vertical-align: top;
 }
 
 .rb-manager-bookings-table th {
-    background: rgba(181, 145, 106, 0.18);
+    background: #f0f0f1;
     font-weight: 600;
-    color: #1b1611;
+    color: #1d2327;
     text-transform: uppercase;
     font-size: 12px;
 }
 
 .rb-manager-bookings-table tbody tr:hover {
-    background: rgba(181, 145, 106, 0.12);
+    background: #f6f7f7;
 }
 
 .rb-manager-note {
     margin-top: 6px;
     font-size: 13px;
-    color: #d9cbb6;
+    color: #50575e;
 }
 
 .rb-manager-note-internal {
-    color: #8faee0;
+    color: var(--wp-admin-theme-color, #2271b1);
 }
 
 .rb-manager-empty {
     text-align: center;
     padding: 32px !important;
-    color: #d1c6bb;
+    color: #50575e;
 }
 
 .rb-manager-bookings-table-wrapper {
@@ -1016,6 +1026,7 @@
     margin-bottom: 20px;
 }
 
+
 .rb-manager-create label,
 .rb-manager-form-grid label,
 .rb-manager-settings-grid label,
@@ -1026,7 +1037,7 @@
     gap: 6px;
     font-size: 13px;
     font-weight: 600;
-    color: #f6eddd;
+    color: #1d2327;
 }
 
 .rb-manager-create input,
@@ -1041,11 +1052,11 @@
 .rb-manager-settings input,
 .rb-manager-settings select,
 .rb-manager-settings textarea {
-    background: rgba(19, 19, 19, 0.92);
-    border: 1px solid rgba(181, 145, 106, 0.28);
-    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
     padding: 12px 14px;
-    color: #f7f4ef;
+    color: #1d2327;
     font-size: 14px;
     min-height: 44px;
     line-height: 1.45;
@@ -1063,7 +1074,7 @@
 .rb-manager input::placeholder,
 .rb-manager textarea::placeholder,
 .rb-manager select::placeholder {
-    color: rgba(245, 243, 239, 0.6);
+    color: #8c8f94;
 }
 
 .rb-manager-create input:focus,
@@ -1084,8 +1095,8 @@
 .rb-manager-login select:focus,
 .rb-manager-location-switcher select:focus {
     outline: none;
-    border-color: #b5916a;
-    box-shadow: 0 0 0 2px rgba(181, 145, 106, 0.25);
+    border-color: var(--wp-admin-theme-color, #2271b1);
+    box-shadow: 0 0 0 1px rgba(34, 113, 177, 0.25);
 }
 
 .rb-manager-checkbox {
@@ -1110,7 +1121,7 @@
 
 .rb-manager-language-title {
     font-weight: 600;
-    color: #f7f3e9;
+    color: #1d2327;
     margin: 0;
 }
 
@@ -1125,10 +1136,10 @@
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    border-radius: 12px;
-    border: 1px solid rgba(181, 145, 106, 0.35);
-    background: rgba(19, 19, 19, 0.85);
-    color: #f7f3e9;
+    border-radius: 8px;
+    border: 1px solid #dcdcde;
+    background: #ffffff;
+    color: #1d2327;
     font-size: 14px;
 }
 
@@ -1189,11 +1200,11 @@
 }
 
 .rb-manager-settings-tab {
-    background: #1e1e1e;
-    border: 1px solid #333333;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
     border-radius: 999px;
     padding: 8px 18px;
-    color: #f0f0f0;
+    color: #1d2327;
     font-size: 13px;
     cursor: pointer;
     transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
@@ -1201,15 +1212,15 @@
 
 .rb-manager-settings-tab:hover,
 .rb-manager-settings-tab.active {
-    background: linear-gradient(135deg, #8b6f47, #bfa678);
-    border-color: rgba(255, 255, 255, 0.25);
-    color: #111111;
+    background: var(--wp-admin-theme-color, #2271b1);
+    border-color: var(--wp-admin-theme-color, #2271b1);
+    color: #ffffff;
 }
 
 .rb-manager-settings-panels {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
     padding: 24px;
 }
 
@@ -1229,8 +1240,8 @@
     gap: 12px;
     padding: 12px 14px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
 }
 
 .rb-manager-toggle-group label {
@@ -1238,12 +1249,12 @@
     align-items: center;
     gap: 8px;
     font-size: 13px;
-    color: #d8cfc0;
+    color: #1d2327;
 }
 
 .rb-manager-settings small {
     font-size: 12px;
-    color: rgba(239, 234, 226, 0.7);
+    color: #50575e;
 }
 
 .rb-manager-stats {
@@ -1254,11 +1265,11 @@
 }
 
 .rb-manager-stat-card {
-    background: rgba(22, 22, 22, 0.92);
-    border: 1px solid rgba(181, 145, 106, 0.25);
+    background: #ffffff;
+    border: 1px solid #dcdcde;
     border-radius: 12px;
     padding: 14px 16px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .rb-manager-stat-label {
@@ -1266,14 +1277,14 @@
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-    color: #d9ccb9;
+    color: #50575e;
     margin-bottom: 6px;
 }
 
 .rb-manager-stat-value {
     font-size: 22px;
     font-weight: 600;
-    color: #fdfaf6;
+    color: #1d2327;
 }
 
 .rb-manager-tip,
@@ -1285,19 +1296,22 @@
 }
 
 .rb-manager-tip {
-    background: rgba(139, 111, 71, 0.15);
-    border: 1px solid rgba(139, 111, 71, 0.4);
+    background: rgba(34, 113, 177, 0.12);
+    border: 1px solid rgba(34, 113, 177, 0.25);
+    color: var(--wp-admin-theme-color, #2271b1);
 }
 
 .rb-manager-warning {
-    background: rgba(255, 99, 71, 0.12);
-    border: 1px solid rgba(255, 99, 71, 0.4);
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    color: #b32d2e;
 }
+
 
 .rb-manager-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1309,27 +1323,27 @@
 }
 
 .rb-manager-modal-dialog {
-    background: #161616;
-    border-radius: 16px;
+    background: #ffffff;
+    border-radius: 12px;
     padding: 28px;
     width: min(640px, 92vw);
     max-height: 90vh;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+    border: 1px solid #dcdcde;
+    box-shadow: 0 18px 32px rgba(31, 31, 31, 0.18);
     position: relative;
 }
 
 .rb-manager-modal h3 {
     margin-top: 0;
     margin-bottom: 18px;
-    color: #f7f3e9;
+    color: #1d2327;
 }
 
 .rb-manager-modal-close {
     background: transparent;
     border: none;
-    color: #f0f0f0;
+    color: #1d2327;
     font-size: 26px;
     line-height: 1;
     cursor: pointer;
@@ -1341,11 +1355,11 @@
 .rb-manager-modal textarea,
 .rb-manager-modal input,
 .rb-manager-modal select {
-    background: #1e1e1e;
-    border: 1px solid #333333;
-    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
     padding: 10px;
-    color: #f0f0f0;
+    color: #1d2327;
     width: 100%;
 }
 
@@ -2006,18 +2020,19 @@
     padding: 12px 15px;
     border-radius: 6px;
     display: none;
+    border: 1px solid transparent;
 }
 
 .rb-portal-result.success {
-    background: rgba(46, 204, 113, 0.15);
-    border: 1px solid rgba(46, 204, 113, 0.4);
-    color: #2ecc71;
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #1a6a2a;
 }
 
 .rb-portal-result.error {
-    background: rgba(231, 76, 60, 0.15);
-    border: 1px solid rgba(231, 76, 60, 0.4);
-    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.12);
+    border-color: rgba(231, 76, 60, 0.3);
+    color: #b32d2e;
 }
 
 .rb-manager .rb-btn-primary,
@@ -2029,33 +2044,40 @@
 }
 
 .rb-manager .rb-btn-primary {
-    background: linear-gradient(135deg, #a6784a, #d7bd8e) !important;
-    color: #12110f !important;
-    border: none !important;
-    box-shadow: 0 10px 24px rgba(163, 120, 73, 0.35) !important;
+    background: var(--wp-admin-theme-color, #2271b1) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--wp-admin-theme-color, #2271b1) !important;
+    box-shadow: 0 8px 16px rgba(34, 113, 177, 0.2) !important;
 }
 
-.rb-manager .rb-btn-primary:hover {
-    background: linear-gradient(135deg, #b9895a, #e5cca2) !important;
+.rb-manager .rb-btn-primary:hover,
+.rb-manager .rb-btn-primary:focus-visible {
+    background: var(--wp-admin-theme-color-darker-10, #1a5a8a) !important;
+    border-color: var(--wp-admin-theme-color-darker-10, #1a5a8a) !important;
 }
 
 .rb-manager .rb-btn-danger {
-    background: #c0392b !important;
+    background: #b32d2e !important;
     color: #fff !important;
+    border: 1px solid #b32d2e !important;
 }
 
-.rb-manager .rb-btn-danger:hover {
-    background: #e74c3c !important;
+.rb-manager .rb-btn-danger:hover,
+.rb-manager .rb-btn-danger:focus-visible {
+    background: #8a2426 !important;
+    border-color: #8a2426 !important;
 }
 
 .rb-manager .rb-btn-secondary {
-    background: rgba(36, 36, 36, 0.9) !important;
-    color: #f2eeea !important;
-    border: 1px solid rgba(181, 145, 106, 0.28) !important;
+    background: #f6f7f7 !important;
+    color: #1d2327 !important;
+    border: 1px solid #dcdcde !important;
 }
 
-.rb-manager .rb-btn-secondary:hover {
-    background: rgba(55, 55, 55, 0.95) !important;
+.rb-manager .rb-btn-secondary:hover,
+.rb-manager .rb-btn-secondary:focus-visible {
+    background: #e5e6e7 !important;
+    border-color: #c3c4c7 !important;
 }
 
 #rb-manager-table-feedback,
