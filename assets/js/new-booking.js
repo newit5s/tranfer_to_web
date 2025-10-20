@@ -47,9 +47,15 @@
             if (!this.currentLanguage) {
                 this.currentLanguage = $('.rb-new-lang-select').first().val() || '';
             }
+            this.stepperItems = this.modal.find('.rb-new-stepper__item');
+            const $successMessage = this.modal.find('#rb-new-success-message');
+            if ($successMessage.length) {
+                $successMessage.data('default-message', $successMessage.text());
+            }
             this.bindEvents();
             this.setInitialValues();
             this.preventBodyScroll();
+            this.updateStepper(1);
         },
 
         bindEvents: function() {
@@ -83,6 +89,9 @@
 
             // Keyboard navigation
             $(document).on('keydown', this.handleKeydown.bind(this));
+
+            // Restart booking
+            $(document).on('click', '.rb-new-restart-btn', this.handleRestart.bind(this));
         },
 
         setInitialValues: function() {
@@ -412,16 +421,19 @@
 
             const $step1 = $('.rb-new-step[data-step="1"]');
             const $step2 = $('.rb-new-step[data-step="2"]');
+            const $step3 = $('.rb-new-step[data-step="3"]');
 
             // Ensure the second step can be displayed by removing the hidden attribute
             $step2.stop(true, true).hide().removeAttr('hidden');
+            $step3.stop(true, true).hide().attr('hidden', true).removeClass('active');
 
             $step1.stop(true, true).fadeOut(300, () => {
-                $step1.attr('hidden', true);
-                $step2.fadeIn(300);
+                $step1.attr('hidden', true).removeClass('active');
+                $step2.fadeIn(300).addClass('active');
             });
 
             this.currentStep = 2;
+            this.updateStepper(2);
 
             // Focus first input in step 2
             setTimeout(() => {
@@ -455,15 +467,18 @@
 
             const $step1 = $('.rb-new-step[data-step="1"]');
             const $step2 = $('.rb-new-step[data-step="2"]');
+            const $step3 = $('.rb-new-step[data-step="3"]');
 
             $step1.stop(true, true).hide().removeAttr('hidden');
 
             $step2.stop(true, true).fadeOut(300, () => {
-                $step2.attr('hidden', true);
-                $step1.fadeIn(300);
+                $step2.attr('hidden', true).removeClass('active');
+                $step3.stop(true, true).hide().attr('hidden', true).removeClass('active');
+                $step1.fadeIn(300).addClass('active');
             });
 
             this.currentStep = 1;
+            this.updateStepper(1);
 
             // Clear any result messages
             $('#rb-new-booking-result').attr('hidden', true).hide();
@@ -472,13 +487,21 @@
         resetToStep1: function() {
             const $step1 = $('.rb-new-step[data-step="1"]');
             const $step2 = $('.rb-new-step[data-step="2"]');
+            const $step3 = $('.rb-new-step[data-step="3"]');
 
-            $step2.stop(true, true).hide().attr('hidden', true);
-            $step1.stop(true, true).show().removeAttr('hidden');
+            $step2.stop(true, true).hide().attr('hidden', true).removeClass('active');
+            $step3.stop(true, true).hide().attr('hidden', true).removeClass('active');
+            $step1.stop(true, true).show().removeAttr('hidden').addClass('active');
             this.currentStep = 1;
+            this.updateStepper(1);
             this.selectedData = {};
             this.clearAllMessages();
             this.clearForm();
+            const $successMessage = $('#rb-new-success-message');
+            if ($successMessage.length) {
+                const defaultMessage = $successMessage.data('default-message') || $successMessage.text();
+                $successMessage.text(defaultMessage);
+            }
         },
 
         submitBooking: function(e) {
@@ -558,8 +581,10 @@
         },
 
         handleBookingResponse: function(response) {
-            if (response.success) {
-                this.showBookingSuccess(response.data.message);
+            if (response && response.success) {
+                const successMessage = response.data && response.data.message ? response.data.message : (this.strings.processing || 'Success');
+                this.showBookingSuccess(successMessage);
+                this.goToStep3();
 
                 // Auto-close modal after success
                 setTimeout(() => {
@@ -573,20 +598,21 @@
                     }
                 }, 4000);
             } else {
-                this.showBookingError(response.data.message);
+                const errorMessage = response && response.data && response.data.message ? response.data.message : (this.strings.connectionError || 'Connection error. Please try again.');
+                this.showBookingError(errorMessage);
             }
         },
 
         showBookingSuccess: function(message) {
-            $('#rb-new-booking-result')
-                .removeClass('error')
-                .addClass('success')
-                .html('<p>✓ ' + message + '</p>')
-                .removeAttr('hidden')
-                .show();
-            
-            // Scroll to message
-            this.scrollToElement('#rb-new-booking-result');
+            const $successMessage = $('#rb-new-success-message');
+            if ($successMessage.length) {
+                if (!$successMessage.data('default-message')) {
+                    $successMessage.data('default-message', $successMessage.text());
+                }
+                $successMessage.text(message);
+            }
+
+            $('#rb-new-booking-result').attr('hidden', true).hide();
         },
 
         showBookingError: function(message) {
@@ -596,9 +622,37 @@
                 .html('<p>' + message + '</p>')
                 .removeAttr('hidden')
                 .show();
-            
+
             // Scroll to message
             this.scrollToElement('#rb-new-booking-result');
+        },
+
+        goToStep3: function() {
+            const $step2 = $('.rb-new-step[data-step="2"]');
+            const $step3 = $('.rb-new-step[data-step="3"]');
+
+            $step3.stop(true, true).hide().removeAttr('hidden');
+
+            $step2.stop(true, true).fadeOut(300, () => {
+                $step2.attr('hidden', true).removeClass('active');
+                $step3.fadeIn(300).addClass('active');
+                this.scrollToElement('.rb-new-step[data-step="3"]');
+            });
+
+            this.currentStep = 3;
+            this.updateStepper(3);
+        },
+
+        handleRestart: function(e) {
+            e.preventDefault();
+            this.resetToStep1();
+            if (this.isInline) {
+                $('#rb-new-date').trigger('focus');
+            } else {
+                setTimeout(() => {
+                    this.modal.find('input, select').first().focus();
+                }, 200);
+            }
         },
 
         updateTimeSlots: function() {
@@ -740,7 +794,7 @@
         },
 
         highlightField: function($field) {
-            $field.addClass('error').css('border-color', '#fc8181');
+            $field.addClass('error');
         },
 
         unhighlightField: function($field) {
@@ -770,6 +824,25 @@
                 .css('border-color', '');
             this.availableSlots = [];
             $('#rb-new-checkout').empty().append(`<option value="">${this.strings.selectTime}</option>`);
+        },
+
+        updateStepper: function(step) {
+            if (!this.stepperItems || !this.stepperItems.length) {
+                return;
+            }
+
+            this.stepperItems.each((index, element) => {
+                const $item = $(element);
+                const itemStep = parseInt($item.data('step'), 10);
+
+                $item.removeClass('is-active is-complete');
+
+                if (itemStep < step) {
+                    $item.addClass('is-complete');
+                } else if (itemStep === step) {
+                    $item.addClass('is-active');
+                }
+            });
         }
     };
 

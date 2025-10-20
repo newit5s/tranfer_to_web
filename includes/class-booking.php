@@ -119,7 +119,18 @@ class RB_Booking {
             $params[] = (int) $location_id;
         }
 
-        $today = date('Y-m-d');
+        $today = current_time('Y-m-d');
+        $today_time = strtotime($today);
+        $week_start = date('Y-m-d', strtotime('monday this week', $today_time));
+        $week_end = date('Y-m-d', strtotime('sunday this week', $today_time));
+
+        // Ensure week range is valid even if locale defines Sunday as first day
+        if ($week_end < $week_start) {
+            $week_end = date('Y-m-d', strtotime('+6 days', strtotime($week_start)));
+        }
+
+        $month_start = date('Y-m-01', $today_time);
+        $month_end = date('Y-m-t', $today_time);
 
         $stats = array(
             'total' => $this->prepare_and_get_var("SELECT COUNT(*) FROM $table_name WHERE $where", $params),
@@ -146,6 +157,30 @@ class RB_Booking {
             'today_cancelled' => $this->prepare_and_get_var(
                 "SELECT COUNT(*) FROM $table_name WHERE status = 'cancelled' AND $where AND booking_date = %s",
                 array_merge($params, array($today))
+            ),
+            'week_total' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE $where AND booking_date BETWEEN %s AND %s",
+                array_merge($params, array($week_start, $week_end))
+            ),
+            'week_pending' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'pending' AND $where AND booking_date BETWEEN %s AND %s",
+                array_merge($params, array($week_start, $week_end))
+            ),
+            'week_confirmed' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'confirmed' AND $where AND booking_date BETWEEN %s AND %s",
+                array_merge($params, array($week_start, $week_end))
+            ),
+            'week_completed' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'completed' AND $where AND booking_date BETWEEN %s AND %s",
+                array_merge($params, array($week_start, $week_end))
+            ),
+            'week_cancelled' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE status = 'cancelled' AND $where AND booking_date BETWEEN %s AND %s",
+                array_merge($params, array($week_start, $week_end))
+            ),
+            'month_total' => $this->prepare_and_get_var(
+                "SELECT COUNT(*) FROM $table_name WHERE $where AND booking_date BETWEEN %s AND %s",
+                array_merge($params, array($month_start, $month_end))
             ),
         );
 
