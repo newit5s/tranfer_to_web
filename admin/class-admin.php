@@ -15,6 +15,7 @@ class RB_Admin {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'handle_admin_actions'));
         add_action('admin_notices', array($this, 'display_admin_notices'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_app_assets'));
 
     }
 
@@ -151,21 +152,30 @@ class RB_Admin {
     
     public function add_admin_menu() {
         add_menu_page(
-            rb_t('booking'),
-            rb_t('booking'),
+            rb_t('booking_hub', __('Booking Hub', 'restaurant-booking')),
+            rb_t('booking_hub', __('Booking Hub', 'restaurant-booking')),
             'manage_options',
             'restaurant-booking',
-            array($this, 'display_dashboard_page'),
+            array($this, 'display_app_shell'),
             'dashicons-calendar-alt',
             30
         );
-        
+
         add_submenu_page(
             'restaurant-booking',
-            rb_t('dashboard'),
-            rb_t('dashboard'),
+            rb_t('booking_hub', __('Booking Hub', 'restaurant-booking')),
+            rb_t('booking_hub', __('Booking Hub', 'restaurant-booking')),
             'manage_options',
             'restaurant-booking',
+            array($this, 'display_app_shell')
+        );
+
+        add_submenu_page(
+            'restaurant-booking',
+            rb_t('legacy_dashboard', __('Legacy Dashboard', 'restaurant-booking')),
+            rb_t('legacy_dashboard', __('Legacy Dashboard', 'restaurant-booking')),
+            'manage_options',
+            'rb-legacy-dashboard',
             array($this, 'display_dashboard_page')
         );
         
@@ -212,6 +222,87 @@ class RB_Admin {
             'manage_options',
             'rb-settings',
             array($this, 'display_settings_page')
+        );
+    }
+
+    public function display_app_shell() {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        echo '<div class="wrap rb-admin-app-wrap">';
+        echo '<h1 class="rb-admin-app__title">' . esc_html(rb_t('booking_hub', __('Booking Hub', 'restaurant-booking'))) . '</h1>';
+        echo '<div id="rb-admin-app" class="rb-admin-app"></div>';
+        echo '<noscript class="rb-admin-app__noscript">' . esc_html__('The booking hub requires JavaScript. Please enable it to continue.', 'restaurant-booking') . '</noscript>';
+        echo '</div>';
+    }
+
+    public function enqueue_app_assets($hook) {
+        if ('toplevel_page_restaurant-booking' !== $hook && 'restaurant-booking_page_restaurant-booking' !== $hook) {
+            return;
+        }
+
+        wp_enqueue_script('wp-element');
+        wp_enqueue_script('wp-components');
+        wp_enqueue_script('wp-api-fetch');
+        wp_enqueue_script('wp-i18n');
+        wp_enqueue_script('wp-data');
+
+        $script_path = RB_PLUGIN_DIR . 'assets/js/admin-app.js';
+        $script_version = file_exists($script_path) ? filemtime($script_path) : RB_VERSION;
+        wp_enqueue_script(
+            'rb-admin-app',
+            RB_PLUGIN_URL . 'assets/js/admin-app.js',
+            array('wp-element', 'wp-components', 'wp-api-fetch', 'wp-i18n', 'wp-data'),
+            $script_version,
+            true
+        );
+
+        $style_path = RB_PLUGIN_DIR . 'assets/css/admin-app.css';
+        $style_version = file_exists($style_path) ? filemtime($style_path) : RB_VERSION;
+        wp_enqueue_style(
+            'rb-admin-app',
+            RB_PLUGIN_URL . 'assets/css/admin-app.css',
+            array('wp-components'),
+            $style_version
+        );
+
+        $locations = $this->get_all_locations_for_portal_accounts();
+        $status_labels = array(
+            'pending'   => rb_t('pending', __('Pending', 'restaurant-booking')),
+            'confirmed' => rb_t('confirmed', __('Confirmed', 'restaurant-booking')),
+            'completed' => rb_t('completed', __('Completed', 'restaurant-booking')),
+            'cancelled' => rb_t('cancelled', __('Cancelled', 'restaurant-booking')),
+            'no-show'   => rb_t('no_show', __('No-show', 'restaurant-booking')),
+        );
+
+        wp_localize_script(
+            'rb-admin-app',
+            'RBAdminSettings',
+            array(
+                'root'         => esc_url_raw(rest_url(RB_REST_Controller::REST_NAMESPACE . '/')),
+                'nonce'        => wp_create_nonce('wp_rest'),
+                'locations'    => $locations,
+                'statusLabels' => $status_labels,
+                'i18n'         => array(
+                    'searchBookings'   => rb_t('search_bookings', __('Search bookings', 'restaurant-booking')),
+                    'searchCustomers'  => rb_t('search_customers', __('Search customers', 'restaurant-booking')),
+                    'filters'          => rb_t('filters', __('Filters', 'restaurant-booking')),
+                    'statsHeading'     => rb_t('today_overview', __("Today's overview", 'restaurant-booking')),
+                    'sourcesHeading'   => rb_t('source_breakdown', __('Source breakdown', 'restaurant-booking')),
+                    'tablesHeading'    => rb_t('tables', __('Tables', 'restaurant-booking')),
+                    'customersHeading' => rb_t('customers', __('Customers', 'restaurant-booking')),
+                    'bookingsHeading'  => rb_t('bookings', __('Bookings', 'restaurant-booking')),
+                    'perPage'          => rb_t('per_page', __('Per page', 'restaurant-booking')),
+                    'emptyState'       => rb_t('nothing_found', __('No records found for the current filters.', 'restaurant-booking')),
+                    'reload'           => rb_t('reload', __('Reload', 'restaurant-booking')),
+                    'updateStatus'     => rb_t('update_status', __('Update status', 'restaurant-booking')),
+                    'toggleTable'      => rb_t('toggle_table', __('Toggle availability', 'restaurant-booking')),
+                    'available'        => rb_t('available', __('Available', 'restaurant-booking')),
+                    'unavailable'      => rb_t('unavailable', __('Unavailable', 'restaurant-booking')),
+                    'bookingHubTitle'  => rb_t('booking_hub', __('Booking Hub', 'restaurant-booking')),
+                ),
+            )
         );
     }
     

@@ -82,6 +82,7 @@ function rb_init_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-location.php';
     require_once RB_PLUGIN_DIR . 'includes/class-portal-account.php';
     require_once RB_PLUGIN_DIR . 'includes/class-assets-manager.php';
+    require_once RB_PLUGIN_DIR . 'includes/class-rest.php';
 
     // Initialize globals
     global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
@@ -91,9 +92,12 @@ function rb_init_plugin() {
     $rb_customer = new RB_Customer();
     $rb_email = new RB_Email();
     $rb_location = new RB_Location();
-    
+
     // Initialize AJAX
     new RB_Ajax();
+
+    // Initialize REST API
+    new RB_REST_Controller();
     
     // Load Admin
     if (is_admin()) {
@@ -128,10 +132,15 @@ function rb_disable_wp_location_manager_role() {
  */
 add_action('admin_enqueue_scripts', 'rb_admin_enqueue_scripts');
 function rb_admin_enqueue_scripts($hook) {
+    if ('toplevel_page_restaurant-booking' === $hook || 'restaurant-booking_page_restaurant-booking' === $hook) {
+        // Modern SPA assets are enqueued via RB_Admin::enqueue_app_assets to avoid legacy scripts.
+        return;
+    }
+
     if (strpos($hook, 'restaurant-booking') !== false || strpos($hook, 'rb-') !== false) {
         wp_enqueue_style('rb-admin-css', RB_PLUGIN_URL . 'assets/css/admin.css', array(), RB_VERSION);
         wp_enqueue_script('rb-admin-js', RB_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), RB_VERSION, true);
-        
+
         wp_localize_script('rb-admin-js', 'rb_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('rb_admin_nonce'),

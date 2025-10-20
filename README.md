@@ -7,7 +7,7 @@ Plugin WordPress giúp nhà hàng quản lý đặt bàn từ khâu tiếp nhậ
 - **Bootstrap**: `restaurant-booking-manager.php` khởi tạo plugin, đăng ký shortcode, enqueue assets kế thừa và gọi toàn bộ lớp trong `includes/`, `admin/`, `public/`.
 - **Business layer**: các lớp trong `includes/` phụ trách đặt bàn (`RB_Booking`), khách hàng (`RB_Customer`), chi nhánh & bàn (`RB_Location`), tài khoản portal (`RB_Portal_Account_Manager`), email (`RB_Email`), AJAX (`RB_Ajax`) và đa ngôn ngữ (`RB_I18n`).
 - **Frontend**: `assets/css/new-frontend.css` + `assets/js/new-booking.js` cho widget đặt bàn modal 3 bước; `public/class-frontend-*.php` dựng portal quản lý, chia sẻ logic chung qua `RB_Frontend_Base`.
-- **Admin**: `admin/class-admin.php` tạo menu **Đặt bàn**, cấu hình chung, quản lý chi nhánh, bàn, portal accounts, dọn dữ liệu.
+- **Admin**: `admin/class-admin.php` dựng Booking Hub dạng SPA dựa trên Gutenberg Components (React) và giao tiếp qua REST (`includes/class-rest.php`) để hiển thị dashboard, bảng đặt bàn, bàn và khách hàng theo thời gian thực.
 - **Mẫu MVC nhẹ**: mỗi module có lớp controller (AJAX/REST), service (xử lý logic) và repository (làm việc với `RB_Database`). Các service nên đặt trong `includes/services/` (nếu cần thêm) để tái sử dụng cho cả frontend và admin.
 
 ## 📦 Cấu trúc thư mục
@@ -30,6 +30,7 @@ restaurant-booking-manager/
 │   ├── class-language-switcher.php     # Shortcode + widget đổi ngôn ngữ
 │   ├── class-location.php              # Quản lý chi nhánh & bàn
 │   ├── class-portal-account-manager.php # CRUD tài khoản portal + phân quyền
+│   ├── class-rest.php                  # REST endpoints cho Booking Hub (stats/booking/tables/customers)
 │   └── services/                       # Service mở rộng dùng chung (tùy chọn)
 ├── public/
 │   ├── class-frontend-base.php         # Logic chia sẻ giữa frontend/portal
@@ -40,10 +41,12 @@ restaurant-booking-manager/
 ├── assets/
 │   ├── css/
 │   │   ├── admin.css                   # Giao diện trang quản trị plugin
+│   │   ├── admin-app.css               # Phong cách SPA Booking Hub
 │   │   ├── frontend.css                # Portal quản lý (legacy layout)
 │   │   └── new-frontend.css            # Giao diện đặt bàn mới dạng modal
 │   └── js/
 │       ├── admin.js                    # Tương tác CRUD trong trang admin
+│       ├── admin-app.js                # SPA Booking Hub (React + REST)
 │       ├── frontend.js                 # Portal quản lý & bảng điều khiển
 │       └── new-booking.js              # Luồng đặt bàn mới 3 bước
 ├── languages/                          # File bản dịch (vi, en, ja...)
@@ -146,9 +149,10 @@ restaurant-booking-manager/
 
 ## 🗂️ Trang quản trị WordPress
 
-- Menu **Đặt bàn** (icon calendar) gồm Dashboard, Create Booking, Tables, Customers, Settings.
-- Sử dụng `admin.css` & `admin.js` để tạo trải nghiệm AJAX (confirm/cancel, bulk actions, inline edit).
-- Tất cả endpoint admin yêu cầu quyền `manage_options` và nonce `rb_admin_nonce`/`rb_language_nonce`.
+- Menu **Đặt bàn** mở ra Booking Hub mới (SPA) với ba tab chính: Bookings, Tables, Customers. Người quản trị có thể lọc theo chi nhánh, trạng thái, tìm kiếm và cập nhật trạng thái ngay trên bảng mà không tải lại trang.
+- Giao diện được dựng từ Gutenberg Components (`wp-element`, `wp-components`, `wp-api-fetch`) thông qua `assets/js/admin-app.js` và `assets/css/admin-app.css`; dữ liệu lấy từ REST (`rb/v1/bookings`, `rb/v1/tables`, `rb/v1/customers`, `rb/v1/stats`).
+- Các trang cũ (Create Booking, Timeline, Settings…) vẫn tồn tại dưới mục "Legacy Dashboard" và tiếp tục dùng `admin.js` để tránh ảnh hưởng workflow hiện hữu.
+- Tất cả endpoint (REST lẫn AJAX) yêu cầu quyền `manage_options` và nonce tương ứng (`wp_rest` hoặc `rb_admin_nonce`/`rb_language_nonce`).
 
 ## 🌐 Đa ngôn ngữ
 
@@ -161,6 +165,10 @@ restaurant-booking-manager/
 - **Filters:** `rb_should_enqueue_new_frontend_assets`, `rb_enqueue_legacy_frontend_assets`, `rb_translations`, `rb_available_languages`.
 - **Actions/AJAX:** `rb_admin_*` cho thao tác quản trị, `rb_manager_*` cho portal, `rb_cleanup_old_bookings`, `rb_reset_plugin` cho công cụ bảo trì.
 - **Helper:** `rb_t()` để lấy chuỗi bản địa hóa, `rb_get_current_language()` và `rb_get_available_languages()` cho dev.
+- **REST (`rb/v1` namespace):**
+  - `GET /bookings` (lọc theo trạng thái, nguồn, khoảng ngày, location, search, phân trang), `POST /bookings/{id}/status` để chuyển trạng thái (pending/confirmed/completed/cancelled/no-show).
+  - `GET /tables` (có `location_id` và phân trang), `POST /tables/{id}` để bật/tắt bàn (`is_available`).
+  - `GET /customers` (search + location + phân trang) và `GET /stats` để lấy số liệu dashboard + phân bổ nguồn.
 
 ## 💾 Cơ sở dữ liệu chính
 
@@ -187,7 +195,7 @@ restaurant-booking-manager/
 1. **Xác định layer**: xác nhận thay đổi nằm ở frontend (JS/CSS + shortcode), portal (public class) hay admin (`admin/`).
 2. **Thiết kế dữ liệu**: cập nhật schema trong `includes/class-rb-database.php` và viết hàm migrate trong `activate()` nếu thêm trường/bảng.
 3. **Business logic**: mở rộng service tương ứng trong `includes/` (ví dụ thêm phương thức vào `RB_Booking_Manager`). Ưu tiên viết hàm thuần (pure function) để dễ test.
-4. **Endpoint**: đăng ký AJAX mới bằng `add_action( 'wp_ajax_rb_xxx', ... )` trong loader và viết handler tại `includes/class-rb-ajax.php`.
+4. **Endpoint**: cân nhắc thêm REST (`includes/class-rest.php`) khi cần chia sẻ cho Booking Hub/location manager; với tác vụ chỉ dùng nội bộ legacy có thể tiếp tục đăng ký AJAX qua `add_action( 'wp_ajax_rb_xxx', ... )`.
 5. **Giao diện**: cập nhật template trong `public/partials/` hoặc `admin/partials/`. Với JS, thêm module tại `assets/js/` và enqueue thông qua `RB_Assets_Manager`.
 6. **Hook & filter**: nếu expose tính năng cho developer khác, thêm filter/action mới và ghi lại trong mục [Hooks & mở rộng](#-hooks--mở-rộng).
 7. **Bản dịch**: thêm chuỗi mới vào file `languages/{locale}/translations.php` và gọi `rb_t( 'key' )` trong code.

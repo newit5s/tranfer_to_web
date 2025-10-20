@@ -25,6 +25,54 @@ class RB_Booking {
     }
 
     public function get_bookings($args = array()) {
+        $args = $this->normalize_booking_query_args($args);
+        $table_name = $this->wpdb->prefix . 'rb_bookings';
+
+        $query_parts = $this->build_booking_where_clause($args);
+        $where = $query_parts['where'];
+        $where_params = $query_parts['params'];
+
+        $allowed_orderby = array('id', 'customer_name', 'booking_date', 'booking_time', 'guest_count', 'status', 'booking_source', 'created_at');
+        if (!in_array($args['orderby'], $allowed_orderby, true)) {
+            $args['orderby'] = 'booking_date';
+        }
+
+        $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
+        $orderby = sanitize_sql_orderby($args['orderby'] . ' ' . $order);
+
+        $sql = "SELECT * FROM $table_name WHERE $where ORDER BY $orderby";
+
+        if ($args['limit'] > 0) {
+            $sql .= $this->wpdb->prepare(' LIMIT %d OFFSET %d', $args['limit'], $args['offset']);
+        }
+
+        if (!empty($where_params)) {
+            return $this->wpdb->get_results($this->wpdb->prepare($sql, $where_params));
+        }
+
+        return $this->wpdb->get_results($sql);
+    }
+
+    public function count_bookings($args = array()) {
+        $args = $this->normalize_booking_query_args($args);
+        $args['limit'] = -1;
+        $args['offset'] = 0;
+
+        $table_name = $this->wpdb->prefix . 'rb_bookings';
+        $query_parts = $this->build_booking_where_clause($args);
+        $where = $query_parts['where'];
+        $where_params = $query_parts['params'];
+
+        $sql = "SELECT COUNT(*) FROM $table_name WHERE $where";
+
+        if (!empty($where_params)) {
+            return (int) $this->wpdb->get_var($this->wpdb->prepare($sql, $where_params));
+        }
+
+        return (int) $this->wpdb->get_var($sql);
+    }
+
+    private function normalize_booking_query_args($args) {
         $defaults = array(
             'status' => '',
             'date' => '',
@@ -40,8 +88,38 @@ class RB_Booking {
         );
 
         $args = wp_parse_args($args, $defaults);
-        $table_name = $this->wpdb->prefix . 'rb_bookings';
 
+        $args['limit'] = isset($args['limit']) ? (int) $args['limit'] : -1;
+        $args['offset'] = isset($args['offset']) ? max(0, (int) $args['offset']) : 0;
+        $args['location_id'] = isset($args['location_id']) ? max(0, (int) $args['location_id']) : 0;
+        $args['order'] = isset($args['order']) ? $args['order'] : 'DESC';
+
+        foreach (array('date', 'date_from', 'date_to') as $date_field) {
+            if (!empty($args[$date_field]) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $args[$date_field])) {
+                $args[$date_field] = '';
+            }
+        }
+
+        if (!empty($args['status'])) {
+            $args['status'] = sanitize_text_field($args['status']);
+        }
+
+        if (!empty($args['source'])) {
+            $args['source'] = sanitize_text_field($args['source']);
+        }
+
+        if (!empty($args['search'])) {
+            $args['search'] = sanitize_text_field($args['search']);
+        }
+
+        if (!empty($args['orderby'])) {
+            $args['orderby'] = sanitize_key($args['orderby']);
+        }
+
+        return $args;
+    }
+
+    private function build_booking_where_clause($args) {
         $where_clauses = array('1=1');
         $where_params = array();
 
@@ -86,27 +164,10 @@ class RB_Booking {
             $where_params[] = (int) $args['location_id'];
         }
 
-        $where = implode(' AND ', $where_clauses);
-
-        $allowed_orderby = array('id', 'customer_name', 'booking_date', 'booking_time', 'guest_count', 'status', 'booking_source', 'created_at');
-        if (!in_array($args['orderby'], $allowed_orderby, true)) {
-            $args['orderby'] = 'booking_date';
-        }
-
-        $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
-        $orderby = sanitize_sql_orderby($args['orderby'] . ' ' . $order);
-
-        $sql = "SELECT * FROM $table_name WHERE $where ORDER BY $orderby";
-
-        if ($args['limit'] > 0) {
-            $sql .= $this->wpdb->prepare(' LIMIT %d OFFSET %d', $args['limit'], $args['offset']);
-        }
-
-        if (!empty($where_params)) {
-            return $this->wpdb->get_results($this->wpdb->prepare($sql, $where_params));
-        }
-
-        return $this->wpdb->get_results($sql);
+        return array(
+            'where' => implode(' AND ', $where_clauses),
+            'params' => $where_params,
+        );
     }
 
     public function get_location_stats($location_id = 0) {

@@ -1,0 +1,250 @@
+.rb-admin-app-wrap {
+    max-width: 1200px;
+    margin-top: 20px;
+}
+
+.rb-admin-app__title {
+    font-size: 28px;
+    margin-bottom: 12px;
+}
+
+.rb-admin-app__noscript {
+    color: #cc1818;
+    font-weight: 500;
+}
+
+.rb-admin-app__container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rb-admin-app__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rb-admin-app__summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.rb-admin-app__metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+.rb-admin-app__metric {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border: 1px solid #eef2f6;
+}
+
+.rb-admin-app__metric-label {
+    color: #4a5568;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.rb-admin-app__metric-value {
+    font-size: 22px;
+}
+
+.rb-admin-app__muted {
+    color: #6b7280;
+    margin: 0;
+}
+
+.rb-admin-app__sources {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.rb-admin-app__source-name {
+    font-weight: 600;
+}
+
+.rb-admin-app__source-value {
+    float: right;
+    color: #1f2937;
+}
+
+.rb-admin-app__tabs {
+    background: transparent;
+}
+
+.rb-admin-app__filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+}
+
+.rb-admin-app__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+}
+
+.rb-admin-app__empty {
+    margin: 18px 0;
+    color: #6b7280;
+}
+
+.rb-admin-app__table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 18px;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.rb-admin-app__table th,
+.rb-admin-app__table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+
+.rb-admin-app__table th {
+    background: #f8fafc;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #475569;
+}
+
+.rb-admin-app__table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.rb-admin-app__cell-title {
+    font-weight: 600;
+}
+
+.rb-admin-app__cell-muted {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.rb-admin-app__status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.rb-admin-app__badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #1f2937;
+}
+
+.rb-admin-app__badge--success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.rb-admin-app__badge--error {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.rb-admin-app__badge--neutral {
+    background: #e2e8f0;
+    color: #1f2937;
+}
+
+.rb-admin-app__status--pending {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.rb-admin-app__status--confirmed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.rb-admin-app__status--completed {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.rb-admin-app__status--cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.rb-admin-app__status--no-show {
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+.rb-admin-app__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rb-admin-app__pagination {
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.rb-admin-app__pagination-status {
+    font-weight: 600;
+    color: #374151;
+}
+
+.rb-admin-app__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+@media (max-width: 680px) {
+    .rb-admin-app__toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .rb-admin-app__filters {
+        grid-template-columns: 1fr;
+    }
+
+    .rb-admin-app__table th,
+    .rb-admin-app__table td {
+        padding: 10px 12px;
+    }
+}
