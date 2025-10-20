@@ -617,7 +617,15 @@
     };
 
     const mountPoint = document.getElementById('rb-admin-app');
-    if (mountPoint) {
-        wp.element.render(h(BookingHubApp), mountPoint);
+    if (mountPoint && wp && wp.element) {
+        if (typeof wp.element.createRoot === 'function') {
+            const root = mountPoint.__rbRoot || wp.element.createRoot(mountPoint);
+            root.render(h(BookingHubApp));
+            mountPoint.__rbRoot = root;
+        } else if (typeof wp.element.render === 'function') {
+            wp.element.render(h(BookingHubApp), mountPoint);
+        } else if (window.ReactDOM && typeof window.ReactDOM.render === 'function') {
+            window.ReactDOM.render(h(BookingHubApp), mountPoint);
+        }
     }
 })(window.wp || {}, window.RBAdminSettings || {});
