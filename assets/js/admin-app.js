@@ -433,7 +433,11 @@
                                 h(
                                     'p',
                                     null,
-                                    h(Badge, { status: table.is_available ? 'success' : 'warning' }, table.is_available ? i18n.available : i18n.unavailable)
+                                    h(
+                                        BadgeComponent,
+                                        { status: table.is_available ? 'success' : 'warning' },
+                                        table.is_available ? i18n.available : i18n.unavailable
+                                    )
                                 ),
                                 h(Button, {
                                     variant: 'secondary',
