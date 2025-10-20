@@ -182,6 +182,21 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                 <div class="rb-new-modal-content" role="dialog" aria-modal="true">
                     <button type="button" class="rb-new-close" aria-label="<?php esc_attr_e('Close booking form', 'restaurant-booking'); ?>">&times;</button>
 
+                    <div class="rb-new-stepper" role="list" aria-label="<?php echo esc_attr(rb_t('booking_steps', __('Booking progress', 'restaurant-booking'))); ?>">
+                        <div class="rb-new-stepper__item is-active" data-step="1" role="listitem">
+                            <span class="rb-new-stepper__circle">1</span>
+                            <span class="rb-new-stepper__label"><?php echo esc_html(rb_t('step_availability', __('Choose time', 'restaurant-booking'))); ?></span>
+                        </div>
+                        <div class="rb-new-stepper__item" data-step="2" role="listitem">
+                            <span class="rb-new-stepper__circle">2</span>
+                            <span class="rb-new-stepper__label"><?php echo esc_html(rb_t('step_details', __('Your details', 'restaurant-booking'))); ?></span>
+                        </div>
+                        <div class="rb-new-stepper__item" data-step="3" role="listitem">
+                            <span class="rb-new-stepper__circle">3</span>
+                            <span class="rb-new-stepper__label"><?php echo esc_html(rb_t('step_confirmation', __('Confirmation', 'restaurant-booking'))); ?></span>
+                        </div>
+                    </div>
+
                     <!-- Step 1: Check Availability -->
                     <div class="rb-new-step rb-new-step-availability active" data-step="1">
                         <div class="rb-new-modal-header">
@@ -344,6 +359,21 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
                             <div id="rb-new-booking-result" class="rb-new-result" hidden></div>
                         </form>
+                    </div>
+
+                    <!-- Step 3: Confirmation -->
+                    <div class="rb-new-step rb-new-step-confirmation" data-step="3" hidden>
+                        <div class="rb-new-success-card" role="status" aria-live="polite">
+                            <div class="rb-new-success-icon" aria-hidden="true">✓</div>
+                            <p id="rb-new-success-message"><?php echo esc_html(rb_t('reservation_confirmed_notice', __('Your reservation has been confirmed. We look forward to serving you!', 'restaurant-booking'))); ?></p>
+                            <p class="rb-new-success-subtext"><?php echo esc_html(rb_t('booking_confirmation_subtext', __('A confirmation email has been sent to your inbox.', 'restaurant-booking'))); ?></p>
+                        </div>
+
+                        <div class="rb-new-form-actions">
+                            <button type="button" class="rb-new-btn-primary rb-new-restart-btn">
+                                <?php echo esc_html(rb_t('start_new_booking', __('Make another reservation', 'restaurant-booking'))); ?>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

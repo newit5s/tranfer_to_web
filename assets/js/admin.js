@@ -487,6 +487,77 @@
                 e.preventDefault();
                 refreshStatistics();
             });
+
+            renderMiniCharts();
+        }
+
+        function renderMiniCharts() {
+            var charts = document.querySelectorAll('.rb-mini-chart');
+            if (!charts.length) {
+                return;
+            }
+
+            charts.forEach(function(chart) {
+                var labels = safeParseJSON(chart.getAttribute('data-labels'));
+                var values = safeParseJSON(chart.getAttribute('data-values'));
+
+                if (!Array.isArray(labels) || !Array.isArray(values) || !values.length) {
+                    chart.classList.add('rb-mini-chart--empty');
+                    chart.innerHTML = '<p class="rb-empty-state">' + (chart.getAttribute('data-empty') || 'No data available yet.') + '</p>';
+                    return;
+                }
+
+                var max = Math.max.apply(null, values.concat([1]));
+                var bars = values.map(function(value, index) {
+                    var height = max > 0 ? Math.round((value / max) * 100) : 0;
+                    var label = labels[index] || '';
+                    return (
+                        '<div class="rb-mini-chart__bar" role="img" aria-label="' + escapeHtml(label) + ': ' + value + '">' +
+                            '<div class="rb-mini-chart__bar-track">' +
+                                '<div class="rb-mini-chart__bar-fill" style="--rb-bar-height:' + height + '%"></div>' +
+                            '</div>' +
+                            '<span class="rb-mini-chart__value">' + value + '</span>' +
+                            '<span class="rb-mini-chart__label">' + escapeHtml(label) + '</span>' +
+                        '</div>'
+                    );
+                }).join('');
+
+                chart.innerHTML = '<div class="rb-mini-chart__bars">' + bars + '</div>';
+
+                requestAnimationFrame(function() {
+                    chart.querySelectorAll('.rb-mini-chart__bar-fill').forEach(function(fill) {
+                        requestAnimationFrame(function() {
+                            fill.classList.add('is-visible');
+                        });
+                    });
+                });
+            });
+        }
+
+        function safeParseJSON(value) {
+            if (typeof value !== 'string' || value.trim() === '') {
+                return [];
+            }
+
+            try {
+                var parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function escapeHtml(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+
+            return value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         function initCreateBookingForm() {

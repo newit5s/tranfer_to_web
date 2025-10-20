@@ -27,6 +27,16 @@
             this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
             this.cardSelector = '.rb-booking-item, .rb-inbox-item';
 
+            try {
+                this.statsDataset = JSON.parse(this.layout.attr('data-rb-stats') || '{}');
+            } catch (error) {
+                this.statsDataset = {};
+            }
+
+            this.todayDate = this.layout.attr('data-rb-today') || this.statsDataset.today_date || '';
+            this.weekStart = this.statsDataset.week_start || '';
+            this.weekEnd = this.statsDataset.week_end || '';
+
             if (this.detail.length) {
                 this.detail.attr('aria-hidden', 'true');
             }
@@ -96,6 +106,7 @@
                     return;
                 }
                 self.refreshCardFromResponse(booking);
+                self.updateSidebarStats();
             });
 
             $(document).on('rb:manager:bookingRemoved', function (event, bookingId) {
@@ -103,6 +114,7 @@
                     return;
                 }
                 self.removeCard(bookingId);
+                self.updateSidebarStats();
             });
 
             $(document).on('keydown', function (event) {
@@ -123,6 +135,8 @@
             this.cards.each(function (index, element) {
                 element.setAttribute('data-rb-index', index);
             });
+
+            this.updateSidebarStats();
         },
 
         getCardById: function (bookingId) {
@@ -412,6 +426,60 @@
             if (this.lastFocused && !this.lastFocused.closest('body').length) {
                 this.lastFocused = null;
             }
+        },
+
+        updateSidebarStats: function () {
+            if (!this.cards || !this.cards.length) {
+                return;
+            }
+
+            var today = this.todayDate;
+            var weekStart = this.weekStart;
+            var weekEnd = this.weekEnd;
+            var totals = {
+                today_total: today ? 0 : null,
+                today_pending: today ? 0 : null,
+                today_confirmed: today ? 0 : null,
+                week_total: (weekStart && weekEnd) ? 0 : null
+            };
+
+            var formatter = typeof Intl !== 'undefined' && Intl.NumberFormat
+                ? new Intl.NumberFormat()
+                : null;
+
+            this.cards.each(function (_, element) {
+                var card = element;
+                var status = card.getAttribute('data-status') || '';
+                var bookingDate = card.getAttribute('data-booking-date') || '';
+
+                if (today && bookingDate === today) {
+                    totals.today_total += 1;
+                    if (status === 'pending') {
+                        totals.today_pending += 1;
+                    }
+                    if (status === 'confirmed') {
+                        totals.today_confirmed += 1;
+                    }
+                }
+
+                if (weekStart && weekEnd && bookingDate && bookingDate >= weekStart && bookingDate <= weekEnd) {
+                    totals.week_total += 1;
+                }
+            });
+
+            Object.keys(totals).forEach(function (key) {
+                var value = totals[key];
+                if (value === null || typeof value === 'undefined') {
+                    return;
+                }
+
+                var target = document.querySelector('[data-rb-stat="' + key + '"]');
+                if (!target) {
+                    return;
+                }
+
+                target.textContent = formatter ? formatter.format(value) : String(value);
+            });
         }
     };
 

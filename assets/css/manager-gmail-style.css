@@ -9,6 +9,10 @@
     --rb-gmail-muted: var(--rb-new-muted, #5f6368);
     --rb-gmail-primary: var(--rb-new-primary, #1a73e8);
     --rb-gmail-primary-light: var(--rb-new-primary-light, #4285f4);
+    --rb-gmail-success: #27ae60;
+    --rb-gmail-warning: #f39c12;
+    --rb-gmail-danger: #e74c3c;
+    --rb-gmail-info: #2271b1;
     --rb-gmail-shadow: rgba(60, 64, 67, 0.18);
     --rb-gmail-shadow-strong: rgba(60, 64, 67, 0.28);
     --rb-gmail-radius: 14px;
@@ -981,6 +985,48 @@
     gap: 16px;
 }
 
+.rb-gmail-sidebar-stats {
+    background: rgba(26, 115, 232, 0.06);
+    border: 1px solid rgba(26, 115, 232, 0.14);
+    border-radius: 18px;
+    padding: 18px 18px 16px;
+    box-shadow: 0 12px 24px rgba(26, 115, 232, 0.08);
+}
+
+.rb-gmail-sidebar-stats--week {
+    background: rgba(39, 174, 96, 0.06);
+    border-color: rgba(39, 174, 96, 0.18);
+}
+
+.rb-gmail-stat-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+    color: var(--rb-gmail-muted);
+}
+
+.rb-gmail-stat-item dt {
+    margin: 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.rb-gmail-stat-item dd {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--rb-gmail-text);
+}
+
+.rb-gmail-stat-item--total {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+}
+
 .rb-gmail-sidebar-summary {
     font-size: 13px;
     color: var(--rb-gmail-muted);
@@ -1288,6 +1334,26 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
+.rb-booking-card.status-pending {
+    border-left: 4px solid var(--rb-gmail-warning);
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.12), var(--rb-gmail-surface));
+}
+
+.rb-booking-card.status-confirmed {
+    border-left: 4px solid var(--rb-gmail-success);
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.12), var(--rb-gmail-surface));
+}
+
+.rb-booking-card.status-completed {
+    border-left: 4px solid var(--rb-gmail-info);
+    background: linear-gradient(135deg, rgba(34, 113, 177, 0.12), var(--rb-gmail-surface));
+}
+
+.rb-booking-card.status-cancelled {
+    border-left: 4px solid var(--rb-gmail-danger);
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.12), var(--rb-gmail-surface));
+}
+
 .rb-booking-card:hover,
 .rb-booking-card:focus-within {
     border-color: var(--rb-gmail-primary-light);
@@ -1388,23 +1454,35 @@
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
-    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
 }
 
 .rb-booking-status-badge.pending {
-    background: #f59e0b;
+    background: rgba(243, 156, 18, 0.16);
+    color: #b67200;
+    border-color: rgba(243, 156, 18, 0.32);
 }
 
 .rb-booking-status-badge.confirmed {
-    background: #34d399;
+    background: rgba(39, 174, 96, 0.16);
+    color: #1f7a46;
+    border-color: rgba(39, 174, 96, 0.32);
 }
 
 .rb-booking-status-badge.completed {
-    background: #2563eb;
+    background: rgba(34, 113, 177, 0.18);
+    color: var(--rb-gmail-info);
+    border-color: rgba(34, 113, 177, 0.36);
 }
 
 .rb-booking-status-badge.cancelled {
-    background: #ef4444;
+    background: rgba(231, 76, 60, 0.16);
+    color: #a62c20;
+    border-color: rgba(231, 76, 60, 0.32);
 }
 
 .rb-booking-card-note {
@@ -1429,6 +1507,37 @@
     font-size: 42px;
     display: block;
     margin-bottom: 12px;
+}
+
+.rb-manager--gmail .rb-inbox-badge {
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rb-manager--gmail .rb-inbox-badge--vip {
+    background: linear-gradient(135deg, rgba(249, 168, 37, 0.85), rgba(249, 208, 37, 0.68));
+    color: #2d1600;
+}
+
+.rb-manager--gmail .rb-inbox-badge--danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.88), rgba(239, 68, 68, 0.7));
+    color: #fff8f6;
+}
+
+.rb-manager--gmail .rb-inbox-badge--success {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(34, 197, 94, 0.7));
+    color: #0f421d;
+}
+
+.rb-manager--gmail .rb-inbox-badge--warning {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.86), rgba(251, 146, 60, 0.72));
+    color: #3c2208;
 }
 
 .rb-gmail-detail {
@@ -2132,6 +2241,52 @@
 
     .rb-gmail-toggle {
         display: block !important;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .rb-manager--gmail {
+        --rb-gmail-bg: #0f172a;
+        --rb-gmail-surface: #111c2f;
+        --rb-gmail-surface-alt: #1e293b;
+        --rb-gmail-border: rgba(148, 163, 184, 0.22);
+        --rb-gmail-border-strong: rgba(148, 163, 184, 0.35);
+        --rb-gmail-text: #e2e8f0;
+        --rb-gmail-muted: #94a3b8;
+        --rb-gmail-shadow: rgba(8, 25, 48, 0.45);
+        --rb-gmail-shadow-strong: rgba(8, 25, 48, 0.6);
+    }
+
+    .rb-manager--gmail .rb-gmail-sidebar,
+    .rb-manager--gmail .rb-gmail-detail,
+    .rb-manager--gmail .rb-booking-card,
+    .rb-manager--gmail .rb-gmail-sidebar-stats,
+    .rb-manager--gmail .rb-gmail-sidebar-stats--week {
+        background: var(--rb-gmail-surface);
+        border-color: rgba(148, 163, 184, 0.28);
+    }
+
+    .rb-manager--gmail .rb-booking-card.status-pending,
+    .rb-manager--gmail .rb-booking-card.status-confirmed,
+    .rb-manager--gmail .rb-booking-card.status-completed,
+    .rb-manager--gmail .rb-booking-card.status-cancelled {
+        background: rgba(15, 23, 42, 0.65);
+    }
+
+    .rb-manager--gmail .rb-booking-card:hover,
+    .rb-manager--gmail .rb-booking-card:focus-within {
+        box-shadow: 0 18px 44px rgba(8, 25, 48, 0.6);
+    }
+
+    .rb-manager--gmail .rb-booking-status-badge {
+        border-color: rgba(226, 232, 240, 0.2);
+    }
+
+    .rb-manager--gmail .rb-gmail-status-link:hover,
+    .rb-manager--gmail .rb-gmail-status-link:focus-visible,
+    .rb-manager--gmail .rb-gmail-source-link:hover,
+    .rb-manager--gmail .rb-gmail-source-link:focus-visible {
+        background: rgba(59, 130, 246, 0.16);
     }
 }
 
