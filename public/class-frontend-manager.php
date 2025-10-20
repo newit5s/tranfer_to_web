@@ -814,6 +814,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 $note = !empty($booking->special_requests) ? $booking->special_requests : '';
                                 $admin_note = !empty($booking->admin_notes) ? $booking->admin_notes : '';
                                 $date_display = !empty($booking->booking_date) ? date_i18n(get_option('date_format', 'd/m/Y'), strtotime($booking->booking_date)) : '';
+                                $booking_time = !empty($booking->booking_time) ? substr($booking->booking_time, 0, 5) : '';
+                                $checkout_time = !empty($booking->checkout_time) ? substr($booking->checkout_time, 0, 5) : '';
+                                $time_range_display = $booking_time;
+                                if (!empty($checkout_time)) {
+                                    $time_range_display = $booking_time !== '' ? $booking_time . ' – ' . $checkout_time : $checkout_time;
+                                }
                                 $padded_id = str_pad($booking->id, 5, '0', STR_PAD_LEFT);
                                 $source_label = $this->format_booking_source($booking->booking_source);
                                 $initials = strtoupper(substr(trim($booking->customer_name), 0, 1));
@@ -830,7 +836,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     data-customer-phone="<?php echo esc_attr($booking->customer_phone); ?>"
                                     data-customer-email="<?php echo esc_attr($booking->customer_email); ?>"
                                     data-booking-date="<?php echo esc_attr($booking->booking_date); ?>"
-                                    data-booking-time="<?php echo esc_attr($booking->booking_time); ?>"
+                                    data-booking-time="<?php echo esc_attr($booking_time); ?>"
+                                    data-checkout-time="<?php echo esc_attr($checkout_time); ?>"
                                     data-date-display="<?php echo esc_attr($date_display); ?>"
                                     data-guest-count="<?php echo esc_attr($booking->guest_count); ?>"
                                     data-booking-source="<?php echo esc_attr($booking->booking_source); ?>"
@@ -855,13 +862,13 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                                 <?php endif; ?>
                                             </div>
                                             <div class="rb-booking-card-time">
-                                                <?php if ($date_display !== '') : ?>
-                                                    <span class="rb-booking-item-time"><?php echo esc_html($date_display); ?></span>
-                                                <?php endif; ?>
-                                                <?php if (!empty($booking->booking_time)) : ?>
-                                                    <span class="rb-booking-item-slot"><?php echo esc_html($booking->booking_time); ?></span>
-                                                <?php endif; ?>
-                                            </div>
+                                            <?php if ($date_display !== '') : ?>
+                                                <span class="rb-booking-item-time"><?php echo esc_html($date_display); ?></span>
+                                            <?php endif; ?>
+                                            <?php if ($time_range_display !== '') : ?>
+                                                <span class="rb-booking-item-slot"><?php echo esc_html($time_range_display); ?></span>
+                                            <?php endif; ?>
+                                        </div>
                                         </header>
                                         <div class="rb-booking-card-meta rb-booking-item-meta">
                                             <?php if (!empty($booking->customer_phone)) : ?>
@@ -937,6 +944,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                         <input type="hidden" name="action" value="rb_manager_save_booking">
                         <input type="hidden" name="nonce" value="<?php echo esc_attr($ajax_nonce); ?>">
                         <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
+                        <input type="hidden" name="booking_id" value="">
                         <div class="rb-manager-form-grid">
                             <label>
                                 <?php echo esc_html($this->t('customer_name', __('Customer name', 'restaurant-booking'))); ?>
@@ -963,6 +971,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 <input type="time" name="booking_time" required>
                             </label>
                             <label>
+                                <?php echo esc_html($this->t('checkout_time', __('Checkout time', 'restaurant-booking'))); ?>
+                                <input type="time" name="checkout_time" step="300" required>
+                            </label>
+                            <label>
                                 <?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?>
                                 <select name="booking_source">
                                     <?php foreach ($source_options as $value => $label) : ?>
@@ -970,6 +982,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                         <option value="<?php echo esc_attr($value); ?>"><?php echo esc_html($label); ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                            </label>
+                            <label>
+                                <?php echo esc_html($this->t('table_number', __('Table number', 'restaurant-booking'))); ?>
+                                <input type="number" name="table_number" min="1">
                             </label>
                         </div>
                         <label class="rb-manager-wide">
@@ -1126,6 +1142,9 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             }
         }
 
+        $booking_time = !empty($booking->booking_time) ? substr($booking->booking_time, 0, 5) : '';
+        $checkout_time = !empty($booking->checkout_time) ? substr($booking->checkout_time, 0, 5) : '';
+
         return array(
             'id' => (int) $booking->id,
             'padded_id' => str_pad($booking->id, 5, '0', STR_PAD_LEFT),
@@ -1133,7 +1152,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             'customer_phone' => $booking->customer_phone,
             'customer_email' => $booking->customer_email,
             'booking_date' => $booking->booking_date,
-            'booking_time' => $booking->booking_time,
+            'booking_time' => $booking_time,
+            'checkout_time' => $checkout_time,
             'guest_count' => (int) $booking->guest_count,
             'booking_source' => $booking->booking_source,
             'special_requests' => $booking->special_requests,
@@ -1175,7 +1195,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         ?>
         <div class="rb-manager-create">
             <h3><?php echo esc_html($this->t('create_a_new_reservation', __('Create a new reservation', 'restaurant-booking'))); ?></h3>
-            <form id="rb-manager-create-booking" method="post">
+            <form
+                id="rb-manager-create-booking"
+                method="post"
+                data-opening="<?php echo esc_attr($opening_time); ?>"
+                data-closing="<?php echo esc_attr($closing_time); ?>"
+            >
                 <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
                 <input type="hidden" name="nonce" value="<?php echo esc_attr($ajax_nonce); ?>">
                 <div class="rb-form-grid">
@@ -1211,6 +1236,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 <option value="<?php echo esc_attr($slot); ?>"><?php echo esc_html($slot); ?></option>
                             <?php endforeach; ?>
                         </select>
+                    </label>
+                    <label>
+                        <?php echo esc_html($this->t('checkout_time', __('Checkout time', 'restaurant-booking'))); ?> *
+                        <input type="time" name="checkout_time" step="300" required>
                     </label>
                     <label>
                         <?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?>
@@ -2223,13 +2252,28 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         $guest_count = isset($_POST['guest_count']) ? intval($_POST['guest_count']) : 0;
         $booking_date = isset($_POST['booking_date']) ? sanitize_text_field(wp_unslash($_POST['booking_date'])) : '';
         $booking_time = isset($_POST['booking_time']) ? sanitize_text_field(wp_unslash($_POST['booking_time'])) : '';
+        $checkout_time = isset($_POST['checkout_time']) ? sanitize_text_field(wp_unslash($_POST['checkout_time'])) : '';
         $booking_source = isset($_POST['booking_source']) ? sanitize_text_field(wp_unslash($_POST['booking_source'])) : 'portal';
         $special_requests = isset($_POST['special_requests']) ? sanitize_textarea_field(wp_unslash($_POST['special_requests'])) : '';
         $admin_notes = isset($_POST['admin_notes']) ? sanitize_textarea_field(wp_unslash($_POST['admin_notes'])) : '';
         $auto_confirm = !empty($_POST['auto_confirm']);
 
-        if (empty($customer_name) || empty($customer_phone) || empty($customer_email) || !$guest_count || empty($booking_date) || empty($booking_time)) {
+        if (empty($customer_name) || empty($customer_phone) || empty($customer_email) || !$guest_count || empty($booking_date) || empty($booking_time) || empty($checkout_time)) {
             wp_send_json_error(array('message' => __('Please fill out all required fields.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $checkin_timestamp = strtotime($booking_date . ' ' . $booking_time);
+        $checkout_timestamp = strtotime($booking_date . ' ' . $checkout_time);
+
+        if (!$checkin_timestamp || !$checkout_timestamp || $checkout_timestamp <= $checkin_timestamp) {
+            wp_send_json_error(array('message' => __('Please select an end time that is after the start time.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $duration = $checkout_timestamp - $checkin_timestamp;
+        if ($duration < HOUR_IN_SECONDS || $duration > 6 * HOUR_IN_SECONDS) {
+            wp_send_json_error(array('message' => __('Reservations must last between 1 and 6 hours.', 'restaurant-booking')));
             wp_die();
         }
 
@@ -2238,7 +2282,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             $booking_time,
             $guest_count,
             null,
-            $location_id
+            $location_id,
+            $checkout_time
         );
 
         if (!$is_available) {
@@ -2253,6 +2298,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             'guest_count' => $guest_count,
             'booking_date' => $booking_date,
             'booking_time' => $booking_time,
+            'checkin_time' => $booking_time,
+            'checkout_time' => $checkout_time,
             'booking_source' => $booking_source,
             'special_requests' => $special_requests,
             'admin_notes' => $admin_notes,
@@ -2312,7 +2359,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             require_once RB_PLUGIN_DIR . 'includes/class-booking.php';
         }
 
-        global $rb_booking;
+        global $rb_booking, $wpdb;
         if (!$rb_booking) {
             $rb_booking = new RB_Booking();
         }
@@ -2343,17 +2390,33 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         $guest_count = isset($_POST['guest_count']) ? intval($_POST['guest_count']) : 0;
         $booking_date = isset($_POST['booking_date']) ? sanitize_text_field(wp_unslash($_POST['booking_date'])) : '';
         $booking_time = isset($_POST['booking_time']) ? sanitize_text_field(wp_unslash($_POST['booking_time'])) : '';
+        $checkout_time = isset($_POST['checkout_time']) ? sanitize_text_field(wp_unslash($_POST['checkout_time'])) : '';
         $booking_source = isset($_POST['booking_source']) ? sanitize_text_field(wp_unslash($_POST['booking_source'])) : 'portal';
         $special_requests = isset($_POST['special_requests']) ? sanitize_textarea_field(wp_unslash($_POST['special_requests'])) : '';
         $admin_notes = isset($_POST['admin_notes']) ? sanitize_textarea_field(wp_unslash($_POST['admin_notes'])) : '';
+        $table_number = isset($_POST['table_number']) ? intval($_POST['table_number']) : 0;
 
-        if (empty($customer_name) || empty($customer_phone) || empty($customer_email) || !$guest_count || empty($booking_date) || empty($booking_time)) {
+        if (empty($customer_name) || empty($customer_phone) || empty($customer_email) || !$guest_count || empty($booking_date) || empty($booking_time) || empty($checkout_time)) {
             wp_send_json_error(array('message' => __('Please fill out all required fields.', 'restaurant-booking')));
             wp_die();
         }
 
         if (!is_email($customer_email)) {
             wp_send_json_error(array('message' => __('Please provide a valid customer email.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $checkin_timestamp = strtotime($booking_date . ' ' . $booking_time);
+        $checkout_timestamp = strtotime($booking_date . ' ' . $checkout_time);
+
+        if (!$checkin_timestamp || !$checkout_timestamp || $checkout_timestamp <= $checkin_timestamp) {
+            wp_send_json_error(array('message' => __('Please select an end time that is after the start time.', 'restaurant-booking')));
+            wp_die();
+        }
+
+        $duration = $checkout_timestamp - $checkin_timestamp;
+        if ($duration < HOUR_IN_SECONDS || $duration > 6 * HOUR_IN_SECONDS) {
+            wp_send_json_error(array('message' => __('Reservations must last between 1 and 6 hours.', 'restaurant-booking')));
             wp_die();
         }
 
@@ -2367,12 +2430,43 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             $booking_time,
             $guest_count,
             $booking_id,
-            $booking_location
+            $booking_location,
+            $checkout_time
         );
 
         if (!$is_available) {
             wp_send_json_error(array('message' => __('This time slot is no longer available. Please choose a different time.', 'restaurant-booking')));
             wp_die();
+        }
+
+        if ($table_number > 0) {
+            $tables_table = $wpdb->prefix . 'rb_tables';
+            $table_exists = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$tables_table} WHERE table_number = %d AND location_id = %d",
+                    $table_number,
+                    $booking_location
+                )
+            );
+
+            if ($table_exists === 0) {
+                wp_send_json_error(array('message' => __('Selected table does not exist for this location.', 'restaurant-booking')));
+                wp_die();
+            }
+
+            $can_assign = $rb_booking->can_assign_table(
+                $table_number,
+                $booking_date,
+                $booking_time,
+                $checkout_time,
+                $booking_location,
+                $booking_id
+            );
+
+            if (!$can_assign) {
+                wp_send_json_error(array('message' => __('This table is not available for the selected time.', 'restaurant-booking')));
+                wp_die();
+            }
         }
 
         $update_data = array(
@@ -2382,10 +2476,14 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             'guest_count' => $guest_count,
             'booking_date' => $booking_date,
             'booking_time' => $booking_time,
+            'checkin_time' => $booking_time,
+            'checkout_time' => $checkout_time,
             'booking_source' => $booking_source,
             'special_requests' => $special_requests,
             'admin_notes' => $admin_notes,
         );
+
+        $update_data['table_number'] = $table_number > 0 ? $table_number : null;
 
         $updated = $rb_booking->update_booking($booking_id, $update_data);
 

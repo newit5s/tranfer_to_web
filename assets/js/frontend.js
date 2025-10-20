@@ -790,6 +790,7 @@
                     customer_email: String(item.data('customerEmail') || item.attr('data-customer-email') || ''),
                     booking_date: String(item.data('bookingDate') || item.attr('data-booking-date') || ''),
                     booking_time: String(item.data('bookingTime') || item.attr('data-booking-time') || ''),
+                    checkout_time: String(item.data('checkoutTime') || item.attr('data-checkout-time') || ''),
                     date_display: String(item.data('dateDisplay') || item.attr('data-date-display') || ''),
                     guest_count: String(item.data('guestCount') || item.attr('data-guest-count') || ''),
                     booking_source: String(item.data('bookingSource') || item.attr('data-booking-source') || ''),
@@ -854,8 +855,12 @@
                 if (booking.date_display || booking.booking_date) {
                     subtitleParts.push(escapeHtml(booking.date_display || booking.booking_date));
                 }
-                if (booking.booking_time) {
-                    subtitleParts.push(escapeHtml(booking.booking_time));
+                var detailTime = booking.booking_time || '';
+                if (booking.checkout_time) {
+                    detailTime = detailTime ? detailTime + ' – ' + booking.checkout_time : booking.checkout_time;
+                }
+                if (detailTime) {
+                    subtitleParts.push(escapeHtml(detailTime));
                 }
                 var subtitle = subtitleParts.join(' • ');
 
@@ -876,7 +881,7 @@
                 var bookingInfoHtml = '<div class="rb-detail-section"><h4 class="rb-detail-section-title">' + escapeHtml(bookingLabel) + '</h4>' +
                     '<div class="rb-detail-grid">' +
                         '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(dateLabel) + '</span><span class="rb-detail-value large">' + escapeHtml(booking.date_display || booking.booking_date || '') + '</span></div>' +
-                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(timeLabel) + '</span><span class="rb-detail-value large">' + escapeHtml(booking.booking_time || '') + '</span></div>' +
+                        '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(timeLabel) + '</span><span class="rb-detail-value large">' + escapeHtml(detailTime) + '</span></div>' +
                         '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(guestsLabel) + '</span><span class="rb-detail-value large">' + guestsValue + ' 👥</span></div>' +
                         '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(sourceLabel) + '</span><span class="rb-detail-value">' + sourceValue + '</span></div>' +
                         '<div class="rb-detail-row"><span class="rb-detail-label">' + escapeHtml(tableLabel) + '</span><span class="rb-detail-value">' + tableValue + '</span></div>' +
@@ -1051,6 +1056,7 @@
                 item.attr('data-customer-email', booking.customer_email || '');
                 item.attr('data-booking-date', booking.booking_date || '');
                 item.attr('data-booking-time', booking.booking_time || '');
+                item.attr('data-checkout-time', booking.checkout_time || '');
                 item.attr('data-date-display', dateDisplay);
                 item.attr('data-guest-count', guestCount);
                 item.attr('data-booking-source', booking.booking_source || '');
@@ -1069,6 +1075,7 @@
                 item.data('customerEmail', booking.customer_email || '');
                 item.data('bookingDate', booking.booking_date || '');
                 item.data('bookingTime', booking.booking_time || '');
+                item.data('checkoutTime', booking.checkout_time || '');
                 item.data('dateDisplay', dateDisplay);
                 item.data('guestCount', guestCount);
                 item.data('bookingSource', booking.booking_source || '');
@@ -1098,7 +1105,12 @@
                 item.find('.rb-booking-item-time').text(combinedTime);
                 var slotSpan = item.find('.rb-booking-item-slot');
                 if (slotSpan.length) {
-                    slotSpan.text(booking.booking_time || '');
+                    if (booking.checkout_time) {
+                        var range = (booking.booking_time || '') + (booking.booking_time && booking.checkout_time ? ' – ' : '') + (booking.checkout_time || '');
+                        slotSpan.text(range.trim());
+                    } else {
+                        slotSpan.text(booking.booking_time || '');
+                    }
                 }
                 var idBadge = item.find('.rb-booking-card-id');
                 if (idBadge.length) {
@@ -1498,9 +1510,11 @@
                 editForm.find('[name="guest_count"]').val(item.data('guestCount'));
                 editForm.find('[name="booking_date"]').val(item.data('bookingDate'));
                 editForm.find('[name="booking_time"]').val(item.data('bookingTime'));
+                editForm.find('[name="checkout_time"]').val(item.data('checkoutTime') || item.attr('data-checkout-time') || '');
                 editForm.find('[name="booking_source"]').val(item.data('bookingSource'));
                 editForm.find('[name="special_requests"]').val(item.data('specialRequests'));
                 editForm.find('[name="admin_notes"]').val(item.data('adminNotes'));
+                editForm.find('[name="table_number"]').val(item.data('tableNumber') || item.attr('data-table-number') || '');
                 editForm.data('row', item);
                 editModal.removeAttr('hidden');
             });
@@ -1607,6 +1621,77 @@
 
             var createForm = $('#rb-manager-create-booking');
             if (createForm.length) {
+                var bookingTimeField = createForm.find('[name="booking_time"]');
+                var checkoutTimeField = createForm.find('[name="checkout_time"]');
+                var closingTimeAttr = createForm.data('closing') || '';
+
+                if (checkoutTimeField.length && closingTimeAttr) {
+                    checkoutTimeField.attr('max', closingTimeAttr);
+                }
+
+                function parseTimeToMinutes(value) {
+                    if (!value) {
+                        return null;
+                    }
+                    var parts = String(value).split(':');
+                    if (parts.length < 2) {
+                        return null;
+                    }
+                    var hours = parseInt(parts[0], 10);
+                    var minutes = parseInt(parts[1], 10);
+                    if (isNaN(hours) || isNaN(minutes)) {
+                        return null;
+                    }
+                    return hours * 60 + minutes;
+                }
+
+                function formatMinutesToTime(minutes) {
+                    var total = Math.max(0, Math.min(23 * 60 + 59, minutes));
+                    var hours = Math.floor(total / 60);
+                    var mins = total % 60;
+                    return String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+                }
+
+                function updateCheckoutDefault() {
+                    if (!bookingTimeField.length || !checkoutTimeField.length) {
+                        return;
+                    }
+
+                    var startValue = bookingTimeField.val();
+                    if (!startValue) {
+                        checkoutTimeField.val('');
+                        return;
+                    }
+
+                    var startMinutes = parseTimeToMinutes(startValue);
+                    if (startMinutes == null) {
+                        checkoutTimeField.val('');
+                        return;
+                    }
+
+                    var defaultMinutes = startMinutes + 120;
+                    var closingMinutes = parseTimeToMinutes(closingTimeAttr);
+
+                    checkoutTimeField.attr('min', startValue);
+
+                    if (closingMinutes != null && defaultMinutes > closingMinutes) {
+                        defaultMinutes = closingMinutes;
+                        if (defaultMinutes <= startMinutes) {
+                            checkoutTimeField.val('');
+                            return;
+                        }
+                    }
+
+                    checkoutTimeField.val(formatMinutesToTime(defaultMinutes));
+                }
+
+                if (bookingTimeField.length && checkoutTimeField.length) {
+                    bookingTimeField.on('change', updateCheckoutDefault);
+                    if (!checkoutTimeField.val()) {
+                        updateCheckoutDefault();
+                    }
+                }
+
                 createForm.on('submit', function(e) {
                     e.preventDefault();
                     var form = $(this);
