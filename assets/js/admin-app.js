@@ -20,9 +20,10 @@
         ? (props) => h(wp.components.Badge, props)
         : (props) => h('span', { className: `rb-admin-app__badge rb-admin-app__badge--${props.status || 'info'}` }, props.children);
     const apiFetch = wp.apiFetch;
+    const restRoot = settings && settings.root ? settings.root : settings.legacyRoot;
 
-    if (settings && settings.root) {
-        apiFetch.use(apiFetch.createRootURLMiddleware(settings.root));
+    if (restRoot && apiFetch && typeof apiFetch.createRootURLMiddleware === 'function') {
+        apiFetch.use(apiFetch.createRootURLMiddleware(restRoot));
     }
 
     if (settings && settings.nonce) {
@@ -617,7 +618,15 @@
     };
 
     const mountPoint = document.getElementById('rb-admin-app');
-    if (mountPoint) {
-        wp.element.render(h(BookingHubApp), mountPoint);
+    if (mountPoint && wp && wp.element) {
+        if (typeof wp.element.createRoot === 'function') {
+            const root = mountPoint.__rbRoot || wp.element.createRoot(mountPoint);
+            root.render(h(BookingHubApp));
+            mountPoint.__rbRoot = root;
+        } else if (typeof wp.element.render === 'function') {
+            wp.element.render(h(BookingHubApp), mountPoint);
+        } else if (window.ReactDOM && typeof window.ReactDOM.render === 'function') {
+            window.ReactDOM.render(h(BookingHubApp), mountPoint);
+        }
     }
 })(window.wp || {}, window.RBAdminSettings || {});

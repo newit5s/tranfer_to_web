@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) {
 
 class RB_REST_Controller {
     const REST_NAMESPACE = 'rb/v1';
+    const LEGACY_NAMESPACE = 'restaurant-booking/v1';
 
     /**
      * Allowed booking statuses for transitions.
@@ -21,120 +22,139 @@ class RB_REST_Controller {
         add_action('rest_api_init', array($this, 'register_routes'));
     }
 
+
     public function register_routes() {
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/bookings',
-            array(
+        foreach ($this->get_namespaces() as $namespace) {
+            register_rest_route(
+                $namespace,
+                '/bookings',
                 array(
-                    'methods'             => WP_REST_Server::READABLE,
-                    'callback'            => array($this, 'get_bookings'),
-                    'permission_callback' => array($this, 'permissions_manage'),
-                    'args'                => $this->get_booking_collection_args(),
-                ),
-            )
-        );
-
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/bookings/(?P<id>\d+)/status',
-            array(
-                array(
-                    'methods'             => WP_REST_Server::EDITABLE,
-                    'callback'            => array($this, 'update_booking_status'),
-                    'permission_callback' => array($this, 'permissions_manage'),
-                    'args'                => array(
-                        'status' => array(
-                            'required'          => true,
-                            'sanitize_callback' => 'sanitize_text_field',
-                            'validate_callback' => array($this, 'validate_status'),
-                        ),
+                    array(
+                        'methods'             => WP_REST_Server::READABLE,
+                        'callback'            => array($this, 'get_bookings'),
+                        'permission_callback' => array($this, 'permissions_manage'),
+                        'args'                => $this->get_booking_collection_args(),
                     ),
-                ),
-            )
-        );
+                )
+            );
 
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/stats',
-            array(
+            register_rest_route(
+                $namespace,
+                '/bookings/(?P<id>\d+)/status',
                 array(
-                    'methods'             => WP_REST_Server::READABLE,
-                    'callback'            => array($this, 'get_stats'),
-                    'permission_callback' => array($this, 'permissions_manage'),
-                    'args'                => array(
-                        'location_id' => array(
-                            'default'           => 0,
-                            'sanitize_callback' => 'absint',
-                        ),
-                    ),
-                ),
-            )
-        );
-
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/tables',
-            array(
-                array(
-                    'methods'             => WP_REST_Server::READABLE,
-                    'callback'            => array($this, 'get_tables'),
-                    'permission_callback' => array($this, 'permissions_manage'),
-                    'args'                => array_merge(
-                        $this->get_paginated_args(),
-                        array(
-                            'location_id' => array(
-                                'default'           => 0,
-                                'sanitize_callback' => 'absint',
-                            ),
-                        )
-                    ),
-                ),
-            )
-        );
-
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/tables/(?P<id>\d+)',
-            array(
-                array(
-                    'methods'             => WP_REST_Server::EDITABLE,
-                    'callback'            => array($this, 'update_table'),
-                    'permission_callback' => array($this, 'permissions_manage'),
-                    'args'                => array(
-                        'is_available' => array(
-                            'required'          => true,
-                            'sanitize_callback' => array($this, 'sanitize_boolean'),
-                        ),
-                    ),
-                ),
-            )
-        );
-
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/customers',
-            array(
-                array(
-                    'methods'             => WP_REST_Server::READABLE,
-                    'callback'            => array($this, 'get_customers'),
-                    'permission_callback' => array($this, 'permissions_manage'),
-                    'args'                => array_merge(
-                        $this->get_paginated_args(),
-                        array(
-                            'search' => array(
-                                'default'           => '',
+                    array(
+                        'methods'             => WP_REST_Server::EDITABLE,
+                        'callback'            => array($this, 'update_booking_status'),
+                        'permission_callback' => array($this, 'permissions_manage'),
+                        'args'                => array(
+                            'status' => array(
+                                'required'          => true,
                                 'sanitize_callback' => 'sanitize_text_field',
+                                'validate_callback' => array($this, 'validate_status'),
                             ),
+                        ),
+                    ),
+                )
+            );
+
+            register_rest_route(
+                $namespace,
+                '/stats',
+                array(
+                    array(
+                        'methods'             => WP_REST_Server::READABLE,
+                        'callback'            => array($this, 'get_stats'),
+                        'permission_callback' => array($this, 'permissions_manage'),
+                        'args'                => array(
                             'location_id' => array(
                                 'default'           => 0,
                                 'sanitize_callback' => 'absint',
                             ),
-                        )
+                        ),
                     ),
-                ),
-            )
-        );
+                )
+            );
+
+            register_rest_route(
+                $namespace,
+                '/tables',
+                array(
+                    array(
+                        'methods'             => WP_REST_Server::READABLE,
+                        'callback'            => array($this, 'get_tables'),
+                        'permission_callback' => array($this, 'permissions_manage'),
+                        'args'                => array_merge(
+                            $this->get_paginated_args(),
+                            array(
+                                'location_id' => array(
+                                    'default'           => 0,
+                                    'sanitize_callback' => 'absint',
+                                ),
+                            )
+                        ),
+                    ),
+                )
+            );
+
+            register_rest_route(
+                $namespace,
+                '/tables/(?P<id>\d+)',
+                array(
+                    array(
+                        'methods'             => WP_REST_Server::EDITABLE,
+                        'callback'            => array($this, 'update_table'),
+                        'permission_callback' => array($this, 'permissions_manage'),
+                        'args'                => array(
+                            'is_available' => array(
+                                'required'          => true,
+                                'sanitize_callback' => array($this, 'sanitize_boolean'),
+                            ),
+                        ),
+                    ),
+                )
+            );
+
+            register_rest_route(
+                $namespace,
+                '/customers',
+                array(
+                    array(
+                        'methods'             => WP_REST_Server::READABLE,
+                        'callback'            => array($this, 'get_customers'),
+                        'permission_callback' => array($this, 'permissions_manage'),
+                        'args'                => array_merge(
+                            $this->get_paginated_args(),
+                            array(
+                                'search' => array(
+                                    'default'           => '',
+                                    'sanitize_callback' => 'sanitize_text_field',
+                                ),
+                                'location_id' => array(
+                                    'default'           => 0,
+                                    'sanitize_callback' => 'absint',
+                                ),
+                            )
+                        ),
+                    ),
+                )
+            );
+        }
+
+    }
+
+    private function get_namespaces() {
+        $namespaces = array(self::REST_NAMESPACE);
+
+        if (!empty(self::LEGACY_NAMESPACE) && self::LEGACY_NAMESPACE !== self::REST_NAMESPACE) {
+            $namespaces[] = self::LEGACY_NAMESPACE;
+        }
+
+        /**
+         * Allow third-parties to register additional namespaces for the admin REST endpoints.
+         *
+         * @param string[] $namespaces
+         */
+        return apply_filters('rb_rest_controller_namespaces', $namespaces);
     }
 
     public function permissions_manage() {
