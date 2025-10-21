@@ -100,14 +100,84 @@
         return root || '/wp-json/';
     })();
 
+    const normalizeRoot = (root) => (root ? root.replace(/\/+$/, '') + '/' : '');
+
+    const candidateRoots = [];
+    if (restRoot) {
+        candidateRoots.push(restRoot);
+    }
+    if (settings && settings.legacyRoot && settings.legacyRoot !== restRoot) {
+        candidateRoots.push(settings.legacyRoot);
+    }
+    if (!candidateRoots.length && restIndexUrl) {
+        candidateRoots.push(restIndexUrl);
+    }
+
+    const normalizedRoots = candidateRoots
+        .map(normalizeRoot)
+        .filter((root, index, array) => root && array.indexOf(root) === index);
+
+    const isRestNoRouteError = (error) => {
+        if (!error) {
+            return false;
+        }
+
+        if (error.code === 'rest_no_route') {
+            return true;
+        }
+
+        const status = error.data && error.data.status;
+        return status === 404;
+    };
+
+    const prepareRestOptions = (options, root) => {
+        if (!root) {
+            return { ...options };
+        }
+
+        const nextOptions = { ...options };
+
+        if (typeof nextOptions.path === 'string' && nextOptions.path) {
+            const trimmedPath = nextOptions.path.replace(/^\/+/, '');
+            nextOptions.url = `${root}${trimmedPath}`;
+            delete nextOptions.path;
+        } else if (typeof nextOptions.url === 'string' && nextOptions.url.charAt(0) === '/') {
+            const trimmedUrl = nextOptions.url.replace(/^\/+/, '');
+            nextOptions.url = `${root}${trimmedUrl}`;
+        } else if (!nextOptions.url) {
+            nextOptions.url = root;
+        }
+
+        return nextOptions;
+    };
+
+    const restRequest = (options, attempt = 0) => {
+        if (!apiFetch) {
+            return Promise.reject(new Error('REST API unavailable'));
+        }
+
+        if (!normalizedRoots.length) {
+            return apiFetch(options);
+        }
+
+        const root = normalizedRoots[Math.min(attempt, normalizedRoots.length - 1)];
+        const preparedOptions = prepareRestOptions(options, root);
+
+        return apiFetch(preparedOptions).catch((error) => {
+            if (attempt + 1 < normalizedRoots.length && isRestNoRouteError(error)) {
+                return restRequest(options, attempt + 1);
+            }
+
+            throw error;
+        });
+    };
+
     const enhanceRestError = (error) => {
         if (!error) {
             return error;
         }
 
-        const code = error.code || (error.data && error.data.status === 404 ? 'rest_no_route' : null);
-
-        if (code !== 'rest_no_route') {
+        if (!isRestNoRouteError(error)) {
             return error;
         }
 
@@ -208,7 +278,7 @@
 
         useEffect(() => {
             setState({ loading: true, error: null, data: null });
-            apiFetch({ path: `stats${buildQuery({ location_id: locationId })}` })
+            restRequest({ path: `stats${buildQuery({ location_id: locationId })}` })
                 .then((response) => {
                     if (mounted.current) {
                         setState({ loading: false, error: null, data: response });
@@ -230,7 +300,7 @@
 
         useEffect(() => {
             setState({ loading: true, error: null, data: null });
-            apiFetch({ path: `${resource}${buildQuery(params)}` })
+            restRequest({ path: `${resource}${buildQuery(params)}` })
                 .then((response) => {
                     if (mounted.current) {
                         setState({ loading: false, error: null, data: response });
@@ -378,7 +448,7 @@
         const handleStatusChange = useCallback(
             (bookingId, nextStatus) => {
                 setUpdatingId(bookingId);
-                apiFetch({
+                restRequest({
                     path: `bookings/${bookingId}/status`,
                     method: 'POST',
                     data: { status: nextStatus },
@@ -534,23 +604,23 @@
 
         const toggleTable = useCallback((table) => {
             setUpdating(table.id);
-                apiFetch({
-                    path: `tables/${table.id}`,
-                    method: 'POST',
-                    data: { is_available: !table.is_available },
+            restRequest({
+                path: `tables/${table.id}`,
+                method: 'POST',
+                data: { is_available: !table.is_available },
+            })
+                .then(() => {
+                    setNotice({ type: 'success', message: __('Table updated.', 'restaurant-booking') });
+                    setRefreshIndex((value) => value + 1);
                 })
-                    .then(() => {
-                        setNotice({ type: 'success', message: __('Table updated.', 'restaurant-booking') });
-                        setRefreshIndex((value) => value + 1);
-                    })
-                    .catch((err) => {
-                        const enhancedError = enhanceRestError(err);
-                        setNotice({
-                            type: 'error',
-                            message: enhancedError.message || __('Failed to update table.', 'restaurant-booking'),
-                        });
-                    })
-                    .finally(() => setUpdating(null));
+                .catch((err) => {
+                    const enhancedError = enhanceRestError(err);
+                    setNotice({
+                        type: 'error',
+                        message: enhancedError.message || __('Failed to update table.', 'restaurant-booking'),
+                    });
+                })
+                .finally(() => setUpdating(null));
         }, []);
 
         return h(

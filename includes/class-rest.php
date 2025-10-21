@@ -179,15 +179,50 @@ class RB_REST_Controller {
         return apply_filters('rb_rest_controller_namespaces', $namespaces);
     }
 
-    public function permissions_manage() {
+    /**
+     * Check whether the current request can manage booking resources.
+     *
+     * The REST API passes the current request object when evaluating the
+     * permission callback. Accept it as an optional parameter to avoid
+     * argument warnings on PHP 8+ while keeping backward compatibility.
+     *
+     * @param WP_REST_Request|null $request Current REST request (unused).
+     *
+     * @return bool
+     */
+    public function permissions_manage(?WP_REST_Request $request = null) {
+        unset($request);
+
         return current_user_can('manage_options');
     }
 
-    public function validate_status($value) {
+    /**
+     * Validate booking status transitions.
+     *
+     * @param string                $value   Status provided in the request.
+     * @param WP_REST_Request|null  $request Current REST request (unused).
+     * @param string|null           $param   Parameter name (unused).
+     *
+     * @return bool
+     */
+    public function validate_status($value, ?WP_REST_Request $request = null, $param = null) {
+        unset($request, $param);
+
         return in_array($value, $this->allowed_statuses, true);
     }
 
-    public function sanitize_boolean($value) {
+    /**
+     * Normalize boolean request parameters.
+     *
+     * @param mixed                 $value   Value to sanitize.
+     * @param WP_REST_Request|null  $request Current REST request (unused).
+     * @param string|null           $param   Parameter name (unused).
+     *
+     * @return bool
+     */
+    public function sanitize_boolean($value, ?WP_REST_Request $request = null, $param = null) {
+        unset($request, $param);
+
         return (bool) rest_sanitize_boolean($value);
     }
 
@@ -244,7 +279,18 @@ class RB_REST_Controller {
         );
     }
 
-    public function sanitize_date($value) {
+    /**
+     * Sanitize incoming date strings (YYYY-MM-DD).
+     *
+     * @param string                $value   Value to sanitize.
+     * @param WP_REST_Request|null  $request Current REST request (unused).
+     * @param string|null           $param   Parameter name (unused).
+     *
+     * @return string
+     */
+    public function sanitize_date($value, ?WP_REST_Request $request = null, $param = null) {
+        unset($request, $param);
+
         if (!empty($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
             return $value;
         }
