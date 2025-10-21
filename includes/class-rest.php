@@ -116,6 +116,28 @@ class RB_REST_Controller {
 
             register_rest_route(
                 $namespace,
+                '/timeline',
+                array(
+                    array(
+                        'methods'             => WP_REST_Server::READABLE,
+                        'callback'            => array($this, 'get_timeline'),
+                        'permission_callback' => array($this, 'permissions_manage'),
+                        'args'                => array(
+                            'date' => array(
+                                'default'           => '',
+                                'sanitize_callback' => array($this, 'sanitize_date'),
+                            ),
+                            'location_id' => array(
+                                'default'           => 0,
+                                'sanitize_callback' => 'absint',
+                            ),
+                        ),
+                    ),
+                )
+            );
+
+            register_rest_route(
+                $namespace,
                 '/customers',
                 array(
                     array(
@@ -452,6 +474,58 @@ class RB_REST_Controller {
                 'created_at'   => $row->created_at,
             )
         );
+    }
+
+    public function get_timeline(WP_REST_Request $request) {
+        global $rb_booking, $rb_location;
+
+        if (!$rb_booking) {
+            require_once RB_PLUGIN_DIR . 'includes/class-booking.php';
+            $rb_booking = new RB_Booking();
+        }
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $current_date = function_exists('wp_date') ? wp_date('Y-m-d') : date_i18n('Y-m-d');
+        $date         = $request->get_param('date');
+        if (empty($date)) {
+            $date = $current_date;
+        }
+
+        $location_id = (int) $request->get_param('location_id');
+
+        if ($location_id <= 0 && $rb_location) {
+            $locations = $rb_location->all(array('orderby' => 'id', 'order' => 'ASC'));
+            if (!empty($locations)) {
+                $location_id = (int) $locations[0]->id;
+            }
+        }
+
+        if ($location_id <= 0) {
+            return new WP_Error(
+                'rb_invalid_location',
+                __('A valid location_id parameter is required to fetch timeline data.', 'restaurant-booking'),
+                array(
+                    'status' => 400,
+                    'help'   => __('Create at least one location or pass a specific location_id to access the timeline endpoint.', 'restaurant-booking'),
+                )
+            );
+        }
+
+        $timeline = $rb_booking->get_timeline_data($date, $location_id);
+
+        if (is_wp_error($timeline)) {
+            return new WP_Error(
+                'rb_timeline_error',
+                $timeline->get_error_message(),
+                array('status' => 400)
+            );
+        }
+
+        return rest_ensure_response($timeline);
     }
 
     public function get_customers(WP_REST_Request $request) {
