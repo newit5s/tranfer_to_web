@@ -1,5 +1,68 @@
 (function (wp, settings) {
+    const appRoot = document.getElementById('rb-admin-app');
+    const fallbackConfig = settings && settings.fallback ? settings.fallback : {};
+    const fallbackHandles = Array.isArray(fallbackConfig.missingHandles) ? fallbackConfig.missingHandles : [];
+
+    const renderFallback = (override) => {
+        if (!appRoot) {
+            return;
+        }
+
+        const message = override && override.message ? override.message : (fallbackConfig.message || '');
+        const help = override && override.help ? override.help : (fallbackConfig.help || '');
+        const handles = override && Array.isArray(override.missingHandles) ? override.missingHandles : fallbackHandles;
+        const listLabel = (override && override.listLabel) || fallbackConfig.listLabel || '';
+        const legacyUrl = (override && override.legacyUrl) || fallbackConfig.legacyUrl || '';
+        const legacyLabel = (override && override.legacyLabel) || fallbackConfig.legacyLabel || '';
+
+        const container = document.createElement('div');
+        container.className = 'rb-admin-app__fallback';
+
+        if (message) {
+            const title = document.createElement('p');
+            title.className = 'rb-admin-app__fallback-title';
+            title.textContent = message;
+            container.appendChild(title);
+        }
+
+        if (help) {
+            const helpEl = document.createElement('p');
+            helpEl.textContent = help;
+            container.appendChild(helpEl);
+        }
+
+        if (handles.length) {
+            const listEl = document.createElement('p');
+            if (listLabel && listLabel.indexOf('%s') !== -1) {
+                listEl.textContent = listLabel.replace('%s', handles.join(', '));
+            } else if (listLabel) {
+                listEl.textContent = `${listLabel} ${handles.join(', ')}`;
+            } else {
+                listEl.textContent = handles.join(', ');
+            }
+            container.appendChild(listEl);
+        }
+
+        if (legacyUrl && legacyLabel) {
+            const action = document.createElement('p');
+            const link = document.createElement('a');
+            link.className = 'button button-primary';
+            link.href = legacyUrl;
+            link.textContent = legacyLabel;
+            action.appendChild(link);
+            container.appendChild(action);
+        }
+
+        appRoot.innerHTML = '';
+        appRoot.appendChild(container);
+    };
+
+    if (settings) {
+        settings.renderFallback = renderFallback;
+    }
+
     if (!wp || !wp.element || !wp.components || !wp.apiFetch) {
+        renderFallback();
         return;
     }
 
@@ -22,12 +85,58 @@
     const apiFetch = wp.apiFetch;
     const restRoot = settings && settings.root ? settings.root : settings.legacyRoot;
 
-    if (restRoot && apiFetch && typeof apiFetch.createRootURLMiddleware === 'function') {
-        apiFetch.use(apiFetch.createRootURLMiddleware(restRoot));
-    }
+    if (apiFetch && typeof apiFetch.use === 'function') {
+        if (restRoot) {
+            if (typeof apiFetch.createRootURLMiddleware === 'function') {
+                apiFetch.use(apiFetch.createRootURLMiddleware(restRoot));
+            } else {
+                const sanitizedRoot = restRoot.replace(/\/+$/, '');
+                const normalizedRoot = `${sanitizedRoot}/`;
+                apiFetch.use((options, next) => {
+                    const nextOptions = { ...options };
 
-    if (settings && settings.nonce) {
-        apiFetch.use(apiFetch.createNonceMiddleware(settings.nonce));
+                    if (typeof nextOptions.path === 'string' && nextOptions.path) {
+                        const trimmedPath = nextOptions.path.replace(/^\/+/, '');
+                        if (!/^https?:/i.test(trimmedPath)) {
+                            nextOptions.url = normalizedRoot + trimmedPath;
+                            delete nextOptions.path;
+                        }
+                    } else if (typeof nextOptions.url === 'string' && nextOptions.url.charAt(0) === '/') {
+                        const trimmedUrl = nextOptions.url.replace(/^\/+/, '');
+                        nextOptions.url = `${normalizedRoot}${trimmedUrl}`;
+                    } else if (!nextOptions.url) {
+                        nextOptions.url = normalizedRoot;
+                    }
+
+                    return next(nextOptions);
+                });
+            }
+        }
+
+        if (settings && settings.nonce) {
+            if (typeof apiFetch.createNonceMiddleware === 'function') {
+                apiFetch.use(apiFetch.createNonceMiddleware(settings.nonce));
+            } else {
+                const nonce = settings.nonce;
+                apiFetch.use((options, next) => {
+                    const nextOptions = { ...options };
+
+                    if (typeof window !== 'undefined' && nextOptions.headers instanceof window.Headers) {
+                        nextOptions.headers = new window.Headers(nextOptions.headers);
+                        nextOptions.headers.set('X-WP-Nonce', nonce);
+                    } else if (nextOptions.headers && typeof nextOptions.headers.set === 'function') {
+                        nextOptions.headers.set('X-WP-Nonce', nonce);
+                    } else {
+                        nextOptions.headers = {
+                            ...(nextOptions.headers || {}),
+                            'X-WP-Nonce': nonce,
+                        };
+                    }
+
+                    return next(nextOptions);
+                });
+            }
+        }
     }
 
     const STATUS_ACTIONS = ['pending', 'confirmed', 'completed', 'cancelled', 'no-show'];
