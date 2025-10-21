@@ -10,6 +10,7 @@ if (!defined('ABSPATH')) {
 class RB_Admin {
 
     private $portal_account_manager;
+    private $missing_block_editor_handles = null;
 
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -230,9 +231,30 @@ class RB_Admin {
             return;
         }
 
+        $missing_handles = $this->get_missing_block_editor_handles();
+
         echo '<div class="wrap rb-admin-app-wrap">';
         echo '<h1 class="rb-admin-app__title">' . esc_html(rb_t('booking_hub', __('Booking Hub', 'restaurant-booking'))) . '</h1>';
-        echo '<div id="rb-admin-app" class="rb-admin-app"></div>';
+
+        echo '<div id="rb-admin-app" class="rb-admin-app">';
+        if (!empty($missing_handles)) {
+            $dependency_message = rb_t('booking_hub_dependency_missing', __('Booking Hub requires the WordPress block editor scripts to load.', 'restaurant-booking'));
+            $dependency_hint = rb_t('booking_hub_dependency_hint', __('Please update WordPress or activate the Gutenberg plugin, then reload this page.', 'restaurant-booking'));
+            $list_template = rb_t('booking_hub_dependency_list', __('Missing scripts: %s', 'restaurant-booking'));
+            $legacy_label = rb_t('open_legacy_dashboard', __('Open Legacy Dashboard', 'restaurant-booking'));
+            $legacy_url = esc_url(admin_url('admin.php?page=rb-legacy-dashboard'));
+
+            echo '<div class="rb-admin-app__fallback">';
+            echo '<p class="rb-admin-app__fallback-title">' . esc_html($dependency_message) . '</p>';
+            echo '<p>' . esc_html($dependency_hint) . '</p>';
+            if (!empty($list_template)) {
+                echo '<p>' . esc_html(sprintf($list_template, implode(', ', $missing_handles))) . '</p>';
+            }
+            echo '<p><a class="button button-primary" href="' . $legacy_url . '">' . esc_html($legacy_label) . '</a></p>';
+            echo '</div>';
+        }
+        echo '</div>';
+
         echo '<noscript class="rb-admin-app__noscript">' . esc_html__('The booking hub requires JavaScript. Please enable it to continue.', 'restaurant-booking') . '</noscript>';
         echo '</div>';
     }
@@ -242,18 +264,33 @@ class RB_Admin {
             return;
         }
 
-        wp_enqueue_script('wp-element');
-        wp_enqueue_script('wp-components');
-        wp_enqueue_script('wp-api-fetch');
-        wp_enqueue_script('wp-i18n');
-        wp_enqueue_script('wp-data');
+        $required_handles = array('wp-element', 'wp-components', 'wp-api-fetch', 'wp-i18n', 'wp-data');
+        $missing_handles = $this->get_missing_block_editor_handles();
+
+        $script_dependencies = array();
+        foreach ($required_handles as $handle) {
+            if (!in_array($handle, $missing_handles, true) && wp_script_is($handle, 'registered')) {
+                $script_dependencies[] = $handle;
+                wp_enqueue_script($handle);
+            }
+        }
+
+        $style_dependencies = array();
+        if (wp_style_is('wp-components', 'registered')) {
+            $style_dependencies[] = 'wp-components';
+            wp_enqueue_style('wp-components');
+        }
+
+        if (!empty($missing_handles)) {
+            add_action('admin_notices', array($this, 'render_spa_dependency_notice'));
+        }
 
         $script_path = RB_PLUGIN_DIR . 'assets/js/admin-app.js';
         $script_version = file_exists($script_path) ? filemtime($script_path) : RB_VERSION;
         wp_enqueue_script(
             'rb-admin-app',
             RB_PLUGIN_URL . 'assets/js/admin-app.js',
-            array('wp-element', 'wp-components', 'wp-api-fetch', 'wp-i18n', 'wp-data'),
+            $script_dependencies,
             $script_version,
             true
         );
@@ -263,7 +300,7 @@ class RB_Admin {
         wp_enqueue_style(
             'rb-admin-app',
             RB_PLUGIN_URL . 'assets/css/admin-app.css',
-            array('wp-components'),
+            $style_dependencies,
             $style_version
         );
 
@@ -285,6 +322,14 @@ class RB_Admin {
                 'nonce'        => wp_create_nonce('wp_rest'),
                 'locations'    => $locations,
                 'statusLabels' => $status_labels,
+                'fallback'     => array(
+                    'missingHandles' => $missing_handles,
+                    'message'        => rb_t('booking_hub_dependency_missing', __('Booking Hub requires the WordPress block editor scripts to load.', 'restaurant-booking')),
+                    'help'           => rb_t('booking_hub_dependency_hint', __('Please update WordPress or activate the Gutenberg plugin, then reload this page.', 'restaurant-booking')),
+                    'listLabel'      => rb_t('booking_hub_dependency_list', __('Missing scripts: %s', 'restaurant-booking')),
+                    'legacyUrl'      => esc_url(admin_url('admin.php?page=rb-legacy-dashboard')),
+                    'legacyLabel'    => rb_t('open_legacy_dashboard', __('Open Legacy Dashboard', 'restaurant-booking')),
+                ),
                 'i18n'         => array(
                     'searchBookings'   => rb_t('search_bookings', __('Search bookings', 'restaurant-booking')),
                     'searchCustomers'  => rb_t('search_customers', __('Search customers', 'restaurant-booking')),
@@ -307,19 +352,60 @@ class RB_Admin {
         );
     }
 
+    private function get_missing_block_editor_handles() {
+        if (null !== $this->missing_block_editor_handles) {
+            return $this->missing_block_editor_handles;
+        }
+
+        $required_handles = array('wp-element', 'wp-components', 'wp-api-fetch', 'wp-i18n', 'wp-data');
+        $missing = array();
+
+        if (!function_exists('wp_scripts')) {
+            $this->missing_block_editor_handles = $required_handles;
+            return $this->missing_block_editor_handles;
+        }
+
+        $scripts = wp_scripts();
+        foreach ($required_handles as $handle) {
+            if (!$scripts || !$scripts->query($handle, 'registered')) {
+                $missing[] = $handle;
+            }
+        }
+
+        $this->missing_block_editor_handles = $missing;
+        return $missing;
+    }
+
+    public function render_spa_dependency_notice() {
+        $missing_handles = $this->get_missing_block_editor_handles();
+
+        if (empty($missing_handles)) {
+            return;
+        }
+
+        $dependency_message = rb_t('booking_hub_dependency_missing', __('Booking Hub requires the WordPress block editor scripts to load.', 'restaurant-booking'));
+        $dependency_hint = rb_t('booking_hub_dependency_hint', __('Please update WordPress or activate the Gutenberg plugin, then reload this page.', 'restaurant-booking'));
+        $list_template = rb_t('booking_hub_dependency_list', __('Missing scripts: %s', 'restaurant-booking'));
+        ?>
+        <div class="notice notice-warning">
+            <p><strong><?php echo esc_html($dependency_message); ?></strong></p>
+            <p><?php echo esc_html($dependency_hint); ?></p>
+            <?php if (!empty($list_template)) : ?>
+                <p><?php echo esc_html(sprintf($list_template, implode(', ', $missing_handles))); ?></p>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     public function display_dashboard_page() {
         if (!current_user_can('manage_options')) {
             return;
         }
-
-        wp_safe_redirect(add_query_arg(array('page' => 'restaurant-booking'), admin_url('admin.php')));
-        exit;
+        $this->render_legacy_dashboard_page();
     }
 
-    public function display_create_booking_page() {
+    private function render_legacy_dashboard_page() {
         global $wpdb, $rb_booking, $rb_location;
-        $settings = get_option('rb_settings', array());
-
         if (!$rb_location) {
             require_once RB_PLUGIN_DIR . 'includes/class-location.php';
             $rb_location = new RB_Location();
@@ -333,164 +419,74 @@ class RB_Admin {
         $locations = $rb_location ? $rb_location->all() : array();
 
         if (empty($locations)) {
-            echo '<div class="notice notice-warning"><p>' . esc_html__('No locations found. Please create at least one location before creating bookings.', 'restaurant-booking') . '</p></div>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__('No locations found. Please configure at least one location before managing bookings.', 'restaurant-booking') . '</p></div>';
             return;
         }
 
-        $booking_id = isset($_GET['booking_id']) ? intval($_GET['booking_id']) : 0;
-        $is_edit = false;
-        $editing_booking = null;
+        $location_ids = array_map('intval', wp_list_pluck($locations, 'id'));
+        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : (int) $location_ids[0];
 
-        if ($booking_id) {
-            $editing_booking = $rb_booking->get_booking($booking_id);
-
-            if (!$editing_booking) {
-                wp_safe_redirect(add_query_arg(
-                    array(
-                        'page' => 'restaurant-booking',
-                        'message' => 'booking_not_found',
-                    ),
-                    admin_url('admin.php')
-                ));
-                exit;
-            }
-
-            $is_edit = true;
+        if (!in_array($selected_location_id, $location_ids, true)) {
+            $selected_location_id = (int) $location_ids[0];
         }
 
-        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
-
-        if ($is_edit) {
-            $selected_location_id = (int) $editing_booking->location_id;
-        } elseif (empty($selected_location_id)) {
-            $selected_location_id = (int) $locations[0]->id;
-        }
-
-        $available_location_ids = array_map('intval', wp_list_pluck($locations, 'id'));
-        if (!in_array($selected_location_id, $available_location_ids, true)) {
-            if ($is_edit && $editing_booking) {
-                $available_location_ids[] = $selected_location_id;
-            } else {
-                $selected_location_id = (int) $locations[0]->id;
+        $active_location = null;
+        foreach ($locations as $location_item) {
+            if ((int) $location_item->id === $selected_location_id) {
+                $active_location = $location_item;
+                break;
             }
         }
 
-        $location_settings = $rb_location->get_settings($selected_location_id);
-        $location_details = $rb_location->get($selected_location_id);
+        if (!$active_location && !empty($locations)) {
+            $active_location = $locations[0];
+        }
 
-        $opening_time = isset($location_settings['opening_time']) ? substr($location_settings['opening_time'], 0, 5) : '09:00';
-        $closing_time = isset($location_settings['closing_time']) ? substr($location_settings['closing_time'], 0, 5) : '22:00';
-        $time_interval = isset($location_settings['time_slot_interval']) ? intval($location_settings['time_slot_interval']) : 30;
+        $allowed_statuses = array('pending', 'confirmed', 'completed', 'cancelled');
+        $filter_status = isset($_GET['filter_status']) ? sanitize_text_field($_GET['filter_status']) : '';
+        if (!in_array($filter_status, $allowed_statuses, true)) {
+            $filter_status = '';
+        }
 
-        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
+        $allowed_sources = array('website', 'phone', 'facebook', 'zalo', 'instagram', 'walk-in', 'email', 'other');
+        $filter_source = isset($_GET['filter_source']) ? sanitize_text_field($_GET['filter_source']) : '';
+        if (!in_array($filter_source, $allowed_sources, true)) {
+            $filter_source = '';
+        }
 
-        $form_values = array(
-            'customer_name' => '',
-            'customer_phone' => '',
-            'customer_email' => '',
-            'guest_count' => 1,
-            'booking_date' => date('Y-m-d', current_time('timestamp')),
-            'booking_time' => '',
-            'checkout_time' => '',
-            'booking_source' => 'phone',
-            'special_requests' => '',
-            'admin_notes' => '',
-            'table_number' => null,
+        $filter_date_from = isset($_GET['filter_date_from']) ? sanitize_text_field($_GET['filter_date_from']) : '';
+        $filter_date_to = isset($_GET['filter_date_to']) ? sanitize_text_field($_GET['filter_date_to']) : '';
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filter_date_from)) {
+            $filter_date_from = '';
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filter_date_to)) {
+            $filter_date_to = '';
+        }
+        if ($filter_date_from && $filter_date_to && $filter_date_from > $filter_date_to) {
+            $filter_date_to = '';
+        }
+
+        $allowed_sort = array('created_at', 'booking_date', 'booking_time', 'customer_name', 'booking_source');
+        $sort_by = isset($_GET['sort_by']) ? sanitize_key($_GET['sort_by']) : 'created_at';
+        if (!in_array($sort_by, $allowed_sort, true)) {
+            $sort_by = 'created_at';
+        }
+
+        $sort_order = isset($_GET['sort_order']) ? strtoupper($_GET['sort_order']) : 'DESC';
+        $sort_order = $sort_order === 'ASC' ? 'ASC' : 'DESC';
+
+        $query_args = array(
+            'location_id' => $selected_location_id,
+            'status'      => $filter_status,
+            'source'      => $filter_source,
+            'date_from'   => $filter_date_from,
+            'date_to'     => $filter_date_to,
+            'orderby'     => $sort_by,
+            'order'       => $sort_order,
         );
 
-        if ($is_edit && $editing_booking) {
-            $form_values['customer_name'] = $editing_booking->customer_name;
-            $form_values['customer_phone'] = $editing_booking->customer_phone;
-            $form_values['customer_email'] = $editing_booking->customer_email;
-            $form_values['guest_count'] = (int) $editing_booking->guest_count;
-            $form_values['booking_date'] = $editing_booking->booking_date;
-            $form_values['booking_time'] = !empty($editing_booking->checkin_time)
-                ? substr($editing_booking->checkin_time, 0, 5)
-                : substr($editing_booking->booking_time, 0, 5);
-            $form_values['checkout_time'] = !empty($editing_booking->checkout_time)
-                ? substr($editing_booking->checkout_time, 0, 5)
-                : '';
-            $form_values['booking_source'] = $editing_booking->booking_source;
-            $form_values['special_requests'] = $editing_booking->special_requests;
-            $form_values['admin_notes'] = $editing_booking->admin_notes;
-            $form_values['table_number'] = null !== $editing_booking->table_number ? (int) $editing_booking->table_number : null;
-        }
+        $bookings = $rb_booking->get_bookings($query_args);
 
-        $min_hours = isset($location_settings['min_advance_booking']) ? intval($location_settings['min_advance_booking']) : 2;
-        if ($min_hours < 0) {
-            $min_hours = 0;
-        }
-        $max_days = isset($location_settings['max_advance_booking']) ? intval($location_settings['max_advance_booking']) : 30;
-        if ($max_days <= 0) {
-            $max_days = 30;
-        }
-        $now = current_time('timestamp');
-        $min_timestamp = $now + ($min_hours * HOUR_IN_SECONDS);
-        if ($min_timestamp < $now) {
-            $min_timestamp = $now;
-        }
-        $min_date = date('Y-m-d', $min_timestamp);
-        $max_date = date('Y-m-d', $now + ($max_days * DAY_IN_SECONDS));
-
-        if ($is_edit && !empty($form_values['booking_date'])) {
-            if ($form_values['booking_date'] < $min_date) {
-                $min_date = $form_values['booking_date'];
-            }
-
-            if ($form_values['booking_date'] > $max_date) {
-                $max_date = $form_values['booking_date'];
-            }
-        }
-
-        if ($is_edit) {
-            if (!empty($form_values['booking_time']) && !in_array($form_values['booking_time'], $time_slots, true)) {
-                $time_slots[] = $form_values['booking_time'];
-            }
-
-            if (!empty($form_values['checkout_time']) && !in_array($form_values['checkout_time'], $time_slots, true)) {
-                $time_slots[] = $form_values['checkout_time'];
-            }
-
-            if (!empty($time_slots)) {
-                $time_slots = array_values(array_unique($time_slots));
-                sort($time_slots);
-            }
-        }
-
-        $table_options = array();
-
-        if ($is_edit) {
-            $tables_table = $wpdb->prefix . 'rb_tables';
-            $raw_tables = $wpdb->get_results($wpdb->prepare(
-                "SELECT table_number, capacity FROM {$tables_table} WHERE location_id = %d ORDER BY table_number ASC",
-                $selected_location_id
-            ));
-
-            foreach ($raw_tables as $table_row) {
-                $table_number = (int) $table_row->table_number;
-                $is_available = $rb_booking->can_assign_table(
-                    $table_number,
-                    $form_values['booking_date'],
-                    $form_values['booking_time'],
-                    $form_values['checkout_time'],
-                    $selected_location_id,
-                    $booking_id
-                );
-
-                if ($form_values['table_number'] === $table_number) {
-                    $is_available = true;
-                }
-
-                $table_options[] = array(
-                    'table_number' => $table_number,
-                    'capacity' => (int) $table_row->capacity,
-                    'available' => (bool) $is_available,
-                );
-            }
-        }
-
-
-        require_once RB_PLUGIN_DIR . 'includes/class-booking.php';
         $booking_manager = new RB_Booking();
         $stats = $booking_manager->get_location_stats($selected_location_id);
         $source_stats = $booking_manager->get_source_stats($selected_location_id);
@@ -513,6 +509,7 @@ class RB_Admin {
         $stats['vip'] = $vip_count;
         $stats['loyal'] = $loyal_count;
 
+        $table_name = $wpdb->prefix . 'rb_bookings';
         $today = current_time('Y-m-d');
         $today_timestamp = current_time('timestamp');
         $daily_start = date('Y-m-d', strtotime('-6 days', $today_timestamp));
@@ -732,11 +729,11 @@ class RB_Admin {
                                 ?>
                                 <div class="rb-source-tile">
                                     <span class="rb-source-tile__label"><?php echo esc_html($this->get_source_label($source->booking_source)); ?></span>
-                                    <strong class="rb-source-tile__value"><?php echo number_format_i18n($count); ?></strong>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else : ?>
-                            <p class="rb-empty-state"><?php rb_e('no_data_available_yet'); ?></p>
+                                <strong class="rb-source-tile__value"><?php echo number_format_i18n($count); ?></strong>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <p class="rb-empty-state"><?php rb_e('no_data_available_yet'); ?></p>
                         <?php endif; ?>
                     </div>
                 </section>
@@ -949,6 +946,396 @@ class RB_Admin {
                     </table>
                 </div>
             </section>
+        </div>
+
+        <?php
+    }
+
+    public function display_create_booking_page() {
+        global $wpdb, $rb_booking, $rb_location;
+        $settings = get_option('rb_settings', array());
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        if (!$rb_booking) {
+            require_once RB_PLUGIN_DIR . 'includes/class-booking.php';
+            $rb_booking = new RB_Booking();
+        }
+
+        $locations = $rb_location ? $rb_location->all() : array();
+
+        if (empty($locations)) {
+            echo '<div class="notice notice-warning"><p>' . esc_html__('No locations found. Please create at least one location before creating bookings.', 'restaurant-booking') . '</p></div>';
+            return;
+        }
+
+        $booking_id = isset($_GET['booking_id']) ? intval($_GET['booking_id']) : 0;
+        $is_edit = $booking_id > 0;
+        $editing_booking = null;
+
+        if ($is_edit) {
+            $editing_booking = $rb_booking->get_booking($booking_id);
+
+            if (!$editing_booking) {
+                wp_safe_redirect(add_query_arg(
+                    array(
+                        'page' => 'restaurant-booking',
+                        'message' => 'booking_not_found',
+                    ),
+                    admin_url('admin.php')
+                ));
+                exit;
+            }
+        }
+
+        $location_ids = array_map('intval', wp_list_pluck($locations, 'id'));
+        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : (int) $location_ids[0];
+
+        if ($is_edit) {
+            $selected_location_id = (int) $editing_booking->location_id;
+        }
+
+        if (!in_array($selected_location_id, $location_ids, true)) {
+            $selected_location_id = (int) $location_ids[0];
+        }
+
+        $location_settings = $rb_location->get_settings($selected_location_id);
+        $location_details = $rb_location->get($selected_location_id);
+
+        $opening_time = isset($location_settings['opening_time']) ? substr($location_settings['opening_time'], 0, 5) : '09:00';
+        $closing_time = isset($location_settings['closing_time']) ? substr($location_settings['closing_time'], 0, 5) : '22:00';
+        $time_interval = isset($location_settings['time_slot_interval']) ? intval($location_settings['time_slot_interval']) : 30;
+
+        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
+
+        $form_values = array(
+            'customer_name'   => '',
+            'customer_phone'  => '',
+            'customer_email'  => '',
+            'guest_count'     => 1,
+            'booking_date'    => date('Y-m-d', current_time('timestamp')),
+            'booking_time'    => '',
+            'checkout_time'   => '',
+            'booking_source'  => 'phone',
+            'special_requests'=> '',
+            'admin_notes'     => '',
+            'table_number'    => null,
+        );
+
+        if ($is_edit && $editing_booking) {
+            $form_values['customer_name'] = $editing_booking->customer_name;
+            $form_values['customer_phone'] = $editing_booking->customer_phone;
+            $form_values['customer_email'] = $editing_booking->customer_email;
+            $form_values['guest_count'] = (int) $editing_booking->guest_count;
+            $form_values['booking_date'] = $editing_booking->booking_date;
+            $form_values['booking_time'] = !empty($editing_booking->checkin_time)
+                ? substr($editing_booking->checkin_time, 0, 5)
+                : substr($editing_booking->booking_time, 0, 5);
+            $form_values['checkout_time'] = !empty($editing_booking->checkout_time)
+                ? substr($editing_booking->checkout_time, 0, 5)
+                : '';
+            $form_values['booking_source'] = $editing_booking->booking_source;
+            $form_values['special_requests'] = $editing_booking->special_requests;
+            $form_values['admin_notes'] = $editing_booking->admin_notes;
+            $form_values['table_number'] = null !== $editing_booking->table_number ? (int) $editing_booking->table_number : null;
+        }
+
+        $min_hours = isset($location_settings['min_advance_booking']) ? intval($location_settings['min_advance_booking']) : 0;
+        if ($min_hours < 0) {
+            $min_hours = 0;
+        }
+        $max_days = isset($location_settings['max_advance_booking']) ? intval($location_settings['max_advance_booking']) : 30;
+        if ($max_days <= 0) {
+            $max_days = 30;
+        }
+
+        $now = current_time('timestamp');
+        $min_timestamp = $now + ($min_hours * HOUR_IN_SECONDS);
+        if ($min_timestamp < $now) {
+            $min_timestamp = $now;
+        }
+        $min_date = date('Y-m-d', $min_timestamp);
+        $max_date = date('Y-m-d', $now + ($max_days * DAY_IN_SECONDS));
+
+        if ($is_edit && !empty($form_values['booking_date'])) {
+            if ($form_values['booking_date'] < $min_date) {
+                $min_date = $form_values['booking_date'];
+            }
+
+            if ($form_values['booking_date'] > $max_date) {
+                $max_date = $form_values['booking_date'];
+            }
+        }
+
+        if ($is_edit) {
+            if (!empty($form_values['booking_time']) && !in_array($form_values['booking_time'], $time_slots, true)) {
+                $time_slots[] = $form_values['booking_time'];
+            }
+
+            if (!empty($form_values['checkout_time']) && !in_array($form_values['checkout_time'], $time_slots, true)) {
+                $time_slots[] = $form_values['checkout_time'];
+            }
+
+            if (!empty($time_slots)) {
+                $time_slots = array_values(array_unique($time_slots));
+                sort($time_slots);
+            }
+        }
+
+        $max_guests = isset($location_settings['max_guests_per_booking']) ? (int) $location_settings['max_guests_per_booking'] : 20;
+        if ($max_guests <= 0) {
+            $max_guests = 20;
+        }
+
+        $auto_confirm_enabled = isset($location_settings['auto_confirm_enabled']) && 'yes' === $location_settings['auto_confirm_enabled'];
+
+        $table_options = array();
+        if ($is_edit) {
+            $tables_table = $wpdb->prefix . 'rb_tables';
+            $raw_tables = $wpdb->get_results($wpdb->prepare(
+                "SELECT table_number, capacity FROM {$tables_table} WHERE location_id = %d ORDER BY table_number ASC",
+                $selected_location_id
+            ));
+
+            foreach ($raw_tables as $table_row) {
+                $table_number = (int) $table_row->table_number;
+                $is_available = $rb_booking->can_assign_table(
+                    $table_number,
+                    $form_values['booking_date'],
+                    $form_values['booking_time'],
+                    $form_values['checkout_time'],
+                    $selected_location_id,
+                    $booking_id
+                );
+
+                if ($form_values['table_number'] === $table_number) {
+                    $is_available = true;
+                }
+
+                $table_options[] = array(
+                    'table_number' => $table_number,
+                    'capacity'     => (int) $table_row->capacity,
+                    'available'    => (bool) $is_available,
+                );
+            }
+        }
+
+        $action_value = $is_edit ? 'update_admin_booking' : 'create_admin_booking';
+        $nonce_action = $is_edit ? 'rb_update_admin_booking' : 'rb_create_admin_booking';
+        $submit_label = $is_edit ? rb_t('update_booking', __('Update booking', 'restaurant-booking')) : rb_t('create_booking', __('Create Booking', 'restaurant-booking'));
+        $back_url = esc_url(add_query_arg(array('page' => 'restaurant-booking'), admin_url('admin.php')));
+
+        $legacy_url = esc_url(add_query_arg(array('page' => 'rb-legacy-dashboard'), admin_url('admin.php')));
+        ?>
+        <div class="wrap rb-create-booking">
+            <div class="rb-create-booking__header">
+                <h1 class="rb-create-booking__title">
+                    <?php echo esc_html($is_edit ? rb_t('edit_booking', __('Edit booking', 'restaurant-booking')) : rb_t('create_booking', __('Create Booking', 'restaurant-booking'))); ?>
+                </h1>
+                <div class="rb-create-booking__links">
+                    <a class="button" href="<?php echo esc_url($legacy_url); ?>">
+                        <?php echo esc_html(rb_t('open_legacy_dashboard', __('Open Legacy Dashboard', 'restaurant-booking'))); ?>
+                    </a>
+                </div>
+            </div>
+
+            <?php if (!$is_edit && count($locations) > 1) : ?>
+                <form method="get" action="" class="rb-create-booking__location-switcher">
+                    <input type="hidden" name="page" value="rb-create-booking">
+                    <label class="rb-form-label" for="rb-create-booking-location"><?php esc_html_e('Location', 'restaurant-booking'); ?></label>
+                    <select id="rb-create-booking-location" name="location_id" onchange="this.form.submit();">
+                        <?php foreach ($locations as $location) : ?>
+                            <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, (int) $location->id); ?>>
+                                <?php echo esc_html($location->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+            <?php endif; ?>
+
+            <form id="rb-admin-create-booking-form" method="post" action="" class="rb-create-booking__form">
+                <?php wp_nonce_field($nonce_action, 'rb_nonce'); ?>
+                <input type="hidden" name="action" value="<?php echo esc_attr($action_value); ?>">
+                <input type="hidden" name="location_id" value="<?php echo esc_attr($selected_location_id); ?>">
+                <?php if ($is_edit) : ?>
+                    <input type="hidden" name="booking_id" value="<?php echo esc_attr($booking_id); ?>">
+                <?php endif; ?>
+
+                <div class="rb-create-booking__grid">
+                    <div class="rb-create-booking__main">
+                        <section class="rb-card">
+                            <div class="rb-card-header">
+                                <h2 class="rb-card-title"><?php echo esc_html(rb_t('booking_details', __('Booking Details', 'restaurant-booking'))); ?></h2>
+                            </div>
+                            <div class="rb-card-body rb-card-body--grid">
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="booking_date"><?php rb_e('booking_date'); ?></label>
+                                    <input type="date" id="booking_date" name="booking_date" value="<?php echo esc_attr($form_values['booking_date']); ?>" min="<?php echo esc_attr($min_date); ?>" max="<?php echo esc_attr($max_date); ?>" required>
+                                </div>
+
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="booking_time"><?php rb_e('booking_time'); ?></label>
+                                    <select id="booking_time" name="booking_time" required>
+                                        <option value=""><?php echo esc_html(rb_t('select_time', __('Select Time', 'restaurant-booking'))); ?></option>
+                                        <?php foreach ($time_slots as $slot) : ?>
+                                            <option value="<?php echo esc_attr($slot); ?>" <?php selected($form_values['booking_time'], $slot); ?>>
+                                                <?php echo esc_html($slot); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="checkout_time"><?php rb_e('checkout_time'); ?></label>
+                                    <select id="checkout_time" name="checkout_time" data-current="<?php echo esc_attr($form_values['checkout_time']); ?>">
+                                        <option value=""><?php echo esc_html(rb_t('select_time', __('Select Time', 'restaurant-booking'))); ?></option>
+                                    </select>
+                                </div>
+
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="guest_count"><?php rb_e('guest_count'); ?></label>
+                                    <input type="number" id="guest_count" name="guest_count" min="1" max="<?php echo esc_attr($max_guests); ?>" value="<?php echo esc_attr($form_values['guest_count']); ?>" required>
+                                </div>
+
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="booking_source"><?php rb_e('booking_source'); ?></label>
+                                    <select id="booking_source" name="booking_source">
+                                        <option value="website" <?php selected($form_values['booking_source'], 'website'); ?>><?php echo esc_html(rb_t('website', __('Website', 'restaurant-booking'))); ?></option>
+                                        <option value="phone" <?php selected($form_values['booking_source'], 'phone'); ?>><?php echo esc_html(rb_t('phone', __('Phone', 'restaurant-booking'))); ?></option>
+                                        <option value="facebook" <?php selected($form_values['booking_source'], 'facebook'); ?>><?php echo esc_html(rb_t('facebook', __('Facebook', 'restaurant-booking'))); ?></option>
+                                        <option value="zalo" <?php selected($form_values['booking_source'], 'zalo'); ?>><?php echo esc_html(rb_t('zalo', __('Zalo', 'restaurant-booking'))); ?></option>
+                                        <option value="instagram" <?php selected($form_values['booking_source'], 'instagram'); ?>><?php echo esc_html(rb_t('instagram', __('Instagram', 'restaurant-booking'))); ?></option>
+                                        <option value="walk-in" <?php selected($form_values['booking_source'], 'walk-in'); ?>><?php echo esc_html(rb_t('walk_in', __('Walk-in', 'restaurant-booking'))); ?></option>
+                                        <option value="email" <?php selected($form_values['booking_source'], 'email'); ?>><?php echo esc_html(rb_t('email', __('Email', 'restaurant-booking'))); ?></option>
+                                        <option value="other" <?php selected($form_values['booking_source'], 'other'); ?>><?php echo esc_html(rb_t('other', __('Other', 'restaurant-booking'))); ?></option>
+                                    </select>
+                                </div>
+
+                                <?php if (!$is_edit) : ?>
+                                    <div class="rb-form-field rb-form-field--wide rb-form-field--checkbox">
+                                        <label>
+                                            <input type="checkbox" name="auto_confirm" value="1" <?php checked($auto_confirm_enabled); ?>>
+                                            <?php echo esc_html(rb_t('auto_confirm', __('Auto Confirm', 'restaurant-booking'))); ?>
+                                        </label>
+                                        <p class="description"><?php echo esc_html(rb_t('auto_confirm_desc', __('Automatically confirm and assign table', 'restaurant-booking'))); ?></p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </section>
+
+                        <section class="rb-card">
+                            <div class="rb-card-header">
+                                <h2 class="rb-card-title"><?php echo esc_html(rb_t('customer_details', __('Customer details', 'restaurant-booking'))); ?></h2>
+                            </div>
+                            <div class="rb-card-body rb-card-body--grid">
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="customer_name"><?php rb_e('customer_name'); ?></label>
+                                    <input type="text" id="customer_name" name="customer_name" value="<?php echo esc_attr($form_values['customer_name']); ?>" required>
+                                </div>
+
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="customer_phone"><?php rb_e('phone'); ?></label>
+                                    <input type="tel" id="customer_phone" name="customer_phone" value="<?php echo esc_attr($form_values['customer_phone']); ?>" required>
+                                </div>
+
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="customer_email"><?php rb_e('email'); ?></label>
+                                    <input type="email" id="customer_email" name="customer_email" value="<?php echo esc_attr($form_values['customer_email']); ?>">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="rb-card">
+                            <div class="rb-card-header">
+                                <h2 class="rb-card-title"><?php echo esc_html(rb_t('reservation_notes', __('Reservation notes', 'restaurant-booking'))); ?></h2>
+                            </div>
+                            <div class="rb-card-body rb-card-body--grid">
+                                <div class="rb-form-field rb-form-field--wide">
+                                    <label class="rb-form-label" for="special_requests"><?php rb_e('special_requests'); ?></label>
+                                    <textarea id="special_requests" name="special_requests" rows="3"><?php echo esc_textarea($form_values['special_requests']); ?></textarea>
+                                </div>
+                                <div class="rb-form-field rb-form-field--wide">
+                                    <label class="rb-form-label" for="admin_notes"><?php rb_e('admin_notes'); ?></label>
+                                    <textarea id="admin_notes" name="admin_notes" rows="3"><?php echo esc_textarea($form_values['admin_notes']); ?></textarea>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <aside class="rb-create-booking__sidebar">
+                        <section class="rb-card rb-card--context">
+                            <div class="rb-card-header">
+                                <h2 class="rb-card-title"><?php esc_html_e('Location', 'restaurant-booking'); ?></h2>
+                                <p class="rb-card-subtitle"><?php echo esc_html($location_details ? $location_details->name : ''); ?></p>
+                            </div>
+                            <div class="rb-card-body">
+                                <ul class="rb-admin-dashboard__meta-list">
+                                    <?php if (!empty($location_details->address)) : ?>
+                                        <li>📍 <?php echo esc_html($location_details->address); ?></li>
+                                    <?php endif; ?>
+                                    <?php if (!empty($location_details->hotline)) : ?>
+                                        <li>📞 <?php echo esc_html($location_details->hotline); ?></li>
+                                    <?php endif; ?>
+                                    <?php if (!empty($opening_time) && !empty($closing_time)) : ?>
+                                        <li>⏰ <?php echo esc_html($opening_time . ' – ' . $closing_time); ?></li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        </section>
+
+                        <?php if ($is_edit) : ?>
+                            <section class="rb-card">
+                                <div class="rb-card-header">
+                                    <h2 class="rb-card-title"><?php echo esc_html(rb_t('assign_table', __('Assign table', 'restaurant-booking'))); ?></h2>
+                                </div>
+                                <div class="rb-card-body">
+                                    <?php if (!empty($table_options)) : ?>
+                                        <div class="rb-form-field rb-form-field--wide">
+                                            <label class="rb-form-label" for="table_number"><?php rb_e('table'); ?></label>
+                                            <select id="table_number" name="table_number">
+                                                <option value=""><?php rb_e('unassigned'); ?></option>
+                                                <?php foreach ($table_options as $table) :
+                                                    $label = sprintf(rb_t('table_with_capacity', __('Table %1$s · %2$d seats', 'restaurant-booking')), $table['table_number'], $table['capacity']);
+                                                    if (!$table['available']) {
+                                                        $label .= ' — ' . rb_t('unavailable', __('Unavailable', 'restaurant-booking'));
+                                                    }
+                                                    ?>
+                                                    <option value="<?php echo esc_attr($table['table_number']); ?>" <?php selected($form_values['table_number'], $table['table_number']); ?> <?php disabled(!$table['available']); ?>>
+                                                        <?php echo esc_html($label); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <p class="description"><?php echo esc_html(rb_t('table_assignment_note', __('Only available tables can be selected for this time slot.', 'restaurant-booking'))); ?></p>
+                                        </div>
+                                    <?php else : ?>
+                                        <p class="rb-empty-state"><?php echo esc_html(rb_t('no_tables_configured', __('No tables configured for this location yet.', 'restaurant-booking'))); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </section>
+
+                            <section class="rb-card">
+                                <div class="rb-card-header">
+                                    <h2 class="rb-card-title"><?php rb_e('booking_details'); ?></h2>
+                                </div>
+                                <div class="rb-card-body">
+                                    <ul class="rb-create-booking__meta">
+                                        <li><strong><?php rb_e('status'); ?>:</strong> <?php echo esc_html($this->get_status_label($editing_booking->status)); ?></li>
+                                        <li><strong><?php echo esc_html(rb_t('created_time', __('Created Time', 'restaurant-booking'))); ?>:</strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($editing_booking->created_at))); ?></li>
+                                    </ul>
+                                </div>
+                            </section>
+                        <?php endif; ?>
+                    </aside>
+                </div>
+
+                <div class="rb-create-booking__actions">
+                    <a class="button" href="<?php echo $back_url; ?>"><?php echo esc_html(rb_t('booking_hub', __('Booking Hub', 'restaurant-booking'))); ?></a>
+                    <button type="submit" class="button button-primary button-large"><?php echo esc_html($submit_label); ?></button>
+                </div>
+            </form>
         </div>
 
         <?php
@@ -3287,6 +3674,18 @@ class RB_Admin {
                 break;
             case 'exists':
                 $text = rb_t('table_number_exists');
+                $type = 'error';
+                break;
+            case 'invalid_time_range':
+                $text = rb_t('invalid_time_range', __('The checkout time must be later than the check-in time.', 'restaurant-booking'));
+                $type = 'error';
+                break;
+            case 'invalid_duration':
+                $text = rb_t('invalid_duration', __('Bookings must be between 1 and 6 hours long.', 'restaurant-booking'));
+                $type = 'error';
+                break;
+            case 'no_availability':
+                $text = rb_t('no_availability', __('No availability for this time slot. Please pick another time.', 'restaurant-booking'));
                 $type = 'error';
                 break;
             case 'table_unavailable':

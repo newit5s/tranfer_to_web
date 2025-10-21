@@ -1,5 +1,68 @@
 (function (wp, settings) {
+    const appRoot = document.getElementById('rb-admin-app');
+    const fallbackConfig = settings && settings.fallback ? settings.fallback : {};
+    const fallbackHandles = Array.isArray(fallbackConfig.missingHandles) ? fallbackConfig.missingHandles : [];
+
+    const renderFallback = (override) => {
+        if (!appRoot) {
+            return;
+        }
+
+        const message = override && override.message ? override.message : (fallbackConfig.message || '');
+        const help = override && override.help ? override.help : (fallbackConfig.help || '');
+        const handles = override && Array.isArray(override.missingHandles) ? override.missingHandles : fallbackHandles;
+        const listLabel = (override && override.listLabel) || fallbackConfig.listLabel || '';
+        const legacyUrl = (override && override.legacyUrl) || fallbackConfig.legacyUrl || '';
+        const legacyLabel = (override && override.legacyLabel) || fallbackConfig.legacyLabel || '';
+
+        const container = document.createElement('div');
+        container.className = 'rb-admin-app__fallback';
+
+        if (message) {
+            const title = document.createElement('p');
+            title.className = 'rb-admin-app__fallback-title';
+            title.textContent = message;
+            container.appendChild(title);
+        }
+
+        if (help) {
+            const helpEl = document.createElement('p');
+            helpEl.textContent = help;
+            container.appendChild(helpEl);
+        }
+
+        if (handles.length) {
+            const listEl = document.createElement('p');
+            if (listLabel && listLabel.indexOf('%s') !== -1) {
+                listEl.textContent = listLabel.replace('%s', handles.join(', '));
+            } else if (listLabel) {
+                listEl.textContent = `${listLabel} ${handles.join(', ')}`;
+            } else {
+                listEl.textContent = handles.join(', ');
+            }
+            container.appendChild(listEl);
+        }
+
+        if (legacyUrl && legacyLabel) {
+            const action = document.createElement('p');
+            const link = document.createElement('a');
+            link.className = 'button button-primary';
+            link.href = legacyUrl;
+            link.textContent = legacyLabel;
+            action.appendChild(link);
+            container.appendChild(action);
+        }
+
+        appRoot.innerHTML = '';
+        appRoot.appendChild(container);
+    };
+
+    if (settings) {
+        settings.renderFallback = renderFallback;
+    }
+
     if (!wp || !wp.element || !wp.components || !wp.apiFetch) {
+        renderFallback();
         return;
     }
 
