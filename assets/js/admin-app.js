@@ -67,7 +67,14 @@
     }
 
     const { createElement: h, Fragment, useCallback, useEffect, useMemo, useRef, useState } = wp.element;
-    const { __ } = wp.i18n || { __: (text) => text };
+    const fallbackI18n = {
+        __: (text) => text,
+        sprintf: (format, ...args) => {
+            let index = 0;
+            return format.replace(/%s/g, () => (index < args.length ? args[index++] : ''));
+        },
+    };
+    const { __, sprintf } = wp.i18n || fallbackI18n;
     const {
         Button,
         Card,
@@ -84,6 +91,37 @@
         : (props) => h('span', { className: `rb-admin-app__badge rb-admin-app__badge--${props.status || 'info'}` }, props.children);
     const apiFetch = wp.apiFetch;
     const restRoot = settings && settings.root ? settings.root : settings.legacyRoot;
+    const restIndexUrl = (() => {
+        const root =
+            restRoot ||
+            (settings && settings.legacyRoot) ||
+            (typeof window !== 'undefined' && window.wpApiSettings && window.wpApiSettings.root);
+
+        return root || '/wp-json/';
+    })();
+
+    const enhanceRestError = (error) => {
+        if (!error) {
+            return error;
+        }
+
+        const code = error.code || (error.data && error.data.status === 404 ? 'rest_no_route' : null);
+
+        if (code !== 'rest_no_route') {
+            return error;
+        }
+
+        const message = error.message || __('No REST API route was found matching this request.', 'restaurant-booking');
+        const instructions = sprintf(
+            __('Visit %s in a new tab to verify that the Restaurant Booking REST API routes are registered. If the endpoint is missing, go to Settings → Permalinks and click "Save Changes", or reactivate the plugin.', 'restaurant-booking'),
+            restIndexUrl
+        );
+
+        return {
+            ...error,
+            message: `${message} ${instructions}`,
+        };
+    };
 
     if (apiFetch && typeof apiFetch.use === 'function') {
         if (restRoot) {
@@ -178,7 +216,7 @@
                 })
                 .catch((error) => {
                     if (mounted.current) {
-                        setState({ loading: false, error: error, data: null });
+                        setState({ loading: false, error: enhanceRestError(error), data: null });
                     }
                 });
         }, [locationId]);
@@ -200,7 +238,7 @@
                 })
                 .catch((error) => {
                     if (mounted.current) {
-                        setState({ loading: false, error: error, data: null });
+                        setState({ loading: false, error: enhanceRestError(error), data: null });
                     }
                 });
         }, deps);
@@ -350,7 +388,11 @@
                         refresh();
                     })
                     .catch((updateError) => {
-                        setNotice({ type: 'error', message: updateError.message || __('Failed to update booking.', 'restaurant-booking') });
+                        const enhancedError = enhanceRestError(updateError);
+                        setNotice({
+                            type: 'error',
+                            message: enhancedError.message || __('Failed to update booking.', 'restaurant-booking'),
+                        });
                     })
                     .finally(() => setUpdatingId(null));
             },
@@ -492,19 +534,23 @@
 
         const toggleTable = useCallback((table) => {
             setUpdating(table.id);
-            apiFetch({
-                path: `tables/${table.id}`,
-                method: 'POST',
-                data: { is_available: !table.is_available },
-            })
-                .then(() => {
-                    setNotice({ type: 'success', message: __('Table updated.', 'restaurant-booking') });
-                    setRefreshIndex((value) => value + 1);
+                apiFetch({
+                    path: `tables/${table.id}`,
+                    method: 'POST',
+                    data: { is_available: !table.is_available },
                 })
-                .catch((err) => {
-                    setNotice({ type: 'error', message: err.message || __('Failed to update table.', 'restaurant-booking') });
-                })
-                .finally(() => setUpdating(null));
+                    .then(() => {
+                        setNotice({ type: 'success', message: __('Table updated.', 'restaurant-booking') });
+                        setRefreshIndex((value) => value + 1);
+                    })
+                    .catch((err) => {
+                        const enhancedError = enhanceRestError(err);
+                        setNotice({
+                            type: 'error',
+                            message: enhancedError.message || __('Failed to update table.', 'restaurant-booking'),
+                        });
+                    })
+                    .finally(() => setUpdating(null));
         }, []);
 
         return h(
