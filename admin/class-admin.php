@@ -485,6 +485,18 @@ class RB_Admin {
             'order'       => $sort_order,
         );
 
+        $column_labels = array(
+            'id'       => __('ID', 'restaurant-booking'),
+            'customer' => rb_t('customer', __('Customer', 'restaurant-booking')),
+            'phone'    => rb_t('phone', __('Phone', 'restaurant-booking')),
+            'datetime' => rb_t('date_time', __('Date & time', 'restaurant-booking')),
+            'guests'   => rb_t('guests', __('Guests', 'restaurant-booking')),
+            'table'    => rb_t('table', __('Table', 'restaurant-booking')),
+            'source'   => rb_t('source', __('Source', 'restaurant-booking')),
+            'status'   => rb_t('status', __('Status', 'restaurant-booking')),
+            'actions'  => rb_t('actions', __('Actions', 'restaurant-booking')),
+        );
+
         $bookings = $rb_booking->get_bookings($query_args);
 
         $booking_manager = new RB_Booking();
@@ -743,91 +755,98 @@ class RB_Admin {
                 <div class="rb-card-header">
                     <h2 class="rb-card-title"><?php rb_e('filters_and_sorting'); ?></h2>
                 </div>
-                <form method="get" action="" class="rb-filter-grid">
-                    <input type="hidden" name="page" value="restaurant-booking">
+                <div class="rb-card-body">
+                    <button type="button" class="button button-secondary rb-filter-toggle" aria-expanded="true" aria-controls="rb-filter-panel">
+                        <span class="rb-filter-toggle__label"><?php echo esc_html(rb_t('filters_and_sorting', __('Filters & sorting', 'restaurant-booking'))); ?></span>
+                    </button>
+                    <div id="rb-filter-panel" class="rb-filter-panel is-open" aria-hidden="false">
+                        <form method="get" action="" class="rb-filter-grid">
+                            <input type="hidden" name="page" value="restaurant-booking">
 
-                    <?php if (!empty($locations)) : ?>
-                        <div class="rb-form-field">
-                            <label class="rb-form-label" for="rb-filter-location"><?php esc_html_e('Location', 'restaurant-booking'); ?></label>
-                            <select id="rb-filter-location" name="location_id" onchange="this.form.submit();">
-                                <?php foreach ($locations as $location) : ?>
-                                    <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, (int) $location->id); ?>>
-                                        <?php echo esc_html($location->name); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    <?php endif; ?>
+                            <?php if (!empty($locations)) : ?>
+                                <div class="rb-form-field">
+                                    <label class="rb-form-label" for="rb-filter-location"><?php esc_html_e('Location', 'restaurant-booking'); ?></label>
+                                    <select id="rb-filter-location" name="location_id" onchange="this.form.submit();">
+                                        <?php foreach ($locations as $location) : ?>
+                                            <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, (int) $location->id); ?>>
+                                                <?php echo esc_html($location->name); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            <?php endif; ?>
 
-                    <div class="rb-form-field">
-                        <label class="rb-form-label" for="rb-filter-status"><?php rb_e('status'); ?></label>
-                        <select id="rb-filter-status" name="filter_status">
-                            <option value=""><?php rb_e('all'); ?></option>
-                            <option value="pending" <?php selected($filter_status, 'pending'); ?>><?php rb_e('pending'); ?></option>
-                            <option value="confirmed" <?php selected($filter_status, 'confirmed'); ?>><?php rb_e('confirmed'); ?></option>
-                            <option value="completed" <?php selected($filter_status, 'completed'); ?>><?php rb_e('completed'); ?></option>
-                            <option value="cancelled" <?php selected($filter_status, 'cancelled'); ?>><?php rb_e('cancelled'); ?></option>
-                        </select>
+                            <div class="rb-form-field">
+                                <label class="rb-form-label" for="rb-filter-status"><?php rb_e('status'); ?></label>
+                                <select id="rb-filter-status" name="filter_status">
+                                    <option value=""><?php rb_e('all'); ?></option>
+                                    <option value="pending" <?php selected($filter_status, 'pending'); ?>><?php rb_e('pending'); ?></option>
+                                    <option value="confirmed" <?php selected($filter_status, 'confirmed'); ?>><?php rb_e('confirmed'); ?></option>
+                                    <option value="completed" <?php selected($filter_status, 'completed'); ?>><?php rb_e('completed'); ?></option>
+                                    <option value="cancelled" <?php selected($filter_status, 'cancelled'); ?>><?php rb_e('cancelled'); ?></option>
+                                </select>
+                            </div>
+
+                            <div class="rb-form-field">
+                                <label class="rb-form-label" for="rb-filter-source"><?php rb_e('customer_source'); ?></label>
+                                <select id="rb-filter-source" name="filter_source">
+                                    <option value=""><?php rb_e('all'); ?></option>
+                                    <option value="website" <?php selected($filter_source, 'website'); ?>>🌐 <?php rb_e('website'); ?></option>
+                                    <option value="phone" <?php selected($filter_source, 'phone'); ?>>📞 <?php rb_e('phone'); ?></option>
+                                    <option value="facebook" <?php selected($filter_source, 'facebook'); ?>>📘 <?php rb_e('facebook'); ?></option>
+                                    <option value="zalo" <?php selected($filter_source, 'zalo'); ?>>💬 <?php rb_e('zalo'); ?></option>
+                                    <option value="instagram" <?php selected($filter_source, 'instagram'); ?>>📷 <?php rb_e('instagram'); ?></option>
+                                    <option value="walk-in" <?php selected($filter_source, 'walk-in'); ?>>🚶 <?php rb_e('walk_in'); ?></option>
+                                    <option value="email" <?php selected($filter_source, 'email'); ?>>✉️ <?php rb_e('email'); ?></option>
+                                    <option value="other" <?php selected($filter_source, 'other'); ?>>❓ <?php rb_e('other'); ?></option>
+                                </select>
+                            </div>
+
+                            <div class="rb-form-field">
+                                <label class="rb-form-label" for="rb-filter-date-from"><?php rb_e('from_date'); ?></label>
+                                <input type="date" id="rb-filter-date-from" name="filter_date_from" value="<?php echo esc_attr($filter_date_from); ?>">
+                            </div>
+
+                            <div class="rb-form-field">
+                                <label class="rb-form-label" for="rb-filter-date-to"><?php rb_e('to_date'); ?></label>
+                                <input type="date" id="rb-filter-date-to" name="filter_date_to" value="<?php echo esc_attr($filter_date_to); ?>">
+                            </div>
+
+                            <div class="rb-form-field">
+                                <label class="rb-form-label" for="rb-sort-by"><?php rb_e('sort_by'); ?></label>
+                                <select id="rb-sort-by" name="sort_by">
+                                    <option value="created_at" <?php selected($sort_by, 'created_at'); ?>><?php rb_e('created_time'); ?></option>
+                                    <option value="booking_date" <?php selected($sort_by, 'booking_date'); ?>><?php rb_e('booking_date'); ?></option>
+                                    <option value="booking_time" <?php selected($sort_by, 'booking_time'); ?>><?php rb_e('booking_time'); ?></option>
+                                    <option value="customer_name" <?php selected($sort_by, 'customer_name'); ?>><?php rb_e('customer_name'); ?></option>
+                                    <option value="booking_source" <?php selected($sort_by, 'booking_source'); ?>><?php rb_e('customer_source'); ?></option>
+                                </select>
+                            </div>
+
+                            <div class="rb-form-field">
+                                <label class="rb-form-label" for="rb-sort-order"><?php rb_e('order'); ?></label>
+                                <select id="rb-sort-order" name="sort_order">
+                                    <option value="DESC" <?php selected($sort_order, 'DESC'); ?>><?php rb_e('descending'); ?></option>
+                                    <option value="ASC" <?php selected($sort_order, 'ASC'); ?>><?php rb_e('ascending'); ?></option>
+                                </select>
+                            </div>
+
+                            <div class="rb-form-actions">
+                                <button type="submit" class="button button-primary"><?php rb_e('apply'); ?></button>
+                                <?php
+                                $clear_filters_url = add_query_arg(
+                                    array(
+                                        'page' => 'restaurant-booking',
+                                        'location_id' => $selected_location_id,
+                                    ),
+                                    admin_url('admin.php')
+                                );
+                                ?>
+                                <a href="<?php echo esc_url($clear_filters_url); ?>" class="button button-secondary"><?php rb_e('clear_filters'); ?></a>
+                            </div>
+                        </form>
                     </div>
-
-                    <div class="rb-form-field">
-                        <label class="rb-form-label" for="rb-filter-source"><?php rb_e('customer_source'); ?></label>
-                        <select id="rb-filter-source" name="filter_source">
-                            <option value=""><?php rb_e('all'); ?></option>
-                            <option value="website" <?php selected($filter_source, 'website'); ?>>🌐 <?php rb_e('website'); ?></option>
-                            <option value="phone" <?php selected($filter_source, 'phone'); ?>>📞 <?php rb_e('phone'); ?></option>
-                            <option value="facebook" <?php selected($filter_source, 'facebook'); ?>>📘 <?php rb_e('facebook'); ?></option>
-                            <option value="zalo" <?php selected($filter_source, 'zalo'); ?>>💬 <?php rb_e('zalo'); ?></option>
-                            <option value="instagram" <?php selected($filter_source, 'instagram'); ?>>📷 <?php rb_e('instagram'); ?></option>
-                            <option value="walk-in" <?php selected($filter_source, 'walk-in'); ?>>🚶 <?php rb_e('walk_in'); ?></option>
-                            <option value="email" <?php selected($filter_source, 'email'); ?>>✉️ <?php rb_e('email'); ?></option>
-                            <option value="other" <?php selected($filter_source, 'other'); ?>>❓ <?php rb_e('other'); ?></option>
-                        </select>
-                    </div>
-
-                    <div class="rb-form-field">
-                        <label class="rb-form-label" for="rb-filter-date-from"><?php rb_e('from_date'); ?></label>
-                        <input type="date" id="rb-filter-date-from" name="filter_date_from" value="<?php echo esc_attr($filter_date_from); ?>">
-                    </div>
-
-                    <div class="rb-form-field">
-                        <label class="rb-form-label" for="rb-filter-date-to"><?php rb_e('to_date'); ?></label>
-                        <input type="date" id="rb-filter-date-to" name="filter_date_to" value="<?php echo esc_attr($filter_date_to); ?>">
-                    </div>
-
-                    <div class="rb-form-field">
-                        <label class="rb-form-label" for="rb-sort-by"><?php rb_e('sort_by'); ?></label>
-                        <select id="rb-sort-by" name="sort_by">
-                            <option value="created_at" <?php selected($sort_by, 'created_at'); ?>><?php rb_e('created_time'); ?></option>
-                            <option value="booking_date" <?php selected($sort_by, 'booking_date'); ?>><?php rb_e('booking_date'); ?></option>
-                            <option value="booking_time" <?php selected($sort_by, 'booking_time'); ?>><?php rb_e('booking_time'); ?></option>
-                            <option value="customer_name" <?php selected($sort_by, 'customer_name'); ?>><?php rb_e('customer_name'); ?></option>
-                            <option value="booking_source" <?php selected($sort_by, 'booking_source'); ?>><?php rb_e('customer_source'); ?></option>
-                        </select>
-                    </div>
-
-                    <div class="rb-form-field">
-                        <label class="rb-form-label" for="rb-sort-order"><?php rb_e('order'); ?></label>
-                        <select id="rb-sort-order" name="sort_order">
-                            <option value="DESC" <?php selected($sort_order, 'DESC'); ?>><?php rb_e('descending'); ?></option>
-                            <option value="ASC" <?php selected($sort_order, 'ASC'); ?>><?php rb_e('ascending'); ?></option>
-                        </select>
-                    </div>
-
-                    <div class="rb-form-actions">
-                        <button type="submit" class="button button-primary"><?php rb_e('apply'); ?></button>
-                        <?php
-                        $clear_filters_url = add_query_arg(
-                            array(
-                                'page' => 'restaurant-booking',
-                                'location_id' => $selected_location_id,
-                            ),
-                            admin_url('admin.php')
-                        );
-                        ?>
-                        <a href="<?php echo esc_url($clear_filters_url); ?>" class="button button-secondary"><?php rb_e('clear_filters'); ?></a>
-                    </div>
-                </form>
+                </div>
             </section>
 
             <p class="rb-admin-dashboard__results">
@@ -856,15 +875,15 @@ class RB_Admin {
                         <tbody>
                             <?php if ($bookings) : ?>
                                 <?php foreach ($bookings as $booking) : ?>
-                                    <tr data-booking-id="<?php echo esc_attr($booking->id); ?>">
-                                        <td><?php echo esc_html($booking->id); ?></td>
-                                        <td>
+                                    <tr class="rb-admin-table__row" data-booking-id="<?php echo esc_attr($booking->id); ?>">
+                                        <td data-label="<?php echo esc_attr($column_labels['id']); ?>"><?php echo esc_html($booking->id); ?></td>
+                                        <td data-label="<?php echo esc_attr($column_labels['customer']); ?>">
                                             <strong><?php echo esc_html($booking->customer_name); ?></strong>
                                             <?php if (!empty($booking->customer_email)) : ?>
                                                 <div class="rb-table-meta">✉️ <?php echo esc_html($booking->customer_email); ?></div>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
+                                        <td data-label="<?php echo esc_attr($column_labels['phone']); ?>">
                                             <?php if (!empty($booking->customer_phone)) : ?>
                                                 <a href="tel:<?php echo esc_attr($booking->customer_phone); ?>" class="rb-table-link">
                                                     <?php echo esc_html($booking->customer_phone); ?>
@@ -873,32 +892,32 @@ class RB_Admin {
                                                 <span class="rb-table-meta">—</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
+                                        <td data-label="<?php echo esc_attr($column_labels['datetime']); ?>">
                                             <div class="rb-table-date"><?php echo esc_html(date_i18n('d/m/Y', strtotime($booking->booking_date))); ?></div>
                                             <?php if (!empty($booking->booking_time)) : ?>
                                                 <div class="rb-table-time"><?php echo esc_html($booking->booking_time); ?></div>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="column-numeric"><?php echo esc_html($booking->guest_count); ?></td>
-                                        <td class="column-numeric">
+                                        <td class="column-numeric" data-label="<?php echo esc_attr($column_labels['guests']); ?>"><?php echo esc_html($booking->guest_count); ?></td>
+                                        <td class="column-numeric" data-label="<?php echo esc_attr($column_labels['table']); ?>">
                                             <?php if (!empty($booking->table_number)) : ?>
                                                 <span class="rb-badge rb-badge--primary"><?php echo esc_html(rb_t('table')); ?> <?php echo esc_html($booking->table_number); ?></span>
                                             <?php else : ?>
                                                 <span class="rb-table-meta"><?php rb_e('unassigned'); ?></span>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
+                                        <td data-label="<?php echo esc_attr($column_labels['source']); ?>">
                                             <?php
                                             $source = isset($booking->booking_source) ? $booking->booking_source : 'website';
                                             ?>
                                             <span class="rb-badge rb-badge--muted"><?php echo esc_html($this->get_source_label($source)); ?></span>
                                         </td>
-                                        <td>
+                                        <td data-label="<?php echo esc_attr($column_labels['status']); ?>">
                                             <span class="rb-status rb-status-<?php echo esc_attr($booking->status); ?>">
                                                 <?php echo $this->get_status_label($booking->status); ?>
                                             </span>
                                         </td>
-                                        <td>
+                                        <td class="column-actions" data-label="<?php echo esc_attr($column_labels['actions']); ?>">
                                             <?php
                                             $edit_url = add_query_arg(
                                                 array(

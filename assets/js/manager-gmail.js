@@ -54,6 +54,11 @@
                 self.toggleSidebar();
             });
 
+            this.layouts.on('click', '[data-rb-toggle-filters]', function (event) {
+                event.preventDefault();
+                self.toggleFilters($(this));
+            });
+
             this.layouts.on('click', '[data-rb-close-panels]', function () {
                 self.closePanels();
             });
@@ -147,6 +152,7 @@
         },
 
         toggleSidebar: function () {
+            this.closeFilters();
             if (window.matchMedia('(max-width: 768px)').matches) {
                 var shouldOpen = !this.sidebar.hasClass('is-open');
                 this.layouts.removeClass('has-detail-open');
@@ -161,6 +167,7 @@
         },
 
         openDetail: function () {
+            this.closeFilters();
             this.closeSidebar();
             this.layouts.addClass('has-detail-open');
             if (this.detail.length) {
@@ -219,6 +226,7 @@
         closePanels: function () {
             this.closeDetail();
             this.closeSidebar();
+            this.closeFilters();
         },
 
         handleResize: function () {
@@ -244,7 +252,92 @@
                 this.revealHeader();
             }
 
+            this.syncFiltersForViewport(isMobile);
             this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        },
+
+        toggleFilters: function (button) {
+            if (!button || !button.length || window.innerWidth >= 769) {
+                return;
+            }
+
+            var toolbar = button.closest('.rb-gmail-toolbar');
+            var panel = toolbar.find('[data-rb-filters-panel]');
+
+            if (!panel.length) {
+                return;
+            }
+
+            var isOpen = toolbar.hasClass('is-filters-open');
+            isOpen = !isOpen;
+
+            toolbar.toggleClass('is-filters-open', isOpen);
+            panel.toggleClass('is-open', isOpen);
+
+            if (isOpen) {
+                panel.removeAttr('hidden');
+            } else {
+                panel.attr('hidden', 'hidden');
+            }
+
+            button.attr('aria-expanded', isOpen ? 'true' : 'false');
+        },
+
+        closeFilters: function () {
+            if (window.innerWidth >= 769) {
+                return;
+            }
+
+            this.layouts.find('.rb-gmail-toolbar').each(function () {
+                var toolbar = $(this);
+                var panel = toolbar.find('[data-rb-filters-panel]');
+                var button = toolbar.find('[data-rb-toggle-filters]');
+
+                if (!panel.length) {
+                    return;
+                }
+
+                toolbar.removeClass('is-filters-open');
+                panel.removeClass('is-open');
+                panel.attr('hidden', 'hidden');
+
+                if (button.length) {
+                    button.attr('aria-expanded', 'false');
+                }
+            });
+        },
+
+        syncFiltersForViewport: function (isMobile) {
+            this.layouts.find('.rb-gmail-toolbar').each(function () {
+                var toolbar = $(this);
+                var panel = toolbar.find('[data-rb-filters-panel]');
+                var button = toolbar.find('[data-rb-toggle-filters]');
+
+                if (!panel.length) {
+                    return;
+                }
+
+                if (!isMobile) {
+                    toolbar.removeClass('is-filters-open');
+                    panel.removeClass('is-open');
+                    panel.removeAttr('hidden');
+                    if (button.length) {
+                        button.attr('aria-expanded', 'true');
+                    }
+                } else if (toolbar.hasClass('is-filters-open')) {
+                    panel.addClass('is-open');
+                    panel.removeAttr('hidden');
+                    if (button.length) {
+                        button.attr('aria-expanded', 'true');
+                    }
+                } else {
+                    panel.removeClass('is-open');
+                    panel.attr('hidden', 'hidden');
+                    if (button.length) {
+                        button.attr('aria-expanded', 'false');
+                    }
+                }
+            });
         },
 
         scrollDetailToTop: function () {
