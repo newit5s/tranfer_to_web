@@ -585,6 +585,9 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
         $search_placeholder = $this->t('search_bookings_placeholder', __('Search bookings…', 'restaurant-booking'));
         $list_count_label = sprintf(__('Bookings (%d)', 'restaurant-booking'), count($bookings));
+        $filters_toggle_label = $this->t('filters', __('Filters', 'restaurant-booking'));
+        $filters_toggle_action = $this->t('toggle_filters', __('Toggle filters', 'restaurant-booking'));
+        $filters_panel_id = 'rb-gmail-filter-panel-' . $location_id;
 
         $current_day = current_time('Y-m-d');
         $current_timestamp = strtotime($current_day);
@@ -752,58 +755,71 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 <input type="text" name="search" value="<?php echo esc_attr($filters['search_term']); ?>" placeholder="<?php echo esc_attr($search_placeholder); ?>" autocomplete="off">
                             </div>
                         </form>
+                        <button
+                            type="button"
+                            class="rb-gmail-filters-toggle"
+                            data-rb-toggle-filters
+                            aria-expanded="false"
+                            aria-controls="<?php echo esc_attr($filters_panel_id); ?>"
+                            aria-label="<?php echo esc_attr($filters_toggle_action); ?>"
+                        >
+                            <span class="rb-gmail-filters-toggle-label"><?php echo esc_html($filters_toggle_label); ?></span>
+                            <span class="rb-gmail-filters-toggle-icon" aria-hidden="true">▾</span>
+                        </button>
 
-                        <form class="rb-gmail-filter-form" method="get">
-                            <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
-                            <input type="hidden" name="rb_section" value="dashboard">
-                            <?php if (!empty($filters['search_term'])) : ?>
-                                <input type="hidden" name="search" value="<?php echo esc_attr($filters['search_term']); ?>">
-                            <?php endif; ?>
-                            <label class="rb-gmail-filter-form__status">
-                                <span><?php echo esc_html($this->t('status', __('Status', 'restaurant-booking'))); ?></span>
-                                <select name="filter_status">
-                                    <?php foreach ($status_filters as $value => $info) : ?>
-                                        <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['filter_status'], $value); ?>><?php echo esc_html($info['label']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <label>
-                                <span><?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?></span>
-                                <select name="filter_source">
-                                    <?php foreach ($source_options as $value => $label) : ?>
-                                        <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['filter_source'], $value); ?>><?php echo esc_html($label); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <label>
-                                <span><?php echo esc_html($this->t('from_date', __('From date', 'restaurant-booking'))); ?></span>
-                                <input type="date" name="filter_date_from" value="<?php echo esc_attr($filters['filter_date_from']); ?>">
-                            </label>
-                            <label>
-                                <span><?php echo esc_html($this->t('to_date', __('To date', 'restaurant-booking'))); ?></span>
-                                <input type="date" name="filter_date_to" value="<?php echo esc_attr($filters['filter_date_to']); ?>">
-                            </label>
-                            <label>
-                                <span><?php echo esc_html($this->t('sort_by', __('Sort by', 'restaurant-booking'))); ?></span>
-                                <select name="sort_by">
-                                    <?php foreach ($sort_options as $value => $label) : ?>
-                                        <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['sort_by'], $value); ?>><?php echo esc_html($label); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <label>
-                                <span><?php echo esc_html($this->t('order', __('Order', 'restaurant-booking'))); ?></span>
-                                <select name="sort_order">
-                                    <?php foreach ($order_options as $value => $label) : ?>
-                                        <option value="<?php echo esc_attr($value); ?>" <?php selected(strtoupper($filters['sort_order']), $value); ?>><?php echo esc_html($label); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <div class="rb-gmail-filter-actions">
-                                <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('apply_filters', __('Apply filters', 'restaurant-booking'))); ?></button>
-                                <a class="rb-btn-secondary" href="<?php echo esc_url($reset_url); ?>"><?php echo esc_html($this->t('reset', __('Reset', 'restaurant-booking'))); ?></a>
-                            </div>
-                        </form>
+                        <div class="rb-gmail-filter-panel" id="<?php echo esc_attr($filters_panel_id); ?>" data-rb-filters-panel>
+                            <form class="rb-gmail-filter-form" method="get">
+                                <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
+                                <input type="hidden" name="rb_section" value="dashboard">
+                                <?php if (!empty($filters['search_term'])) : ?>
+                                    <input type="hidden" name="search" value="<?php echo esc_attr($filters['search_term']); ?>">
+                                <?php endif; ?>
+                                <label class="rb-gmail-filter-form__status">
+                                    <span><?php echo esc_html($this->t('status', __('Status', 'restaurant-booking'))); ?></span>
+                                    <select name="filter_status">
+                                        <?php foreach ($status_filters as $value => $info) : ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['filter_status'], $value); ?>><?php echo esc_html($info['label']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span><?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?></span>
+                                    <select name="filter_source">
+                                        <?php foreach ($source_options as $value => $label) : ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['filter_source'], $value); ?>><?php echo esc_html($label); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span><?php echo esc_html($this->t('from_date', __('From date', 'restaurant-booking'))); ?></span>
+                                    <input type="date" name="filter_date_from" value="<?php echo esc_attr($filters['filter_date_from']); ?>">
+                                </label>
+                                <label>
+                                    <span><?php echo esc_html($this->t('to_date', __('To date', 'restaurant-booking'))); ?></span>
+                                    <input type="date" name="filter_date_to" value="<?php echo esc_attr($filters['filter_date_to']); ?>">
+                                </label>
+                                <label>
+                                    <span><?php echo esc_html($this->t('sort_by', __('Sort by', 'restaurant-booking'))); ?></span>
+                                    <select name="sort_by">
+                                        <?php foreach ($sort_options as $value => $label) : ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected($filters['sort_by'], $value); ?>><?php echo esc_html($label); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span><?php echo esc_html($this->t('order', __('Order', 'restaurant-booking'))); ?></span>
+                                    <select name="sort_order">
+                                        <?php foreach ($order_options as $value => $label) : ?>
+                                            <option value="<?php echo esc_attr($value); ?>" <?php selected(strtoupper($filters['sort_order']), $value); ?>><?php echo esc_html($label); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <div class="rb-gmail-filter-actions">
+                                    <button type="submit" class="rb-btn-primary"><?php echo esc_html($this->t('apply_filters', __('Apply filters', 'restaurant-booking'))); ?></button>
+                                    <a class="rb-btn-secondary" href="<?php echo esc_url($reset_url); ?>"><?php echo esc_html($this->t('reset', __('Reset', 'restaurant-booking'))); ?></a>
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="rb-gmail-list" role="list" aria-label="<?php echo esc_attr($list_count_label); ?>">
