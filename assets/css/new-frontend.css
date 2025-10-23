@@ -353,6 +353,8 @@ body.rb-modal-open {
     padding: 22px;
     border-radius: var(--rb-new-radius-card);
     border: 1px solid rgba(34, 113, 177, 0.08);
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .rb-new-form-grid {
@@ -569,6 +571,22 @@ body.rb-modal-open {
     font-size: 14px;
     color: var(--rb-new-muted);
     line-height: 1.5;
+    word-break: break-word;
+}
+
+.rb-new-location-info__note.is-hidden {
+    display: none;
+}
+
+.rb-new-location-info__note-link {
+    color: var(--rb-new-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.rb-new-location-info__note-link:hover,
+.rb-new-location-info__note-link:focus-visible {
+    text-decoration: underline;
 }
 
 .rb-new-location-info__grid {

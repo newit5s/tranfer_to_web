@@ -301,11 +301,40 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                             </div>
                         </form>
 
+                        <?php
+                        $location_note = '';
+                        $location_note_classes = array('rb-new-location-info__note');
+
+                        if (!empty($default_location_hotline) || !empty($default_location_email)) {
+                            $location_note = $this->build_location_contact_note($default_location_hotline, $default_location_email);
+                        }
+
+                        if (empty($location_note)) {
+                            $location_note_classes[] = 'is-hidden';
+                        }
+
+                        $location_note_class_attr = implode(' ', array_map('sanitize_html_class', $location_note_classes));
+                        ?>
+
                         <?php if ('yes' === $settings['frontend_show_location_contact']) : ?>
                             <div class="<?php echo esc_attr($location_info_class_attr); ?>" aria-live="polite">
                                 <h4 class="rb-new-location-info__title"><?php echo esc_html(rb_t('location_contact', __('Location contact', 'restaurant-booking'))); ?></h4>
-                                <p class="rb-new-location-info__note">
-                                    <?php echo esc_html(rb_t('advance_booking_note', __('If you would like to book within 2 hours or cannot select a time slot, please contact the restaurant hotline or email for assistance.', 'restaurant-booking'))); ?>
+                                <p class="<?php echo esc_attr($location_note_class_attr); ?>">
+                                    <span class="rb-new-location-info__note-content">
+                                        <?php
+                                        if (!empty($location_note)) {
+                                            echo wp_kses(
+                                                $location_note,
+                                                array(
+                                                    'a' => array(
+                                                        'href' => array(),
+                                                        'class' => array(),
+                                                    ),
+                                                )
+                                            );
+                                        }
+                                        ?>
+                                    </span>
                                 </p>
                                 <div class="rb-new-location-info__grid">
                                     <p class="rb-new-location-info__item <?php echo empty($default_location_address) ? 'is-hidden' : ''; ?>" data-field="address">
@@ -426,6 +455,101 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
         <?php
         return ob_get_clean();
+    }
+
+    private function build_location_contact_note($hotline, $email) {
+        $hotline = is_string($hotline) ? trim($hotline) : '';
+        $email = is_string($email) ? trim($email) : '';
+
+        if ('' === $hotline && '' === $email) {
+            return '';
+        }
+
+        $templates = $this->get_location_contact_note_templates();
+        $generic = isset($templates['generic']) ? $templates['generic'] : '';
+        $hotline_template = isset($templates['hotline']) ? $templates['hotline'] : $generic;
+        $email_template = isset($templates['email']) ? $templates['email'] : $generic;
+        $both_template = isset($templates['both']) ? $templates['both'] : $generic;
+
+        $hotline_markup = '';
+        if ('' !== $hotline) {
+            $tel_href = $this->format_phone_href($hotline);
+            if ('' !== $tel_href) {
+                $hotline_markup = sprintf(
+                    '<a href="tel:%1$s" class="rb-new-location-info__note-link rb-new-location-info__note-link--hotline">%2$s</a>',
+                    esc_attr($tel_href),
+                    esc_html($hotline)
+                );
+            } else {
+                $hotline_markup = esc_html($hotline);
+            }
+        }
+
+        $email_markup = '';
+        if ('' !== $email) {
+            $sanitized_email = sanitize_email($email);
+            if (!empty($sanitized_email)) {
+                $email_markup = sprintf(
+                    '<a href="mailto:%1$s" class="rb-new-location-info__note-link rb-new-location-info__note-link--email">%2$s</a>',
+                    esc_attr($sanitized_email),
+                    esc_html($email)
+                );
+            } else {
+                $email_markup = esc_html($email);
+            }
+        }
+
+        if (!empty($hotline_markup) && !empty($email_markup)) {
+            if (false !== strpos($both_template, '%')) {
+                return sprintf($both_template, $hotline_markup, $email_markup);
+            }
+
+            return trim($both_template . ' ' . $hotline_markup . ' ' . $email_markup);
+        }
+
+        if (!empty($hotline_markup)) {
+            if (false !== strpos($hotline_template, '%')) {
+                return sprintf($hotline_template, $hotline_markup);
+            }
+
+            return trim($hotline_template . ' ' . $hotline_markup);
+        }
+
+        if (!empty($email_markup)) {
+            if (false !== strpos($email_template, '%')) {
+                return sprintf($email_template, $email_markup);
+            }
+
+            return trim($email_template . ' ' . $email_markup);
+        }
+
+        return $generic;
+    }
+
+    private function get_location_contact_note_templates() {
+        return array(
+            'generic' => rb_t('advance_booking_note', __('If you would like to book within 2 hours or cannot select a time slot, please contact the restaurant hotline or email for assistance.', 'restaurant-booking')),
+            'hotline' => rb_t('advance_booking_note_hotline_only', __('If you would like to book within 2 hours or cannot select a time slot, please call %1$s for assistance.', 'restaurant-booking')),
+            'email' => rb_t('advance_booking_note_email_only', __('If you would like to book within 2 hours or cannot select a time slot, please email %1$s for assistance.', 'restaurant-booking')),
+            'both' => rb_t('advance_booking_note_hotline_email', __('If you would like to book within 2 hours or cannot select a time slot, please contact %1$s or %2$s for assistance.', 'restaurant-booking')),
+        );
+    }
+
+    private function format_phone_href($phone) {
+        $phone = is_string($phone) ? trim($phone) : '';
+
+        if ('' === $phone) {
+            return '';
+        }
+
+        $has_plus_prefix = strpos($phone, '+') === 0;
+        $digits = preg_replace('/[^0-9]/', '', $phone);
+
+        if ('' === $digits) {
+            return '';
+        }
+
+        return $has_plus_prefix ? '+' . $digits : $digits;
     }
 
     // Keep existing methods for backward compatibility and AJAX handlers

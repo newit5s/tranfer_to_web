@@ -32,7 +32,11 @@
             invalidPhone: 'Please enter a valid phone number',
             languageSwitching: 'Switching language…',
             languageSwitched: 'Language switched',
-            languageSwitchFailed: 'Unable to switch language. Please try again.'
+            languageSwitchFailed: 'Unable to switch language. Please try again.',
+            advanceNoteGeneric: 'If you would like to book within 2 hours or cannot select a time slot, please contact the restaurant hotline or email for assistance.',
+            advanceNoteHotlineOnly: 'If you would like to book within 2 hours or cannot select a time slot, please call %1$s for assistance.',
+            advanceNoteEmailOnly: 'If you would like to book within 2 hours or cannot select a time slot, please email %1$s for assistance.',
+            advanceNoteHotlineEmail: 'If you would like to book within 2 hours or cannot select a time slot, please contact us at %1$s or %2$s for assistance.'
         },
 
         init: function() {
@@ -769,6 +773,120 @@
             return (hours * 3600) + (minutes * 60) + seconds;
         },
 
+        escapeHtml: function(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        },
+
+        formatPhoneHref: function(phone) {
+            if (!phone) {
+                return '';
+            }
+
+            const trimmed = String(phone).trim();
+            if (!trimmed) {
+                return '';
+            }
+
+            const hasPlus = trimmed.charAt(0) === '+';
+            const digits = trimmed.replace(/[^0-9]/g, '');
+
+            if (!digits) {
+                return '';
+            }
+
+            return hasPlus ? `+${digits}` : digits;
+        },
+
+        formatEmailHref: function(email) {
+            if (!email) {
+                return '';
+            }
+
+            const sanitized = String(email).trim();
+            if (!sanitized) {
+                return '';
+            }
+
+            return sanitized.replace(/\s+/g, '');
+        },
+
+        replacePlaceholders: function(template, replacements) {
+            if (!template) {
+                return '';
+            }
+
+            let result = template;
+            replacements.forEach((replacement, index) => {
+                const token = `%${index + 1}$s`;
+                result = result.split(token).join(replacement);
+            });
+
+            return result;
+        },
+
+        formatContactNote: function(hotline, email) {
+            const hasHotline = typeof hotline === 'string' && hotline.trim() !== '';
+            const hasEmail = typeof email === 'string' && email.trim() !== '';
+
+            if (!hasHotline && !hasEmail) {
+                return '';
+            }
+
+            const templates = this.strings || {};
+            const generic = templates.advanceNoteGeneric || '';
+            const hotlineTemplate = templates.advanceNoteHotlineOnly || generic;
+            const emailTemplate = templates.advanceNoteEmailOnly || generic;
+            const bothTemplate = templates.advanceNoteHotlineEmail || generic;
+
+            const hotlineText = hasHotline ? this.escapeHtml(hotline.trim()) : '';
+            const emailText = hasEmail ? this.escapeHtml(email.trim()) : '';
+
+            const hotlineHref = hasHotline ? this.formatPhoneHref(hotline) : '';
+            const emailHref = hasEmail ? this.formatEmailHref(email) : '';
+
+            const hotlineMarkup = hasHotline
+                ? (hotlineHref ? `<a href="tel:${hotlineHref}" class="rb-new-location-info__note-link rb-new-location-info__note-link--hotline">${hotlineText}</a>` : hotlineText)
+                : '';
+            const emailMarkup = hasEmail
+                ? (emailHref ? `<a href="mailto:${emailHref}" class="rb-new-location-info__note-link rb-new-location-info__note-link--email">${emailText}</a>` : emailText)
+                : '';
+
+            if (hasHotline && hasEmail) {
+                if (bothTemplate && bothTemplate.indexOf('%') !== -1) {
+                    return this.replacePlaceholders(bothTemplate, [hotlineMarkup, emailMarkup]);
+                }
+
+                return `${bothTemplate} ${hotlineMarkup} ${emailMarkup}`.trim();
+            }
+
+            if (hasHotline) {
+                if (hotlineTemplate && hotlineTemplate.indexOf('%') !== -1) {
+                    return this.replacePlaceholders(hotlineTemplate, [hotlineMarkup]);
+                }
+
+                return `${hotlineTemplate} ${hotlineMarkup}`.trim();
+            }
+
+            if (hasEmail) {
+                if (emailTemplate && emailTemplate.indexOf('%') !== -1) {
+                    return this.replacePlaceholders(emailTemplate, [emailMarkup]);
+                }
+
+                return `${emailTemplate} ${emailMarkup}`.trim();
+            }
+
+            return generic;
+        },
+
         updateLocationMeta: function() {
             const $container = $('.rb-new-location-info');
             if (!$container.length) {
@@ -802,6 +920,28 @@
             updateField('address', address, '#rb-new-location-address');
             updateField('hotline', hotline, '#rb-new-location-hotline');
             updateField('email', email, '#rb-new-location-email');
+
+            const $note = $container.find('.rb-new-location-info__note');
+            if ($note.length) {
+                const noteHtml = this.formatContactNote(hotline, email);
+                const $noteContent = $note.find('.rb-new-location-info__note-content');
+
+                if (noteHtml) {
+                    $note.removeClass('is-hidden');
+                    if ($noteContent.length) {
+                        $noteContent.html(noteHtml);
+                    } else {
+                        $note.html(noteHtml);
+                    }
+                } else {
+                    if ($noteContent.length) {
+                        $noteContent.empty();
+                    } else {
+                        $note.empty();
+                    }
+                    $note.addClass('is-hidden');
+                }
+            }
 
             if (address || hotline || email) {
                 $container.removeClass('is-empty');
