@@ -39,6 +39,10 @@ function rb_activate_plugin() {
         'time_slot_interval' => 30,
         'admin_email' => get_option('admin_email'),
         'enable_email' => 'yes',
+        'notify_vip_bookings' => 'no',
+        'notify_blacklist_events' => 'no',
+        'vip_notification_recipients' => '',
+        'blacklist_notification_recipients' => '',
         'frontend_primary_color' => '#2271b1',
         'frontend_primary_dark_color' => '#185b8f',
         'frontend_primary_light_color' => '#3a8ad6',
@@ -97,15 +101,17 @@ function rb_init_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-portal-account.php';
     require_once RB_PLUGIN_DIR . 'includes/class-assets-manager.php';
     require_once RB_PLUGIN_DIR . 'includes/class-rest.php';
+    require_once RB_PLUGIN_DIR . 'includes/class-notification-service.php';
 
     // Initialize globals
-    global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
+    global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location, $rb_notification_service;
     $rb_database = new RB_Database();
     $rb_database->ensure_portal_schema();
     $rb_booking = new RB_Booking();
     $rb_customer = new RB_Customer();
     $rb_email = new RB_Email();
     $rb_location = new RB_Location();
+    $rb_notification_service = new RB_Notification_Service();
 
     // Initialize AJAX
     new RB_Ajax();
