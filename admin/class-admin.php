@@ -2148,8 +2148,10 @@ class RB_Admin {
             'deposit_for_guests' => 10,
             'admin_email' => get_option('admin_email'),
             'enable_email' => 'yes',
-            'enable_sms' => 'no',
-            'sms_api_key' => '',
+            'notify_vip_bookings' => 'no',
+            'notify_blacklist_events' => 'no',
+            'vip_notification_recipients' => '',
+            'blacklist_notification_recipients' => '',
             'reminder_hours_before' => 24,
             'special_closed_dates' => '',
             'cancellation_hours' => 2,
@@ -2700,16 +2702,27 @@ class RB_Admin {
                         </tr>
                         
                         <tr>
-                            <th scope="row"><?php rb_e('sms_notification'); ?></th>
+                            <th scope="row"><?php rb_e('vip_alerts'); ?></th>
                             <td>
                                 <label>
-                                    <input type="checkbox" name="rb_settings[enable_sms]" value="yes" 
-                                        <?php checked($settings['enable_sms'], 'yes'); ?>>
-                                    <?php rb_e('enable_sms_notifications'); ?>
+                                    <input type="checkbox" name="rb_settings[notify_vip_bookings]" value="yes" <?php checked($settings['notify_vip_bookings'], 'yes'); ?>>
+                                    <?php rb_e('enable_vip_alerts'); ?>
                                 </label>
-                                <br><br>
-                                <input type="text" name="rb_settings[sms_api_key]" placeholder="<?php echo esc_attr(rb_t('enter_sms_api_key')); ?>" 
-                                    value="<?php echo esc_attr($settings['sms_api_key']); ?>" class="regular-text">
+                                <p class="description"><?php rb_e('vip_alerts_desc'); ?></p>
+                                <textarea name="rb_settings[vip_notification_recipients]" rows="3" class="large-text"><?php echo esc_textarea($settings['vip_notification_recipients']); ?></textarea>
+                                <p class="description"><?php rb_e('notification_recipients_hint'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php rb_e('blacklist_alerts'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="rb_settings[notify_blacklist_events]" value="yes" <?php checked($settings['notify_blacklist_events'], 'yes'); ?>>
+                                    <?php rb_e('enable_blacklist_alerts'); ?>
+                                </label>
+                                <p class="description"><?php rb_e('blacklist_alerts_desc'); ?></p>
+                                <textarea name="rb_settings[blacklist_notification_recipients]" rows="3" class="large-text"><?php echo esc_textarea($settings['blacklist_notification_recipients']); ?></textarea>
+                                <p class="description"><?php rb_e('notification_recipients_hint'); ?></p>
                             </td>
                         </tr>
                     </table>
@@ -4018,8 +4031,10 @@ class RB_Admin {
             // Notifications
             'admin_email' => isset($settings['admin_email']) ? sanitize_email($settings['admin_email']) : get_option('admin_email'),
             'enable_email' => isset($settings['enable_email']) ? 'yes' : 'no',
-            'enable_sms' => isset($settings['enable_sms']) ? 'yes' : 'no',
-            'sms_api_key' => isset($settings['sms_api_key']) ? sanitize_text_field($settings['sms_api_key']) : '',
+            'notify_vip_bookings' => isset($settings['notify_vip_bookings']) ? 'yes' : 'no',
+            'notify_blacklist_events' => isset($settings['notify_blacklist_events']) ? 'yes' : 'no',
+            'vip_notification_recipients' => isset($settings['vip_notification_recipients']) ? sanitize_textarea_field($settings['vip_notification_recipients']) : '',
+            'blacklist_notification_recipients' => isset($settings['blacklist_notification_recipients']) ? sanitize_textarea_field($settings['blacklist_notification_recipients']) : '',
             'reminder_hours_before' => isset($settings['reminder_hours_before']) ? intval($settings['reminder_hours_before']) : 24,
             
             // Policies
