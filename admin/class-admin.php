@@ -418,6 +418,11 @@ class RB_Admin {
 
         $locations = $rb_location ? $rb_location->all() : array();
 
+        $current_page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : 'rb-legacy-dashboard';
+        if (empty($current_page)) {
+            $current_page = 'rb-legacy-dashboard';
+        }
+
         if (empty($locations)) {
             echo '<div class="notice notice-warning"><p>' . esc_html__('No locations found. Please configure at least one location before managing bookings.', 'restaurant-booking') . '</p></div>';
             return;
@@ -761,7 +766,7 @@ class RB_Admin {
                     </button>
                     <div id="rb-filter-panel" class="rb-filter-panel is-open" aria-hidden="false">
                         <form method="get" action="" class="rb-filter-grid">
-                            <input type="hidden" name="page" value="restaurant-booking">
+                            <input type="hidden" name="page" value="<?php echo esc_attr($current_page); ?>">
 
                             <?php if (!empty($locations)) : ?>
                                 <div class="rb-form-field">
