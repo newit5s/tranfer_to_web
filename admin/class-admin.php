@@ -2206,7 +2206,6 @@ class RB_Admin {
 
         $all_locations = $rb_location ? $rb_location->all(array('orderby' => 'id', 'order' => 'ASC')) : array();
         $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
-        $location_settings = array();
         $location_settings_defaults = array(
             'hotline' => '',
             'email' => '',
@@ -2240,21 +2239,30 @@ class RB_Admin {
             'no_show_auto_blacklist' => 3,
             'languages' => array(),
         );
+        $location_settings = $location_settings_defaults;
+        $has_selected_location = false;
 
         if (!empty($all_locations)) {
             $location_ids = array_map('intval', wp_list_pluck($all_locations, 'id'));
-            if (!in_array($selected_location_id, $location_ids, true)) {
+
+            if ($selected_location_id && in_array($selected_location_id, $location_ids, true)) {
+                $has_selected_location = true;
+            } elseif (count($location_ids) === 1) {
                 $selected_location_id = (int) $location_ids[0];
+                $has_selected_location = true;
+            } else {
+                $selected_location_id = 0;
             }
 
-            $location_settings = $rb_location->get_settings($selected_location_id);
-            $location_settings = wp_parse_args($location_settings, $location_settings_defaults);
-            if (!is_array($location_settings['languages'])) {
-                $location_settings['languages'] = array_filter(array_map('trim', explode(',', (string) $location_settings['languages'])));
+            if ($has_selected_location) {
+                $location_settings = $rb_location->get_settings($selected_location_id);
+                $location_settings = wp_parse_args($location_settings, $location_settings_defaults);
+                if (!is_array($location_settings['languages'])) {
+                    $location_settings['languages'] = array_filter(array_map('trim', explode(',', (string) $location_settings['languages'])));
+                }
             }
         } else {
             $selected_location_id = 0;
-            $location_settings = $location_settings_defaults;
         }
 
         $available_languages = function_exists('rb_get_available_languages') ? rb_get_available_languages() : array();
@@ -2602,12 +2610,12 @@ class RB_Admin {
                             <p><?php echo esc_html(rb_t('no_locations_available', __('No locations found. Please create a location before adjusting branch settings.', 'restaurant-booking'))); ?></p>
                         </div>
                     <?php else : ?>
-                        <?php wp_nonce_field('rb_save_location_settings', 'rb_location_nonce'); ?>
                         <table class="form-table">
                             <tr>
                                 <th scope="row"><label for="rb-location-selector"><?php echo esc_html(rb_t('select_location', __('Select location', 'restaurant-booking'))); ?></label></th>
                                 <td>
                                     <select id="rb-location-selector" name="rb_selected_location">
+                                        <option value=""><?php echo esc_html(rb_t('select_location_placeholder', __('— Select a location —', 'restaurant-booking'))); ?></option>
                                         <?php foreach ($all_locations as $location) : ?>
                                             <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, $location->id); ?>><?php echo esc_html($location->name); ?></option>
                                         <?php endforeach; ?>
@@ -2616,6 +2624,9 @@ class RB_Admin {
                                 </td>
                             </tr>
                         </table>
+
+                        <?php if ($has_selected_location) : ?>
+                            <?php wp_nonce_field('rb_save_location_settings', 'rb_location_nonce'); ?>
 
                         <h3><?php echo esc_html(rb_t('general_information', __('General information', 'restaurant-booking'))); ?></h3>
                         <table class="form-table">
@@ -2842,6 +2853,11 @@ class RB_Admin {
                                 </td>
                             </tr>
                         </table>
+                        <?php else : ?>
+                            <div class="notice notice-info">
+                                <p><?php echo esc_html(rb_t('select_location_before_editing', __('Choose a location to view and edit its settings. The save button will be enabled once a location is selected.', 'restaurant-booking'))); ?></p>
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
 
@@ -3536,6 +3552,16 @@ class RB_Admin {
             var $submitButton = $submitWrapper.find('.rb-settings-submit');
             var $actionField = $('#rb-settings-action');
 
+            function hasValidLocationSelection() {
+                var $selector = $('#rb-location-selector');
+                if (!$selector.length) {
+                    return false;
+                }
+
+                var value = $selector.val();
+                return value && parseInt(value, 10) > 0;
+            }
+
             function updateSubmitButton(target) {
                 if (!$submitWrapper.length || !$submitButton.length) {
                     return;
@@ -3545,18 +3571,22 @@ class RB_Admin {
                     $submitWrapper.hide();
                     $submitButton.text($submitButton.data('labelDefault'));
                     $submitButton.attr('data-action', 'save_settings');
+                    $submitButton.prop('disabled', false);
                     return;
                 }
 
                 if (target === '#tab-location-settings') {
                     if ($('#rb-location-selector').length) {
+                        var hasSelection = hasValidLocationSelection();
                         $submitButton.text($submitButton.data('labelLocation'));
                         $submitButton.attr('data-action', 'save_location_settings');
+                        $submitButton.prop('disabled', !hasSelection);
                         $submitWrapper.show();
                     } else {
                         $submitWrapper.hide();
                         $submitButton.text($submitButton.data('labelDefault'));
                         $submitButton.attr('data-action', 'save_settings');
+                        $submitButton.prop('disabled', false);
                     }
                     return;
                 }
@@ -3564,6 +3594,7 @@ class RB_Admin {
                 $submitButton.text($submitButton.data('labelDefault'));
                 $submitButton.attr('data-action', 'save_settings');
                 $submitWrapper.show();
+                $submitButton.prop('disabled', false);
             }
 
             function rbShowTab(target) {
