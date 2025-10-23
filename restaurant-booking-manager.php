@@ -97,15 +97,17 @@ function rb_init_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-portal-account.php';
     require_once RB_PLUGIN_DIR . 'includes/class-assets-manager.php';
     require_once RB_PLUGIN_DIR . 'includes/class-rest.php';
+    require_once RB_PLUGIN_DIR . 'includes/class-notification-service.php';
 
     // Initialize globals
-    global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location;
+    global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location, $rb_notification_service;
     $rb_database = new RB_Database();
     $rb_database->ensure_portal_schema();
     $rb_booking = new RB_Booking();
     $rb_customer = new RB_Customer();
     $rb_email = new RB_Email();
     $rb_location = new RB_Location();
+    $rb_notification_service = new RB_Notification_Service();
 
     // Initialize AJAX
     new RB_Ajax();
