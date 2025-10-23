@@ -400,6 +400,11 @@ class RB_Assets_Manager {
             'guestsLabel' => rb_t('people', __('people', 'restaurant-booking')),
             'tableLabel' => rb_t('table', __('Table', 'restaurant-booking')),
             'unassigned' => rb_t('unassigned', __('Unassigned', 'restaurant-booking')),
+            'tablesSidebarTitle' => rb_t('timeline_tables_title', __('Tables', 'restaurant-booking')),
+            'allTablesLabel' => rb_t('timeline_all_tables', __('All tables', 'restaurant-booking')),
+            'showAllTables' => rb_t('timeline_show_all', __('Show all tables', 'restaurant-booking')),
+            'noTablesSelected' => rb_t('timeline_no_tables_selected', __('Select tables from the list to display bookings.', 'restaurant-booking')),
+            'sidebarToggleLabel' => rb_t('timeline_sidebar_toggle', __('Show tables', 'restaurant-booking')),
             'manageTable' => rb_t('manage_table', __('Manage table', 'restaurant-booking')),
             'bookingsTitle' => rb_t('bookings_for_selected_day', __('Bookings for %s', 'restaurant-booking')),
         );
