@@ -366,6 +366,38 @@
          * Initialize filters
          */
         function initFilters() {
+            var $filterToggle = $('.rb-filter-toggle');
+            var $filterPanel = $('#rb-filter-panel');
+
+            if ($filterToggle.length && $filterPanel.length) {
+                var syncFilterPanelState = function() {
+                    if (window.matchMedia('(min-width: 783px)').matches) {
+                        if (!$filterPanel.hasClass('is-open')) {
+                            $filterPanel.addClass('is-open');
+                        }
+                        $filterToggle.attr('aria-expanded', 'true');
+                        $filterPanel.attr('aria-hidden', 'false');
+                    } else {
+                        var isOpen = $filterPanel.hasClass('is-open');
+                        $filterToggle.attr('aria-expanded', isOpen ? 'true' : 'false');
+                        $filterPanel.attr('aria-hidden', isOpen ? 'false' : 'true');
+                    }
+                };
+
+                $filterToggle.on('click', function() {
+                    var isOpen = $filterPanel.toggleClass('is-open').hasClass('is-open');
+                    $filterToggle.attr('aria-expanded', isOpen ? 'true' : 'false');
+                    $filterPanel.attr('aria-hidden', isOpen ? 'false' : 'true');
+
+                    if (window.matchMedia('(min-width: 783px)').matches) {
+                        syncFilterPanelState();
+                    }
+                });
+
+                $(window).on('resize', syncFilterPanelState);
+                syncFilterPanelState();
+            }
+
             // Date range picker
             $('#rb-date-filter').on('change', function() {
                 var selectedDate = $(this).val();

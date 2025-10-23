@@ -54,17 +54,30 @@
                 self.toggleSidebar();
             });
 
+            this.layouts.on('click', '[data-rb-toggle-filters]', function (event) {
+                event.preventDefault();
+                self.toggleFilters($(this));
+            });
+
             this.layouts.on('click', '[data-rb-close-panels]', function () {
                 self.closePanels();
             });
 
             this.layouts.on('click', this.cardSelector, function (event) {
+                if (self.shouldIgnoreCardActivation(event)) {
+                    return;
+                }
+
                 var card = $(this);
                 self.focusCard(card);
                 self.openDetail();
             });
 
             this.layouts.on('keydown', this.cardSelector, function (event) {
+                if (self.shouldIgnoreCardActivation(event)) {
+                    return;
+                }
+
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     $(this).trigger('click');
@@ -147,6 +160,7 @@
         },
 
         toggleSidebar: function () {
+            this.closeFilters();
             if (window.matchMedia('(max-width: 768px)').matches) {
                 var shouldOpen = !this.sidebar.hasClass('is-open');
                 this.layouts.removeClass('has-detail-open');
@@ -161,6 +175,7 @@
         },
 
         openDetail: function () {
+            this.closeFilters();
             this.closeSidebar();
             this.layouts.addClass('has-detail-open');
             if (this.detail.length) {
@@ -217,8 +232,15 @@
         },
 
         closePanels: function () {
-            this.closeDetail();
-            this.closeSidebar();
+            if (this.layouts.filter('.has-detail-open').length) {
+                this.closeDetail();
+            }
+
+            if (this.layouts.filter('.is-sidebar-open').length || this.sidebar.filter('.is-open').length) {
+                this.closeSidebar();
+            }
+
+            this.closeFilters();
         },
 
         handleResize: function () {
@@ -244,7 +266,111 @@
                 this.revealHeader();
             }
 
+            this.syncFiltersForViewport(isMobile);
             this.lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        },
+
+        toggleFilters: function (button) {
+            if (!button || !button.length || window.innerWidth >= 769) {
+                return;
+            }
+
+            var toolbar = button.closest('.rb-gmail-toolbar');
+            var panel = toolbar.find('[data-rb-filters-panel]');
+
+            if (!panel.length) {
+                return;
+            }
+
+            this.closeDetail();
+            this.closeSidebar();
+
+            var isOpen = toolbar.hasClass('is-filters-open');
+            isOpen = !isOpen;
+
+            toolbar.toggleClass('is-filters-open', isOpen);
+            panel.toggleClass('is-open', isOpen);
+
+            if (!panel.attr('tabindex')) {
+                panel.attr('tabindex', '-1');
+            }
+
+            if (isOpen) {
+                panel.removeAttr('hidden');
+                panel.attr('aria-hidden', 'false');
+                panel.trigger('focus');
+            } else {
+                panel.attr('hidden', 'hidden');
+                panel.attr('aria-hidden', 'true');
+                button.trigger('focus');
+            }
+
+            button.attr('aria-expanded', isOpen ? 'true' : 'false');
+        },
+
+        closeFilters: function () {
+            if (window.innerWidth >= 769) {
+                return;
+            }
+
+            this.layouts.find('.rb-gmail-toolbar').each(function () {
+                var toolbar = $(this);
+                var panel = toolbar.find('[data-rb-filters-panel]');
+                var button = toolbar.find('[data-rb-toggle-filters]');
+
+                if (!panel.length) {
+                    return;
+                }
+
+                toolbar.removeClass('is-filters-open');
+                panel.removeClass('is-open');
+                panel.attr('hidden', 'hidden');
+                panel.attr('aria-hidden', 'true');
+
+                if (button.length) {
+                    button.attr('aria-expanded', 'false');
+                }
+            });
+        },
+
+        syncFiltersForViewport: function (isMobile) {
+            this.layouts.find('.rb-gmail-toolbar').each(function () {
+                var toolbar = $(this);
+                var panel = toolbar.find('[data-rb-filters-panel]');
+                var button = toolbar.find('[data-rb-toggle-filters]');
+
+                if (!panel.length) {
+                    return;
+                }
+
+                if (!panel.attr('tabindex')) {
+                    panel.attr('tabindex', '-1');
+                }
+
+                if (!isMobile) {
+                    toolbar.removeClass('is-filters-open');
+                    panel.removeClass('is-open');
+                    panel.removeAttr('hidden');
+                    panel.attr('aria-hidden', 'false');
+                    if (button.length) {
+                        button.attr('aria-expanded', 'true');
+                    }
+                } else if (toolbar.hasClass('is-filters-open')) {
+                    panel.addClass('is-open');
+                    panel.removeAttr('hidden');
+                    panel.attr('aria-hidden', 'false');
+                    if (button.length) {
+                        button.attr('aria-expanded', 'true');
+                    }
+                } else {
+                    panel.removeClass('is-open');
+                    panel.attr('hidden', 'hidden');
+                    panel.attr('aria-hidden', 'true');
+                    if (button.length) {
+                        button.attr('aria-expanded', 'false');
+                    }
+                }
+            });
         },
 
         scrollDetailToTop: function () {
@@ -315,6 +441,28 @@
             }
         },
 
+        shouldIgnoreCardActivation: function (event) {
+            if (!event) {
+                return false;
+            }
+
+            var target = $(event.target);
+
+            if (!target.length) {
+                return false;
+            }
+
+            if (target.is('button, a, input, select, textarea, label, [role="button"], [aria-haspopup="true"]')) {
+                return true;
+            }
+
+            if (target.closest('[data-rb-ignore-detail]').length) {
+                return true;
+            }
+
+            return false;
+        },
+
         handleGlobalKeydown: function (event) {
             if (!this.layout.length) {
                 return;
@@ -330,7 +478,11 @@
             }
 
             if (event.key === 'Escape') {
-                if (this.layout.hasClass('has-detail-open') || this.layout.hasClass('is-sidebar-open')) {
+                var hasOverlay = this.layout.hasClass('has-detail-open') || this.layout.hasClass('is-sidebar-open');
+                var filtersOpen = this.layouts.find('.rb-gmail-toolbar.is-filters-open').length > 0;
+
+                if (hasOverlay || filtersOpen) {
+                    event.preventDefault();
                     this.closePanels();
                 }
             }

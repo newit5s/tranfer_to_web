@@ -16,6 +16,11 @@
     --rb-gmail-shadow: rgba(60, 64, 67, 0.18);
     --rb-gmail-shadow-strong: rgba(60, 64, 67, 0.28);
     --rb-gmail-radius: 14px;
+    --rb-gmail-header-offset: 0px;
+}
+
+body.admin-bar {
+    --rb-gmail-header-offset: var(--wp-admin--admin-bar--height, 32px);
 }
 
 .rb-manager--gmail {
@@ -68,7 +73,7 @@
     padding: 18px 32px;
     box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
     position: sticky;
-    top: 0;
+    top: var(--rb-gmail-header-offset);
     z-index: 10;
     transition: transform 0.25s ease, opacity 0.25s ease;
     will-change: transform;
@@ -1163,6 +1168,52 @@
     outline: none;
 }
 
+.rb-gmail-filters-toggle {
+    display: none;
+    margin-left: auto;
+    border: 1px solid var(--rb-gmail-border);
+    background: var(--rb-gmail-surface-alt);
+    color: var(--rb-gmail-muted);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    line-height: 1.2;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.rb-gmail-filters-toggle:hover,
+.rb-gmail-filters-toggle:focus-visible {
+    background: rgba(34, 113, 177, 0.12);
+    color: var(--rb-gmail-primary);
+    border-color: var(--rb-gmail-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.12);
+}
+
+.rb-gmail-filters-toggle-icon {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.rb-gmail-toolbar.is-filters-open .rb-gmail-filters-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.rb-gmail-filter-panel {
+    flex: 1 1 360px;
+    min-width: 0;
+}
+
+.rb-gmail-filter-panel form {
+    width: 100%;
+}
+
+.rb-gmail-filter-panel[hidden] {
+    display: none !important;
+}
+
 .rb-gmail-toolbar-placeholder {
     display: none !important;
 }
@@ -1684,6 +1735,10 @@
         align-items: stretch;
     }
 
+    .rb-gmail-filter-panel {
+        flex-basis: 100%;
+    }
+
     .rb-gmail-search {
         flex: 1 1 100%;
         max-width: none;
@@ -1768,14 +1823,17 @@
 
     .rb-manager--gmail .rb-customer-inbox.has-detail-open .rb-inbox-detail {
         position: fixed;
-        inset: 72px 16px 20px;
+        top: calc(var(--rb-gmail-header-offset) + 72px);
+        right: 16px;
+        bottom: 20px;
+        left: 16px;
         z-index: 1100;
-        max-height: calc(100vh - 92px);
+        max-height: calc(100vh - (92px + var(--rb-gmail-header-offset)));
         width: auto;
     }
 
     .rb-manager--gmail .rb-customer-inbox.has-detail-open .rb-customer-detail-scroll {
-        max-height: calc(100vh - 164px);
+        max-height: calc(100vh - (164px + var(--rb-gmail-header-offset)));
     }
 
     .rb-manager--gmail .rb-customer-inbox .rb-gmail-detail-close {
@@ -1797,11 +1855,11 @@
 
     .rb-manager--gmail .rb-customer-inbox.is-mobile-ready .rb-gmail-sidebar {
         position: fixed;
-        top: 0;
+        top: var(--rb-gmail-header-offset);
         left: -100%;
         width: 80vw;
         max-width: 320px;
-        height: 100vh;
+        height: calc(100vh - var(--rb-gmail-header-offset));
         z-index: 1000;
         transition: left 0.3s ease;
     }
@@ -1872,6 +1930,32 @@
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
+    }
+
+    .rb-gmail-filters-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .rb-gmail-toolbar .rb-gmail-filter-panel {
+        display: none;
+        width: 100%;
+        padding-top: 10px;
+        border-top: 1px solid var(--rb-gmail-border);
+    }
+
+    .rb-gmail-toolbar.is-filters-open .rb-gmail-filter-panel {
+        display: block;
+    }
+
+    .rb-gmail-toolbar.is-filters-open .rb-gmail-filters-toggle {
+        background: rgba(34, 113, 177, 0.12);
+        color: var(--rb-gmail-primary);
+        border-color: var(--rb-gmail-primary);
     }
 
     .rb-gmail-filter-form {
@@ -2121,12 +2205,12 @@
 
     .rb-manager-gmail-layout.is-mobile-ready .rb-gmail-sidebar {
         position: fixed !important;
-        top: 0 !important;
+        top: var(--rb-gmail-header-offset) !important;
         bottom: 0 !important;
         left: -100% !important;
         width: 82vw !important;
         max-width: 320px !important;
-        height: 100vh !important;
+        height: calc(100vh - var(--rb-gmail-header-offset)) !important;
         padding: 24px 20px !important;
         overflow-y: auto !important;
         background: var(--rb-gmail-surface);
@@ -2162,7 +2246,7 @@
     .rb-gmail-detail {
         grid-area: detail !important;
         position: fixed !important;
-        top: 0 !important;
+        top: var(--rb-gmail-header-offset) !important;
         right: 0 !important;
         bottom: 0 !important;
         left: 0 !important;
@@ -2309,10 +2393,10 @@
 
     .rb-manager-gmail-layout.is-mobile-ready .rb-gmail-sidebar {
         position: fixed !important;
-        top: 0 !important;
+        top: var(--rb-gmail-header-offset) !important;
         left: -100% !important;
         width: 80vw !important;
-        height: 100vh !important;
+        height: calc(100vh - var(--rb-gmail-header-offset)) !important;
         z-index: 1000 !important;
         transition: left 0.3s ease !important;
     }
