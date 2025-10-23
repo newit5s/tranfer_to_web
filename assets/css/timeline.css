@@ -194,6 +194,7 @@
     flex-direction: column;
     gap: 16px;
     position: relative;
+    --rb-timeline-toolbar-offset: 0px;
 }
 
 .rb-timeline-main-content {
@@ -216,8 +217,11 @@
     justify-content: space-between;
     gap: 12px;
     position: sticky;
-    top: 0;
+    top: var(--rb-timeline-toolbar-offset, 0px);
+    left: 0;
+    right: 0;
     z-index: 5;
+    width: 100%;
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
@@ -225,6 +229,7 @@
     box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
     backdrop-filter: blur(6px);
     margin-bottom: 16px;
+    box-sizing: border-box;
 }
 
 .rb-timeline-toolbar-group {
@@ -377,6 +382,7 @@
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 8px;
+    grid-auto-rows: minmax(88px, auto);
     margin-top: 4px;
 }
 
@@ -460,8 +466,8 @@
 }
 
 .rb-timeline-week-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 12px;
 }
 
@@ -476,6 +482,7 @@
     background: #f8fafc;
     cursor: pointer;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    height: 100%;
 }
 
 .rb-timeline-week-row:hover,
@@ -641,7 +648,31 @@ body.rb-timeline-drawer-open {
 }
 
 .rb-timeline-app.rb-timeline-is-mobile .rb-timeline-main {
+    --rb-timeline-toolbar-offset: calc(env(safe-area-inset-top, 0px) + 12px);
     padding-bottom: 20px;
+    padding-top: 4px;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-toolbar-group {
+    width: 100%;
+    display: flex;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-toolbar-group--left {
+    justify-content: flex-start;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-toolbar-group--right {
+    justify-content: flex-end;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-view-toggle {
+    width: 100%;
 }
 
 .rb-timeline-reset-selection {
@@ -707,6 +738,29 @@ body.rb-timeline-drawer-open {
 
 .rb-timeline-timeslot:first-child {
     border-top: none;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-week-list {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-month-grid {
+    grid-template-columns: repeat(7, minmax(96px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-month-grid::-webkit-scrollbar {
+    height: 6px;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-month-grid::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.45);
+    border-radius: 999px;
+}
+
+.rb-timeline-app.rb-timeline-is-mobile .rb-timeline-month-grid::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.4);
 }
 
 .rb-timeline-columns {
