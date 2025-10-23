@@ -563,13 +563,6 @@ body.rb-modal-open {
     color: var(--rb-new-text);
 }
 
-.rb-new-location-info__note {
-    margin: 0 0 14px;
-    font-size: 14px;
-    color: var(--rb-new-muted);
-    line-height: 1.5;
-}
-
 .rb-new-location-info__grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -674,6 +667,12 @@ body.rb-modal-open {
 }
 
 /* Utility */
+@media (max-width: 820px) {
+    .rb-new-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 640px) {
     .rb-new-modal {
         padding: 16px;
