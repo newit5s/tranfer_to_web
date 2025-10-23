@@ -195,7 +195,9 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
             <div id="rb-new-booking-modal" class="<?php echo esc_attr($modal_class_attr); ?>" aria-hidden="<?php echo esc_attr($modal_aria_hidden); ?>" data-inline-mode="<?php echo $show_button ? '0' : '1'; ?>">
                 <div class="rb-new-modal-content" role="dialog" aria-modal="true">
-                    <button type="button" class="rb-new-close" aria-label="<?php esc_attr_e('Close booking form', 'restaurant-booking'); ?>">&times;</button>
+                    <button type="button" class="rb-new-close" aria-label="<?php esc_attr_e('Close booking form', 'restaurant-booking'); ?>">
+                        <span class="rb-new-close-icon" aria-hidden="true"></span>
+                    </button>
 
                     <div class="rb-new-stepper" role="list" aria-label="<?php echo esc_attr(rb_t('booking_steps', __('Booking progress', 'restaurant-booking'))); ?>">
                         <div class="rb-new-stepper__item is-active" data-step="1" role="listitem">
@@ -302,6 +304,9 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                         <?php if ('yes' === $settings['frontend_show_location_contact']) : ?>
                             <div class="<?php echo esc_attr($location_info_class_attr); ?>" aria-live="polite">
                                 <h4 class="rb-new-location-info__title"><?php echo esc_html(rb_t('location_contact', __('Location contact', 'restaurant-booking'))); ?></h4>
+                                <p class="rb-new-location-info__note">
+                                    <?php echo esc_html(rb_t('advance_booking_note', __('If you would like to book within 2 hours or cannot select a time slot, please contact the restaurant hotline or email for assistance.', 'restaurant-booking'))); ?>
+                                </p>
                                 <div class="rb-new-location-info__grid">
                                     <p class="rb-new-location-info__item <?php echo empty($default_location_address) ? 'is-hidden' : ''; ?>" data-field="address">
                                         <span class="rb-new-location-info__label"><?php echo esc_html(rb_t('address', __('Address', 'restaurant-booking'))); ?>:</span>
@@ -579,12 +584,21 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             $email_handler->send_pending_confirmation($booking, $location);
         }
 
+        $success_template = rb_t(
+            'booking_success_message',
+            __('Thank you %1$s! We have sent a confirmation email to %2$s. Please click the link to secure your table at %3$s. For urgent assistance call %4$s.', 'restaurant-booking')
+        );
+
+        $hotline_display = !empty($location['hotline'])
+            ? $location['hotline']
+            : rb_t('restaurant_hotline_generic', __('the restaurant hotline', 'restaurant-booking'));
+
         $success_message = sprintf(
-            __('Thank you %1$s! We have sent a confirmation email to %2$s. Please click the link to secure your table at %3$s. For urgent assistance call %4$s.', 'restaurant-booking'),
+            $success_template,
             $booking_data['customer_name'],
             $booking_data['customer_email'],
             $location['name'],
-            !empty($location['hotline']) ? $location['hotline'] : __('the restaurant hotline', 'restaurant-booking')
+            $hotline_display
         );
 
         wp_send_json_success(array(
