@@ -71,15 +71,39 @@ class RB_Email {
     public function send_admin_notification($booking) {
         $settings = get_option('rb_settings', array());
         $admin_email = isset($settings['admin_email']) ? $settings['admin_email'] : get_option('admin_email');
-        
+
         $subject = sprintf(__('[%s] Đặt bàn mới', 'restaurant-booking'), get_bloginfo('name'));
         $message = $this->get_admin_notification_template($booking);
-        
+
         $headers = array(
             'Content-Type: text/html; charset=UTF-8'
         );
-        
+
         return wp_mail($admin_email, $subject, $message, $headers);
+    }
+
+    public function send_flagged_booking_alert($recipients, $booking, $customer, $flags, $context = 'created') {
+        if (empty($recipients)) {
+            return false;
+        }
+
+        if (!is_array($recipients)) {
+            $recipients = array($recipients);
+        }
+
+        $recipients = array_filter($recipients, 'is_email');
+        if (empty($recipients)) {
+            return false;
+        }
+
+        $subject = $this->get_flagged_booking_subject($booking, $flags, $context);
+        $message = $this->get_flagged_booking_template($booking, $customer, $flags, $context);
+
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8'
+        );
+
+        return wp_mail($recipients, $subject, $message, $headers);
     }
     
     /**
@@ -369,6 +393,207 @@ class RB_Email {
         </html>';
         
         return $template;
+    }
+
+    private function get_flagged_booking_subject($booking, $flags, $context) {
+        $flag_labels = array();
+        if (in_array('vip', $flags, true)) {
+            $flag_labels[] = rb_t('vip', __('VIP', 'restaurant-booking'));
+        }
+
+        if (in_array('blacklist', $flags, true)) {
+            $flag_labels[] = rb_t('blacklisted', __('Blacklisted', 'restaurant-booking'));
+        }
+
+        $flag_text = !empty($flag_labels) ? implode(' & ', $flag_labels) : rb_t('notifications', __('Notifications', 'restaurant-booking'));
+
+        $context_key = $context === 'confirmed' ? 'flagged_context_confirmed' : 'flagged_context_created';
+        $context_text = rb_t($context_key, $context === 'confirmed' ? __('confirmed', 'restaurant-booking') : __('created', 'restaurant-booking'));
+
+        $booking_code = isset($booking->id) ? '#' . str_pad($booking->id, 5, '0', STR_PAD_LEFT) : '';
+
+        $subject_template = rb_t('flagged_booking_subject', __('[%1$s] %2$s booking %3$s (%4$s)', 'restaurant-booking'));
+
+        return sprintf(
+            $subject_template,
+            get_bloginfo('name'),
+            $flag_text,
+            $context_text,
+            $booking_code
+        );
+    }
+
+    private function get_flagged_booking_template($booking, $customer, $flags, $context) {
+        $flag_labels = array();
+        if (in_array('vip', $flags, true)) {
+            $flag_labels[] = rb_t('vip', __('VIP', 'restaurant-booking'));
+        }
+
+        if (in_array('blacklist', $flags, true)) {
+            $flag_labels[] = rb_t('blacklisted', __('Blacklisted', 'restaurant-booking'));
+        }
+
+        $flag_text = !empty($flag_labels) ? implode(' & ', $flag_labels) : rb_t('notifications', __('Notifications', 'restaurant-booking'));
+
+        $context_key = $context === 'confirmed' ? 'flagged_context_confirmed' : 'flagged_context_created';
+        $context_text = rb_t($context_key, $context === 'confirmed' ? __('confirmed', 'restaurant-booking') : __('created', 'restaurant-booking'));
+
+        $booking_code = isset($booking->id) ? '#' . str_pad($booking->id, 5, '0', STR_PAD_LEFT) : '';
+        $booking_date = isset($booking->booking_date) ? date_i18n('l, d/m/Y', strtotime($booking->booking_date)) : '';
+        $checkin = !empty($booking->checkin_time) ? $booking->checkin_time : (isset($booking->booking_time) ? $booking->booking_time : '');
+        $checkout = !empty($booking->checkout_time) ? $booking->checkout_time : '';
+        $time_range = $checkout ? sprintf('%s – %s', $checkin, $checkout) : $checkin;
+        $guest_count = isset($booking->guest_count) ? intval($booking->guest_count) : 0;
+
+        $location_name = '';
+        if (!empty($booking->location_id)) {
+            global $rb_location;
+            if (!$rb_location || !is_a($rb_location, 'RB_Location')) {
+                require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+                $rb_location = new RB_Location();
+            }
+
+            $location = $rb_location->get((int) $booking->location_id);
+            if ($location && !empty($location->name)) {
+                $location_name = $location->name;
+            }
+        }
+
+        $customer_name = isset($booking->customer_name) ? $booking->customer_name : '';
+        $customer_phone = isset($booking->customer_phone) ? $booking->customer_phone : '';
+        $customer_email = isset($booking->customer_email) ? $booking->customer_email : '';
+        $special_requests = isset($booking->special_requests) ? $booking->special_requests : '';
+        $customer_notes = ($customer && isset($customer->customer_notes)) ? $customer->customer_notes : '';
+
+        $header_context = sprintf(rb_t('flagged_booking_context', __('%1$s booking %2$s', 'restaurant-booking')), $flag_text, $context_text);
+
+        ob_start();
+        ?>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #8e44ad; color: white; padding: 24px; text-align: center; border-radius: 6px 6px 0 0; }
+                .content { background: #fff; border: 1px solid #ddd; border-top: none; border-radius: 0 0 6px 6px; padding: 30px; }
+                .badges { margin: 10px 0 20px; }
+                .badge { display: inline-block; padding: 6px 12px; margin-right: 6px; border-radius: 999px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+                .badge--vip { background: #f1c40f; color: #2c3e50; }
+                .badge--blacklist { background: #c0392b; color: #fff; }
+                .section { margin-bottom: 24px; }
+                .section h3 { margin-top: 0; }
+                table { width: 100%; border-collapse: collapse; }
+                td { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+                td:first-child { font-weight: 600; width: 180px; }
+                ul { margin: 0 0 0 20px; padding: 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1><?php echo esc_html(rb_t('flagged_booking_alert', __('Flagged reservation alert', 'restaurant-booking'))); ?></h1>
+                    <p><?php echo esc_html($header_context); ?></p>
+                </div>
+                <div class="content">
+                    <div class="badges">
+                        <?php if (in_array('vip', $flags, true)) : ?>
+                            <span class="badge badge--vip"><?php echo esc_html(rb_t('vip', __('VIP', 'restaurant-booking'))); ?></span>
+                        <?php endif; ?>
+                        <?php if (in_array('blacklist', $flags, true)) : ?>
+                            <span class="badge badge--blacklist"><?php echo esc_html(rb_t('blacklisted', __('Blacklisted', 'restaurant-booking'))); ?></span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="section">
+                        <p><strong><?php echo esc_html(rb_t('flagged_booking_summary', __('This reservation needs attention because:', 'restaurant-booking'))); ?></strong></p>
+                        <ul>
+                            <?php foreach ($flag_labels as $label) : ?>
+                                <li><?php echo esc_html($label); ?></li>
+                            <?php endforeach; ?>
+                            <li><?php echo esc_html(sprintf(rb_t('flagged_booking_state', __('Booking %1$s', 'restaurant-booking')), $context_text)); ?></li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h3><?php echo esc_html(rb_t('booking_details', __('Booking details', 'restaurant-booking'))); ?></h3>
+                        <table>
+                            <?php if ($booking_code) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('booking', __('Booking', 'restaurant-booking'))); ?></td>
+                                    <td><?php echo esc_html($booking_code); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php if ($booking_date) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('date', __('Date', 'restaurant-booking'))); ?></td>
+                                    <td><?php echo esc_html($booking_date); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($time_range)) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('time', __('Time', 'restaurant-booking'))); ?></td>
+                                    <td><?php echo esc_html($time_range); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            <tr>
+                                <td><?php echo esc_html(rb_t('guests', __('Guests', 'restaurant-booking'))); ?></td>
+                                <td><?php echo esc_html(number_format_i18n($guest_count)); ?></td>
+                            </tr>
+                            <?php if ($location_name) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('location', __('Location', 'restaurant-booking'))); ?></td>
+                                    <td><?php echo esc_html($location_name); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($special_requests)) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('special_requests', __('Special Requests', 'restaurant-booking'))); ?></td>
+                                    <td><?php echo nl2br(esc_html($special_requests)); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <h3><?php echo esc_html(rb_t('customer', __('Customer', 'restaurant-booking'))); ?></h3>
+                        <table>
+                            <?php if ($customer_name) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('name', __('Name', 'restaurant-booking'))); ?></td>
+                                    <td><?php echo esc_html($customer_name); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php if ($customer_phone) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('phone', __('Phone', 'restaurant-booking'))); ?></td>
+                                    <td><a href="tel:<?php echo esc_attr($customer_phone); ?>"><?php echo esc_html($customer_phone); ?></a></td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php if ($customer_email) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('email', __('Email', 'restaurant-booking'))); ?></td>
+                                    <td><a href="mailto:<?php echo esc_attr($customer_email); ?>"><?php echo esc_html($customer_email); ?></a></td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($customer_notes)) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(rb_t('customer_notes', __('Customer Notes', 'restaurant-booking'))); ?></td>
+                                    <td><?php echo nl2br(esc_html($customer_notes)); ?></td>
+                                </tr>
+                            <?php endif; ?>
+                        </table>
+                    </div>
+
+                    <p><?php echo esc_html(rb_t('flagged_booking_footer', __('Please follow up with the assigned team and update the booking status once handled.', 'restaurant-booking'))); ?></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        <?php
+
+        return ob_get_clean();
     }
     
     /**

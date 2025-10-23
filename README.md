@@ -5,8 +5,8 @@ Plugin WordPress giúp nhà hàng quản lý đặt bàn từ khâu tiếp nhậ
 ## 📚 Tổng quan kiến trúc
 
 - **Bootstrap**: `restaurant-booking-manager.php` khởi tạo plugin, đăng ký shortcode, enqueue assets kế thừa và gọi toàn bộ lớp trong `includes/`, `admin/`, `public/`.
-- **Business layer**: các lớp trong `includes/` phụ trách đặt bàn (`RB_Booking`), khách hàng (`RB_Customer`), chi nhánh & bàn (`RB_Location`), tài khoản portal (`RB_Portal_Account_Manager`), email (`RB_Email`), AJAX (`RB_Ajax`) và đa ngôn ngữ (`RB_I18n`).
-- **Frontend**: `assets/css/new-frontend.css` + `assets/js/new-booking.js` cho widget đặt bàn modal 3 bước; `public/class-frontend-*.php` dựng portal quản lý, chia sẻ logic chung qua `RB_Frontend_Base`.
+- **Business layer**: các lớp trong `includes/` phụ trách đặt bàn (`RB_Booking`), khách hàng (`RB_Customer`), chi nhánh & bàn (`RB_Location`), tài khoản portal (`RB_Portal_Account_Manager`), email (`RB_Email`), thông báo VIP/Blacklist (`RB_Notification_Service`), AJAX (`RB_Ajax`) và đa ngôn ngữ (`RB_I18n`).
+- **Frontend**: `assets/css/new-frontend.css` + `assets/js/new-booking.js` cho widget đặt bàn modal 3 bước; `assets/css/timeline.css` + `assets/js/timeline-view.js` dựng timeline responsive dùng chung cho admin/portal; `public/class-frontend-*.php` chia sẻ logic qua `RB_Frontend_Base`.
 - **Admin**: `admin/class-admin.php` dựng Booking Hub dạng SPA dựa trên Gutenberg Components (React) và giao tiếp qua REST (`includes/class-rest.php`) để hiển thị dashboard, bảng đặt bàn, bàn và khách hàng theo thời gian thực.
 - **Mẫu MVC nhẹ**: mỗi module có lớp controller (AJAX/REST), service (xử lý logic) và repository (làm việc với `RB_Database`). Các service nên đặt trong `includes/services/` (nếu cần thêm) để tái sử dụng cho cả frontend và admin.
 
@@ -73,22 +73,27 @@ restaurant-booking-manager/
 - Xác thực dữ liệu đầu vào (email, điện thoại), hỗ trợ đa ngôn ngữ và chuyển ngôn ngữ ngay trên widget.
 - Gửi email xác nhận kèm token, cho phép khách cập nhật trạng thái qua đường dẫn bảo mật.
 - Thẻ thông tin chi nhánh (địa chỉ, hotline, email) cập nhật theo lựa chọn và có thể bật/tắt trong tab Appearance.
+- Bố cục modal tự co giãn: lưới form bước 2 chuyển về 1 cột, nút CTA xếp dọc và stepper thu gọn trên thiết bị < 640px để thao tác trên mobile thoải mái hơn.
 
 ### Dành cho nhân viên (Portal)
 - Đăng nhập bằng tài khoản nội bộ, giới hạn chi nhánh theo phân quyền.
 - Dashboard thống kê trạng thái, lọc đặt bàn theo ngày/nguồn, xem lịch sử khách hàng.
+- Timeline đặt bàn responsive với sidebar lọc bàn, chuyển Day/Week/Month và mobile drawer để thao tác nhanh trên điện thoại.
 - Thao tác nhanh: xác nhận/huỷ/hoàn tất đặt bàn, gán bàn, đánh dấu VIP/Blacklist, ghi chú nội bộ.
 - Quản lý bàn theo chi nhánh (thêm/xoá/bật tắt), cập nhật cấu hình giờ mở cửa, buffer time.
 
 ### Dành cho quản trị viên WordPress
-- Giao diện quản trị riêng với tab **General**, **Locations**, **Appearance**, **Portal Accounts**, **Email & Automation**, **Tools**.
-- Sinh portal account, đặt lại mật khẩu, gán nhiều chi nhánh trên cùng một tài khoản.
-- Công cụ dọn lịch cũ và reset plugin (tùy chọn) qua AJAX có nonce bảo vệ.
+- Booking Hub chia thành các tab **Language**, **Hours**, **Booking**, **Location Settings**, **Appearance**, **Notifications**, **Policies**, **Advanced** và **Portal Accounts** để tách cấu hình toàn hệ thống với quyền theo chi nhánh.
+- Tab **Location Settings** cho phép chọn từng chi nhánh để chỉnh giờ mở cửa, ca sáng/chiều, khoảng cách ca, deposit, ngưỡng khách, ngôn ngữ phục vụ… độc lập với thiết lập toàn cục.
+- Tab **Notifications** và **Policies** cấu hình email quản lý, danh sách nhận cảnh báo VIP/Blacklist, thời gian nhắc, quy tắc đặt cọc/hủy, tự động blacklist khách no-show.
+- Tab **Advanced** tập trung tạo chi nhánh mới, dọn lịch cũ, xuất CSV và reset plugin với xác nhận nonce.
+- Tab **Portal Accounts** sinh tài khoản chi nhánh, đặt lại mật khẩu, gán nhiều location trên cùng một tài khoản.
 
 ### Hệ thống nền tảng
 - Tạo bảng dữ liệu khi kích hoạt (`RB_Database::create_tables`), đảm bảo schema portal (`ensure_portal_schema`).
 - Lớp i18n tự động phát hiện ngôn ngữ từ session → cookie → URL → meta người dùng → locale WP, fallback `vi_VN`.
 - Enqueue assets có điều kiện dựa trên shortcode ở trang hiện tại, giảm tải cho theme.
+- `RB_Notification_Service` lắng nghe sự kiện `rb_booking_created/confirmed`, gửi email cảnh báo VIP/Blacklist theo cấu hình và cho phép mở rộng recipients qua hook.
 
 ## ✅ Yêu cầu hệ thống
 
@@ -114,12 +119,15 @@ restaurant-booking-manager/
 
 ## 🛠️ Cấu hình sau khi kích hoạt
 
-1. **General**: số bàn tối đa, giờ mở/đóng cửa mặc định, khoảng cách ca (`time_slot_interval`), email nhận thông báo, bật tắt email tự động.
-2. **Locations**: tạo chi nhánh với địa chỉ, hotline, khoảng cách đặt trước/đặt muộn, ngôn ngữ hỗ trợ, cấu hình bàn theo chi nhánh.
-3. **Portal Accounts**: khởi tạo tài khoản, gán nhiều chi nhánh, đặt mật khẩu, bật/tắt trạng thái. Có thể reset mật khẩu từng tài khoản.
-4. **Email & Automation**: bật cron gửi email xác nhận/nhắc nhở, cấu hình nội dung email và buffer time.
-5. **Tools**: dọn lịch cũ theo mốc thời gian, reset plugin về trạng thái ban đầu (xóa dữ liệu – cẩn trọng).
-6. **Appearance**: tinh chỉnh màu chủ đạo, nền modal, font chữ, bo góc và bật/tắt các thành phần (chuyển ngôn ngữ, tóm tắt đặt bàn, thẻ thông tin chi nhánh) cho widget đặt bàn.
+1. **Language**: chọn ngôn ngữ mặc định, bật/tắt gói dịch và reset nhanh về cấu hình ban đầu.
+1. **Hours**: định nghĩa giờ mở/đóng cửa theo chế độ đơn giản hay 2 ca, cấu hình giờ nghỉ trưa và cho phép nhận đặt cuối tuần.
+1. **Booking**: thiết lập khoảng cách ca, buffer, thời gian đặt trước/tối đa, giới hạn khách và auto-confirm mặc định cho toàn hệ thống.
+1. **Location Settings**: chọn từng chi nhánh để override giờ hoạt động, ca sáng/chiều, buffer, deposit, ngưỡng khách, ngôn ngữ phục vụ và email theo location.
+1. **Appearance**: tinh chỉnh màu chủ đạo, nền modal, font chữ, bo góc và bật/tắt các thành phần (chuyển ngôn ngữ, tóm tắt đặt bàn, thẻ thông tin chi nhánh) cho widget đặt bàn.
+1. **Notifications**: nhập email quản trị, bật nhắc lịch và danh sách nhận cảnh báo khi khách VIP/Blacklist tạo hoặc cập nhật booking.
+1. **Policies**: khai báo yêu cầu đặt cọc, ngưỡng khách cần đặt cọc, thời gian hủy miễn phí, ngày đóng cửa đặc biệt và rule tự động blacklist khách no-show.
+1. **Advanced**: tạo chi nhánh mới, quản lý danh sách hiện có, dọn lịch cũ, xuất CSV và reset plugin (có xác nhận nonce).
+1. **Portal Accounts**: khởi tạo tài khoản, gán nhiều chi nhánh, đặt mật khẩu, bật/tắt trạng thái và reset từng tài khoản khi cần.
 
 ## 🧭 Shortcode & Block
 
@@ -164,8 +172,8 @@ restaurant-booking-manager/
 
 ## 🧩 Hooks & mở rộng
 
-- **Filters:** `rb_should_enqueue_new_frontend_assets`, `rb_enqueue_legacy_frontend_assets`, `rb_translations`, `rb_available_languages`.
-- **Actions/AJAX:** `rb_admin_*` cho thao tác quản trị, `rb_manager_*` cho portal, `rb_cleanup_old_bookings`, `rb_reset_plugin` cho công cụ bảo trì.
+- **Filters:** `rb_should_enqueue_new_frontend_assets`, `rb_should_enqueue_timeline_frontend_assets`, `rb_should_enqueue_timeline_admin_assets`, `rb_enqueue_legacy_frontend_assets`, `rb_translations`, `rb_available_languages`, `rb_flagged_booking_notification_recipients`.
+- **Actions/AJAX:** `rb_admin_*` cho thao tác quản trị, `rb_manager_*` cho portal, `rb_get_timeline_data`, `rb_update_table_status`, `rb_check_availability_extended`, `rb_cleanup_old_bookings`, `rb_reset_plugin` cho công cụ bảo trì.
 - **Helper:** `rb_t()` để lấy chuỗi bản địa hóa, `rb_get_current_language()` và `rb_get_available_languages()` cho dev.
 - **REST (`rb/v1` namespace):**
   - `GET /bookings` (lọc theo trạng thái, nguồn, khoảng ngày, location, search, phân trang), `POST /bookings/{id}/status` để chuyển trạng thái (pending/confirmed/completed/cancelled/no-show).

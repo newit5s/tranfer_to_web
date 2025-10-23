@@ -2148,8 +2148,10 @@ class RB_Admin {
             'deposit_for_guests' => 10,
             'admin_email' => get_option('admin_email'),
             'enable_email' => 'yes',
-            'enable_sms' => 'no',
-            'sms_api_key' => '',
+            'notify_vip_bookings' => 'no',
+            'notify_blacklist_events' => 'no',
+            'vip_notification_recipients' => '',
+            'blacklist_notification_recipients' => '',
             'reminder_hours_before' => 24,
             'special_closed_dates' => '',
             'cancellation_hours' => 2,
@@ -2174,7 +2176,7 @@ class RB_Admin {
         $settings = wp_parse_args($settings, $defaults);
 
         $active_tab = isset($_GET['rb_tab']) ? sanitize_key($_GET['rb_tab']) : 'language';
-        $allowed_tabs = array('language', 'hours', 'booking', 'appearance', 'notifications', 'policies', 'advanced', 'portal-accounts');
+        $allowed_tabs = array('language', 'hours', 'booking', 'location-settings', 'appearance', 'notifications', 'policies', 'advanced', 'portal-accounts');
         if (!in_array($active_tab, $allowed_tabs, true)) {
             $active_tab = 'language';
         }
@@ -2203,19 +2205,83 @@ class RB_Admin {
         }
 
         $all_locations = $rb_location ? $rb_location->all(array('orderby' => 'id', 'order' => 'ASC')) : array();
+        $selected_location_id = isset($_GET['location_id']) ? intval($_GET['location_id']) : 0;
+        $location_settings_defaults = array(
+            'hotline' => '',
+            'email' => '',
+            'address' => '',
+            'shift_notes' => '',
+            'working_hours_mode' => 'simple',
+            'opening_time' => '09:00',
+            'closing_time' => '22:00',
+            'lunch_break_enabled' => 'no',
+            'lunch_break_start' => '14:00',
+            'lunch_break_end' => '17:00',
+            'morning_shift_start' => '09:00',
+            'morning_shift_end' => '14:00',
+            'evening_shift_start' => '17:00',
+            'evening_shift_end' => '22:00',
+            'time_slot_interval' => 30,
+            'booking_buffer_time' => 0,
+            'min_advance_booking' => 2,
+            'max_advance_booking' => 30,
+            'max_guests_per_booking' => 20,
+            'auto_confirm_enabled' => 'no',
+            'require_deposit' => 'no',
+            'deposit_amount' => 0,
+            'deposit_for_guests' => 0,
+            'admin_email' => '',
+            'enable_email' => 'yes',
+            'reminder_hours_before' => 24,
+            'special_closed_dates' => '',
+            'cancellation_hours' => 2,
+            'weekend_enabled' => 'yes',
+            'no_show_auto_blacklist' => 3,
+            'languages' => array(),
+        );
+        $location_settings = $location_settings_defaults;
+        $has_selected_location = false;
+
+        if (!empty($all_locations)) {
+            $location_ids = array_map('intval', wp_list_pluck($all_locations, 'id'));
+
+            if ($selected_location_id && in_array($selected_location_id, $location_ids, true)) {
+                $has_selected_location = true;
+            } elseif (count($location_ids) === 1) {
+                $selected_location_id = (int) $location_ids[0];
+                $has_selected_location = true;
+            } else {
+                $selected_location_id = 0;
+            }
+
+            if ($has_selected_location) {
+                $location_settings = $rb_location->get_settings($selected_location_id);
+                $location_settings = wp_parse_args($location_settings, $location_settings_defaults);
+                if (!is_array($location_settings['languages'])) {
+                    $location_settings['languages'] = array_filter(array_map('trim', explode(',', (string) $location_settings['languages'])));
+                }
+            }
+        } else {
+            $selected_location_id = 0;
+        }
+
+        $available_languages = function_exists('rb_get_available_languages') ? rb_get_available_languages() : array();
+        $global_submit_label = '💾 ' . rb_t('save_all_settings', __('Save all settings', 'restaurant-booking'));
+        $location_submit_label = '💾 ' . rb_t('save_location_settings', __('Save location settings', 'restaurant-booking'));
         ?>
         <div class="wrap">
             <h1>⚙️ <?php rb_e('settings'); ?> - <?php rb_e('restaurant_booking'); ?></h1>
 
             <form method="post" action="" id="rb-settings-form">
                 <?php wp_nonce_field('rb_save_settings', 'rb_nonce'); ?>
-                <input type="hidden" name="action" value="save_settings">
+                <input type="hidden" name="action" id="rb-settings-action" value="save_settings">
 
                 <!-- Tab Navigation -->
                 <h2 class="nav-tab-wrapper">
                     <a href="#tab-language" class="nav-tab <?php echo $active_tab === 'language' ? 'nav-tab-active' : ''; ?>">🌐 <?php rb_e('language'); ?></a>
                     <a href="#tab-hours" class="nav-tab <?php echo $active_tab === 'hours' ? 'nav-tab-active' : ''; ?>">🕐 <?php rb_e('working_hours'); ?></a>
                     <a href="#tab-booking" class="nav-tab <?php echo $active_tab === 'booking' ? 'nav-tab-active' : ''; ?>">📅 <?php rb_e('booking_settings'); ?></a>
+                    <a href="#tab-location-settings" class="nav-tab <?php echo $active_tab === 'location-settings' ? 'nav-tab-active' : ''; ?>">🏢 <?php echo esc_html(rb_t('location_settings', __('Location settings', 'restaurant-booking'))); ?></a>
                     <a href="#tab-appearance" class="nav-tab <?php echo $active_tab === 'appearance' ? 'nav-tab-active' : ''; ?>">🎨 <?php echo esc_html(rb_t('appearance', __('Appearance', 'restaurant-booking'))); ?></a>
                     <a href="#tab-notifications" class="nav-tab <?php echo $active_tab === 'notifications' ? 'nav-tab-active' : ''; ?>">🔔 <?php rb_e('notifications'); ?></a>
                     <a href="#tab-policies" class="nav-tab <?php echo $active_tab === 'policies' ? 'nav-tab-active' : ''; ?>">📋 <?php rb_e('policies'); ?></a>
@@ -2534,6 +2600,267 @@ class RB_Admin {
                     </table>
                 </div>
 
+                <!-- Tab: Location Settings -->
+                <div id="tab-location-settings" class="rb-tab-content" style="display: <?php echo $active_tab === 'location-settings' ? 'block' : 'none'; ?>;">
+                    <h2><?php echo esc_html(rb_t('location_settings', __('Location settings', 'restaurant-booking'))); ?></h2>
+                    <p class="description"><?php echo esc_html(rb_t('location_settings_desc', __('Configure rules that apply to a single branch. These values override the global defaults for the selected location.', 'restaurant-booking'))); ?></p>
+
+                    <?php if (empty($all_locations)) : ?>
+                        <div class="notice notice-warning">
+                            <p><?php echo esc_html(rb_t('no_locations_available', __('No locations found. Please create a location before adjusting branch settings.', 'restaurant-booking'))); ?></p>
+                        </div>
+                    <?php else : ?>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><label for="rb-location-selector"><?php echo esc_html(rb_t('select_location', __('Select location', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <select id="rb-location-selector" name="rb_selected_location">
+                                        <option value=""><?php echo esc_html(rb_t('select_location_placeholder', __('— Select a location —', 'restaurant-booking'))); ?></option>
+                                        <?php foreach ($all_locations as $location) : ?>
+                                            <option value="<?php echo esc_attr($location->id); ?>" <?php selected($selected_location_id, $location->id); ?>><?php echo esc_html($location->name); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="description"><?php echo esc_html(rb_t('location_selector_desc', __('Switch between branches to update their individual configuration.', 'restaurant-booking'))); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <?php if ($has_selected_location) : ?>
+                            <?php wp_nonce_field('rb_save_location_settings', 'rb_location_nonce'); ?>
+
+                        <h3><?php echo esc_html(rb_t('general_information', __('General information', 'restaurant-booking'))); ?></h3>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><label for="rb-location-hotline"><?php echo esc_html(rb_t('hotline', __('Hotline', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="text" id="rb-location-hotline" name="rb_location_settings[hotline]" value="<?php echo esc_attr($location_settings['hotline']); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-email"><?php echo esc_html(rb_t('contact_email', __('Contact email', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="email" id="rb-location-email" name="rb_location_settings[email]" value="<?php echo esc_attr($location_settings['email']); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-admin-email"><?php echo esc_html(rb_t('notification_email', __('Notification email', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="email" id="rb-location-admin-email" name="rb_location_settings[admin_email]" value="<?php echo esc_attr($location_settings['admin_email']); ?>" class="regular-text">
+                                    <p class="description"><?php echo esc_html(rb_t('notification_email_desc', __('Leave empty to use the global admin email.', 'restaurant-booking'))); ?></p>
+                                    <label>
+                                        <input type="checkbox" name="rb_location_settings[enable_email]" value="yes" <?php checked($location_settings['enable_email'], 'yes'); ?>>
+                                        <?php echo esc_html(rb_t('enable_email_notifications', __('Send booking notifications for this location', 'restaurant-booking'))); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-address"><?php echo esc_html(rb_t('location_address', __('Address', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="text" id="rb-location-address" name="rb_location_settings[address]" value="<?php echo esc_attr($location_settings['address']); ?>" class="regular-text">
+                                </td>
+                            </tr>
+                            <?php if (!empty($available_languages)) : ?>
+                                <tr>
+                                    <th scope="row"><label for="rb-location-languages"><?php echo esc_html(rb_t('supported_languages', __('Supported languages', 'restaurant-booking'))); ?></label></th>
+                                    <td>
+                                        <select id="rb-location-languages" name="rb_location_settings[languages][]" multiple size="5" style="min-width:260px;">
+                                            <?php foreach ($available_languages as $code => $info) :
+                                                $label = isset($info['flag']) ? $info['flag'] . ' ' : '';
+                                                $label .= isset($info['name']) ? $info['name'] : $code;
+                                                ?>
+                                                <option value="<?php echo esc_attr($code); ?>" <?php echo in_array($code, $location_settings['languages'], true) ? 'selected' : ''; ?>><?php echo esc_html($label); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <p class="description"><?php echo esc_html(rb_t('supported_languages_desc', __('Choose the languages that the staff at this branch can assist customers with.', 'restaurant-booking'))); ?></p>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                            <tr>
+                                <th scope="row"><label for="rb-location-shift-notes"><?php echo esc_html(rb_t('shift_notes', __('Shift notes', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <textarea id="rb-location-shift-notes" name="rb_location_settings[shift_notes]" rows="3" class="large-text" placeholder="<?php echo esc_attr(rb_t('shift_notes_placeholder', __('Important reminders for the team (optional)', 'restaurant-booking'))); ?>"><?php echo esc_textarea($location_settings['shift_notes']); ?></textarea>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h3><?php echo esc_html(rb_t('working_hours', __('Working hours', 'restaurant-booking'))); ?></h3>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><?php echo esc_html(rb_t('settings_mode', __('Settings mode', 'restaurant-booking'))); ?></th>
+                                <td>
+                                    <fieldset>
+                                        <label>
+                                            <input type="radio" name="rb_location_settings[working_hours_mode]" value="simple" <?php checked($location_settings['working_hours_mode'], 'simple'); ?>>
+                                            <?php echo esc_html(rb_t('simple_one_opening_and_closing_time', __('Simple: one opening and closing time', 'restaurant-booking'))); ?>
+                                        </label>
+                                        <br>
+                                        <label>
+                                            <input type="radio" name="rb_location_settings[working_hours_mode]" value="advanced" <?php checked($location_settings['working_hours_mode'], 'advanced'); ?>>
+                                            <?php echo esc_html(rb_t('advanced_morning_evening_shifts', __('Advanced: morning/evening shifts', 'restaurant-booking'))); ?>
+                                        </label>
+                                    </fieldset>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-opening-time"><?php echo esc_html(rb_t('opening_time', __('Opening time', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="time" id="rb-location-opening-time" name="rb_location_settings[opening_time]" value="<?php echo esc_attr(substr($location_settings['opening_time'], 0, 5)); ?>">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-closing-time"><?php echo esc_html(rb_t('closing_time', __('Closing time', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="time" id="rb-location-closing-time" name="rb_location_settings[closing_time]" value="<?php echo esc_attr(substr($location_settings['closing_time'], 0, 5)); ?>">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php echo esc_html(rb_t('has_lunch_break', __('Has lunch break', 'restaurant-booking'))); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" id="rb-location-lunch-break-enabled" name="rb_location_settings[lunch_break_enabled]" value="yes" <?php checked($location_settings['lunch_break_enabled'], 'yes'); ?>>
+                                        <?php echo esc_html(rb_t('restaurant_has_lunch_break', __('The restaurant closes for lunch break', 'restaurant-booking'))); ?>
+                                    </label>
+                                    <div id="rb-location-lunch-break-times" style="margin-top:12px; display: <?php echo $location_settings['lunch_break_enabled'] === 'yes' ? 'block' : 'none'; ?>;">
+                                        <label style="display:block; margin-bottom:6px;">
+                                            <?php echo esc_html(rb_t('lunch_break_start', __('Lunch break start', 'restaurant-booking'))); ?>
+                                            <input type="time" name="rb_location_settings[lunch_break_start]" value="<?php echo esc_attr(substr($location_settings['lunch_break_start'], 0, 5)); ?>">
+                                        </label>
+                                        <label style="display:block;">
+                                            <?php echo esc_html(rb_t('lunch_break_end', __('Lunch break end', 'restaurant-booking'))); ?>
+                                            <input type="time" name="rb_location_settings[lunch_break_end]" value="<?php echo esc_attr(substr($location_settings['lunch_break_end'], 0, 5)); ?>">
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="rb-location-advanced-hours" style="display: <?php echo $location_settings['working_hours_mode'] === 'advanced' ? 'table-row' : 'none'; ?>;">
+                                <th scope="row"><?php echo esc_html(rb_t('morning_shift', __('Morning shift', 'restaurant-booking'))); ?></th>
+                                <td>
+                                    <div>
+                                    <input type="time" name="rb_location_settings[morning_shift_start]" value="<?php echo esc_attr(substr($location_settings['morning_shift_start'], 0, 5)); ?>">
+                                    <span style="margin:0 6px;">→</span>
+                                    <input type="time" name="rb_location_settings[morning_shift_end]" value="<?php echo esc_attr(substr($location_settings['morning_shift_end'], 0, 5)); ?>">
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="rb-location-advanced-hours" style="display: <?php echo $location_settings['working_hours_mode'] === 'advanced' ? 'table-row' : 'none'; ?>;">
+                                <th scope="row"><?php echo esc_html(rb_t('evening_shift', __('Evening shift', 'restaurant-booking'))); ?></th>
+                                <td>
+                                    <div>
+                                    <input type="time" name="rb_location_settings[evening_shift_start]" value="<?php echo esc_attr(substr($location_settings['evening_shift_start'], 0, 5)); ?>">
+                                    <span style="margin:0 6px;">→</span>
+                                    <input type="time" name="rb_location_settings[evening_shift_end]" value="<?php echo esc_attr(substr($location_settings['evening_shift_end'], 0, 5)); ?>">
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+        <h3><?php echo esc_html(rb_t('booking_settings', __('Booking settings', 'restaurant-booking'))); ?></h3>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><label for="rb-location-time-slot-interval"><?php echo esc_html(rb_t('time_slot_interval_minutes', __('Time slot interval (minutes)', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-time-slot-interval" name="rb_location_settings[time_slot_interval]" min="5" max="120" step="5" value="<?php echo esc_attr((int) $location_settings['time_slot_interval']); ?>" class="small-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-buffer-time"><?php echo esc_html(rb_t('buffer_time', __('Buffer time', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-buffer-time" name="rb_location_settings[booking_buffer_time]" min="0" max="120" step="5" value="<?php echo esc_attr((int) $location_settings['booking_buffer_time']); ?>" class="small-text">
+                                    <p class="description"><?php echo esc_html(rb_t('buffer_time_desc', __('Minutes blocked before the next reservation.', 'restaurant-booking'))); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-min-advance"><?php echo esc_html(rb_t('minimum_hours_in_advance', __('Minimum hours in advance', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-min-advance" name="rb_location_settings[min_advance_booking]" min="0" max="72" value="<?php echo esc_attr((int) $location_settings['min_advance_booking']); ?>" class="small-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-max-advance"><?php echo esc_html(rb_t('maximum_days_in_advance', __('Maximum days in advance', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-max-advance" name="rb_location_settings[max_advance_booking]" min="1" max="365" value="<?php echo esc_attr((int) $location_settings['max_advance_booking']); ?>" class="small-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-max-guests"><?php echo esc_html(rb_t('max_guests_per_booking', __('Max guests per booking', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-max-guests" name="rb_location_settings[max_guests_per_booking]" min="1" max="200" value="<?php echo esc_attr((int) $location_settings['max_guests_per_booking']); ?>" class="small-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php echo esc_html(rb_t('auto_confirm', __('Auto confirm', 'restaurant-booking'))); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="rb_location_settings[auto_confirm_enabled]" value="yes" <?php checked($location_settings['auto_confirm_enabled'], 'yes'); ?>>
+                                        <?php echo esc_html(rb_t('auto_confirm_when_a_table_is_available', __('Automatically confirm when a table is available', 'restaurant-booking'))); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php echo esc_html(rb_t('require_deposit', __('Require deposit', 'restaurant-booking'))); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" id="rb-location-require-deposit" name="rb_location_settings[require_deposit]" value="yes" <?php checked($location_settings['require_deposit'], 'yes'); ?>>
+                                        <?php echo esc_html(rb_t('require_customer_deposit', __('Require customers to pay a deposit', 'restaurant-booking'))); ?>
+                                    </label>
+                                    <div id="rb-location-deposit-settings" style="margin-top:12px; display: <?php echo $location_settings['require_deposit'] === 'yes' ? 'block' : 'none'; ?>;">
+                                        <label style="display:block; margin-bottom:6px;">
+                                            <?php echo esc_html(rb_t('deposit_amount', __('Deposit amount', 'restaurant-booking'))); ?>
+                                            <input type="number" name="rb_location_settings[deposit_amount]" value="<?php echo esc_attr((int) $location_settings['deposit_amount']); ?>" class="small-text"> VNĐ
+                                        </label>
+                                        <label style="display:block;">
+                                            <?php echo esc_html(rb_t('deposit_for_guests', __('Apply for bookings from', 'restaurant-booking'))); ?>
+                                            <input type="number" name="rb_location_settings[deposit_for_guests]" value="<?php echo esc_attr((int) $location_settings['deposit_for_guests']); ?>" class="small-text"> <?php echo esc_html(rb_t('guests_or_more', __('guests or more', 'restaurant-booking'))); ?>
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-reminder-hours"><?php echo esc_html(rb_t('reminder_before', __('Reminder before', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-reminder-hours" name="rb_location_settings[reminder_hours_before]" min="0" max="72" value="<?php echo esc_attr((int) $location_settings['reminder_hours_before']); ?>" class="small-text">
+                                    <span><?php rb_e('hours'); ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-cancellation-hours"><?php echo esc_html(rb_t('free_cancellation_before', __('Free cancellation before', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-cancellation-hours" name="rb_location_settings[cancellation_hours]" min="0" max="72" value="<?php echo esc_attr((int) $location_settings['cancellation_hours']); ?>" class="small-text">
+                                    <span><?php rb_e('hours'); ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-no-show"><?php echo esc_html(rb_t('auto_blacklist_no_show', __('Auto blacklist after no-shows', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-no-show" name="rb_location_settings[no_show_auto_blacklist]" min="0" max="10" value="<?php echo esc_attr((int) $location_settings['no_show_auto_blacklist']); ?>" class="small-text">
+                                    <span><?php rb_e('times'); ?></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php echo esc_html(rb_t('weekend_enabled', __('Enable weekends', 'restaurant-booking'))); ?></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="rb_location_settings[weekend_enabled]" value="yes" <?php checked($location_settings['weekend_enabled'], 'yes'); ?>>
+                                        <?php echo esc_html(rb_t('weekend_enabled_desc', __('Allow reservations on Saturday and Sunday', 'restaurant-booking'))); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-special-closed-dates"><?php echo esc_html(rb_t('special_closed_dates', __('Special closed dates', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <textarea id="rb-location-special-closed-dates" name="rb_location_settings[special_closed_dates]" rows="4" class="large-text" placeholder="<?php echo esc_attr(rb_t('special_closed_dates_placeholder')); ?>"><?php echo esc_textarea($location_settings['special_closed_dates']); ?></textarea>
+                                    <p class="description"><?php echo esc_html(rb_t('special_closed_dates_desc', __('Enter one date per line in YYYY-MM-DD format.', 'restaurant-booking'))); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+                        <?php else : ?>
+                            <div class="notice notice-info">
+                                <p><?php echo esc_html(rb_t('select_location_before_editing', __('Choose a location to view and edit its settings. The save button will be enabled once a location is selected.', 'restaurant-booking'))); ?></p>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+
                 <!-- Tab: Appearance -->
                 <div id="tab-appearance" class="rb-tab-content" style="display: <?php echo $active_tab === 'appearance' ? 'block' : 'none'; ?>;">
                     <h2><?php echo esc_html(rb_t('frontend_appearance', __('Frontend appearance', 'restaurant-booking'))); ?></h2>
@@ -2700,16 +3027,27 @@ class RB_Admin {
                         </tr>
                         
                         <tr>
-                            <th scope="row"><?php rb_e('sms_notification'); ?></th>
+                            <th scope="row"><?php rb_e('vip_alerts'); ?></th>
                             <td>
                                 <label>
-                                    <input type="checkbox" name="rb_settings[enable_sms]" value="yes" 
-                                        <?php checked($settings['enable_sms'], 'yes'); ?>>
-                                    <?php rb_e('enable_sms_notifications'); ?>
+                                    <input type="checkbox" name="rb_settings[notify_vip_bookings]" value="yes" <?php checked($settings['notify_vip_bookings'], 'yes'); ?>>
+                                    <?php rb_e('enable_vip_alerts'); ?>
                                 </label>
-                                <br><br>
-                                <input type="text" name="rb_settings[sms_api_key]" placeholder="<?php echo esc_attr(rb_t('enter_sms_api_key')); ?>" 
-                                    value="<?php echo esc_attr($settings['sms_api_key']); ?>" class="regular-text">
+                                <p class="description"><?php rb_e('vip_alerts_desc'); ?></p>
+                                <textarea name="rb_settings[vip_notification_recipients]" rows="3" class="large-text"><?php echo esc_textarea($settings['vip_notification_recipients']); ?></textarea>
+                                <p class="description"><?php rb_e('notification_recipients_hint'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php rb_e('blacklist_alerts'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="rb_settings[notify_blacklist_events]" value="yes" <?php checked($settings['notify_blacklist_events'], 'yes'); ?>>
+                                    <?php rb_e('enable_blacklist_alerts'); ?>
+                                </label>
+                                <p class="description"><?php rb_e('blacklist_alerts_desc'); ?></p>
+                                <textarea name="rb_settings[blacklist_notification_recipients]" rows="3" class="large-text"><?php echo esc_textarea($settings['blacklist_notification_recipients']); ?></textarea>
+                                <p class="description"><?php rb_e('notification_recipients_hint'); ?></p>
                             </td>
                         </tr>
                     </table>
@@ -2928,7 +3266,7 @@ class RB_Admin {
                 
                 <div class="rb-settings-submit-wrapper">
                     <p class="submit">
-                        <button type="submit" class="button button-primary button-large">💾 <?php rb_e('save_all_settings'); ?></button>
+                        <button type="submit" class="button button-primary button-large rb-settings-submit" data-action="save_settings" data-label-default="<?php echo esc_attr($global_submit_label); ?>" data-label-location="<?php echo esc_attr($location_submit_label); ?>"><?php echo esc_html($global_submit_label); ?></button>
                     </p>
                 </div>
             </form>
@@ -3210,17 +3548,127 @@ class RB_Admin {
         
         <script>
         jQuery(document).ready(function($) {
+            var $submitWrapper = $('.rb-settings-submit-wrapper');
+            var $submitButton = $submitWrapper.find('.rb-settings-submit');
+            var $actionField = $('#rb-settings-action');
+
+            function hasValidLocationSelection() {
+                var $selector = $('#rb-location-selector');
+                if (!$selector.length) {
+                    return false;
+                }
+
+                var value = $selector.val();
+                return value && parseInt(value, 10) > 0;
+            }
+
+            function updateSubmitButton(target) {
+                if (!$submitWrapper.length || !$submitButton.length) {
+                    return;
+                }
+
+                if (target === '#tab-portal-accounts') {
+                    $submitWrapper.hide();
+                    $submitButton.text($submitButton.data('labelDefault'));
+                    $submitButton.attr('data-action', 'save_settings');
+                    $submitButton.prop('disabled', false);
+                    return;
+                }
+
+                if (target === '#tab-location-settings') {
+                    if ($('#rb-location-selector').length) {
+                        var hasSelection = hasValidLocationSelection();
+                        $submitButton.text($submitButton.data('labelLocation'));
+                        $submitButton.attr('data-action', 'save_location_settings');
+                        $submitButton.prop('disabled', !hasSelection);
+                        $submitWrapper.show();
+                    } else {
+                        $submitWrapper.hide();
+                        $submitButton.text($submitButton.data('labelDefault'));
+                        $submitButton.attr('data-action', 'save_settings');
+                        $submitButton.prop('disabled', false);
+                    }
+                    return;
+                }
+
+                $submitButton.text($submitButton.data('labelDefault'));
+                $submitButton.attr('data-action', 'save_settings');
+                $submitWrapper.show();
+                $submitButton.prop('disabled', false);
+            }
+
             function rbShowTab(target) {
                 $('.nav-tab').removeClass('nav-tab-active');
                 $('.nav-tab[href="' + target + '"]').addClass('nav-tab-active');
                 $('.rb-tab-content').hide();
                 $(target).show();
+                updateSubmitButton(target);
+            }
 
-                if (target === '#tab-portal-accounts') {
-                    $('.rb-settings-submit-wrapper').hide();
+            if ($submitButton.length && $actionField.length) {
+                $submitButton.on('click', function() {
+                    var action = $(this).attr('data-action') || 'save_settings';
+                    $actionField.val(action);
+                });
+            }
+
+            var $locationSelector = $('#rb-location-selector');
+            if ($locationSelector.length) {
+                $locationSelector.on('change', function() {
+                    var locationId = $(this).val();
+                    try {
+                        var url = new URL(window.location.href);
+                        url.searchParams.set('rb_tab', 'location-settings');
+                        if (locationId) {
+                            url.searchParams.set('location_id', locationId);
+                        } else {
+                            url.searchParams.delete('location_id');
+                        }
+                        window.location.href = url.toString();
+                    } catch (error) {
+                        window.location.href = window.location.pathname + '?page=rb-settings&rb_tab=location-settings&location_id=' + encodeURIComponent(locationId);
+                    }
+                });
+            }
+
+            function toggleLocationHours() {
+                var mode = $('input[name="rb_location_settings[working_hours_mode]"]:checked').val();
+                if (mode === 'advanced') {
+                    $('.rb-location-advanced-hours').show();
                 } else {
-                    $('.rb-settings-submit-wrapper').show();
+                    $('.rb-location-advanced-hours').hide();
                 }
+            }
+
+            function toggleLocationLunchBreak() {
+                if ($('#rb-location-lunch-break-enabled').is(':checked')) {
+                    $('#rb-location-lunch-break-times').show();
+                } else {
+                    $('#rb-location-lunch-break-times').hide();
+                }
+            }
+
+            function toggleLocationDeposit() {
+                if ($('#rb-location-require-deposit').is(':checked')) {
+                    $('#rb-location-deposit-settings').show();
+                } else {
+                    $('#rb-location-deposit-settings').hide();
+                }
+            }
+
+            if ($('input[name="rb_location_settings[working_hours_mode]"]').length) {
+                toggleLocationHours();
+                $('input[name="rb_location_settings[working_hours_mode]"]').on('change', toggleLocationHours);
+            }
+
+            if ($('#rb-location-lunch-break-enabled').length) {
+                toggleLocationLunchBreak();
+                $('#rb-location-lunch-break-enabled').on('change', toggleLocationLunchBreak);
+            }
+
+            if ($('#rb-location-require-deposit').length) {
+                toggleLocationDeposit();
+                $('#rb-location-require-deposit').on('change', toggleLocationDeposit);
             }
 
             // Tab switching
@@ -3395,6 +3843,11 @@ class RB_Admin {
                 case 'save_settings':
                     if (wp_verify_nonce($_POST['rb_nonce'], 'rb_save_settings')) {
                         $this->save_settings();
+                    }
+                    break;
+                case 'save_location_settings':
+                    if (wp_verify_nonce($_POST['rb_nonce'], 'rb_save_settings') && isset($_POST['rb_location_nonce']) && wp_verify_nonce($_POST['rb_location_nonce'], 'rb_save_location_settings')) {
+                        $this->save_location_settings();
                     }
                     break;
                 case 'save_portal_account':
@@ -4018,8 +4471,10 @@ class RB_Admin {
             // Notifications
             'admin_email' => isset($settings['admin_email']) ? sanitize_email($settings['admin_email']) : get_option('admin_email'),
             'enable_email' => isset($settings['enable_email']) ? 'yes' : 'no',
-            'enable_sms' => isset($settings['enable_sms']) ? 'yes' : 'no',
-            'sms_api_key' => isset($settings['sms_api_key']) ? sanitize_text_field($settings['sms_api_key']) : '',
+            'notify_vip_bookings' => isset($settings['notify_vip_bookings']) ? 'yes' : 'no',
+            'notify_blacklist_events' => isset($settings['notify_blacklist_events']) ? 'yes' : 'no',
+            'vip_notification_recipients' => isset($settings['vip_notification_recipients']) ? sanitize_textarea_field($settings['vip_notification_recipients']) : '',
+            'blacklist_notification_recipients' => isset($settings['blacklist_notification_recipients']) ? sanitize_textarea_field($settings['blacklist_notification_recipients']) : '',
             'reminder_hours_before' => isset($settings['reminder_hours_before']) ? intval($settings['reminder_hours_before']) : 24,
             
             // Policies
@@ -4052,7 +4507,116 @@ class RB_Admin {
         wp_redirect(admin_url('admin.php?page=rb-settings&message=saved'));
         exit;
     }
-    
+
+    private function save_location_settings() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You are not allowed to manage location settings.', 'restaurant-booking'));
+        }
+
+        $location_id = isset($_POST['rb_selected_location']) ? intval($_POST['rb_selected_location']) : 0;
+
+        if (!class_exists('RB_Location')) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+        }
+
+        global $rb_location;
+        if (!$rb_location) {
+            $rb_location = new RB_Location();
+        }
+
+        $location = $rb_location ? $rb_location->get($location_id) : null;
+
+        $redirect_args = array(
+            'page' => 'rb-settings',
+            'rb_tab' => 'location-settings',
+        );
+
+        if (!$location_id || !$location) {
+            $redirect_args['message'] = 'location_settings_error';
+            $redirect_args['error'] = rawurlencode(__('Please choose a valid location before saving.', 'restaurant-booking'));
+            wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+            exit;
+        }
+
+        $redirect_args['location_id'] = $location_id;
+
+        $settings_input = isset($_POST['rb_location_settings']) ? (array) $_POST['rb_location_settings'] : array();
+        $languages_input = isset($settings_input['languages']) ? (array) $settings_input['languages'] : array();
+        $languages_allowed = function_exists('rb_get_available_languages') ? array_keys(rb_get_available_languages()) : array();
+        $language_codes = array();
+
+        foreach ($languages_input as $language_code) {
+            $language_code = sanitize_text_field($language_code);
+            if (empty($languages_allowed) || in_array($language_code, $languages_allowed, true)) {
+                $language_codes[] = $language_code;
+            }
+        }
+
+        $language_codes = array_values(array_unique($language_codes));
+
+        $contact_email = isset($settings_input['email']) ? sanitize_email($settings_input['email']) : '';
+        if (!empty($settings_input['email']) && empty($contact_email)) {
+            $redirect_args['message'] = 'location_settings_error';
+            $redirect_args['error'] = rawurlencode(__('Please enter a valid contact email address.', 'restaurant-booking'));
+            wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+            exit;
+        }
+
+        $notification_email = isset($settings_input['admin_email']) ? sanitize_email($settings_input['admin_email']) : '';
+        if (!empty($settings_input['admin_email']) && empty($notification_email)) {
+            $redirect_args['message'] = 'location_settings_error';
+            $redirect_args['error'] = rawurlencode(__('Please enter a valid notification email address.', 'restaurant-booking'));
+            wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+            exit;
+        }
+
+        $data = array(
+            'hotline' => isset($settings_input['hotline']) ? sanitize_text_field($settings_input['hotline']) : '',
+            'email' => $contact_email,
+            'admin_email' => $notification_email,
+            'enable_email' => !empty($settings_input['enable_email']) ? 'yes' : 'no',
+            'address' => isset($settings_input['address']) ? sanitize_text_field($settings_input['address']) : '',
+            'shift_notes' => isset($settings_input['shift_notes']) ? sanitize_textarea_field($settings_input['shift_notes']) : '',
+            'languages' => $language_codes,
+            'working_hours_mode' => (isset($settings_input['working_hours_mode']) && $settings_input['working_hours_mode'] === 'advanced') ? 'advanced' : 'simple',
+            'opening_time' => isset($settings_input['opening_time']) ? sanitize_text_field($settings_input['opening_time']) : '',
+            'closing_time' => isset($settings_input['closing_time']) ? sanitize_text_field($settings_input['closing_time']) : '',
+            'lunch_break_enabled' => !empty($settings_input['lunch_break_enabled']) ? 'yes' : 'no',
+            'lunch_break_start' => isset($settings_input['lunch_break_start']) ? sanitize_text_field($settings_input['lunch_break_start']) : '',
+            'lunch_break_end' => isset($settings_input['lunch_break_end']) ? sanitize_text_field($settings_input['lunch_break_end']) : '',
+            'morning_shift_start' => isset($settings_input['morning_shift_start']) ? sanitize_text_field($settings_input['morning_shift_start']) : '',
+            'morning_shift_end' => isset($settings_input['morning_shift_end']) ? sanitize_text_field($settings_input['morning_shift_end']) : '',
+            'evening_shift_start' => isset($settings_input['evening_shift_start']) ? sanitize_text_field($settings_input['evening_shift_start']) : '',
+            'evening_shift_end' => isset($settings_input['evening_shift_end']) ? sanitize_text_field($settings_input['evening_shift_end']) : '',
+            'time_slot_interval' => isset($settings_input['time_slot_interval']) ? max(5, intval($settings_input['time_slot_interval'])) : 30,
+            'booking_buffer_time' => isset($settings_input['booking_buffer_time']) ? max(0, intval($settings_input['booking_buffer_time'])) : 0,
+            'min_advance_booking' => isset($settings_input['min_advance_booking']) ? max(0, intval($settings_input['min_advance_booking'])) : 0,
+            'max_advance_booking' => isset($settings_input['max_advance_booking']) ? max(1, intval($settings_input['max_advance_booking'])) : 30,
+            'max_guests_per_booking' => isset($settings_input['max_guests_per_booking']) ? max(1, intval($settings_input['max_guests_per_booking'])) : 20,
+            'auto_confirm_enabled' => !empty($settings_input['auto_confirm_enabled']) ? 'yes' : 'no',
+            'require_deposit' => !empty($settings_input['require_deposit']) ? 'yes' : 'no',
+            'deposit_amount' => isset($settings_input['deposit_amount']) ? max(0, intval($settings_input['deposit_amount'])) : 0,
+            'deposit_for_guests' => isset($settings_input['deposit_for_guests']) ? max(0, intval($settings_input['deposit_for_guests'])) : 0,
+            'reminder_hours_before' => isset($settings_input['reminder_hours_before']) ? max(0, intval($settings_input['reminder_hours_before'])) : 0,
+            'cancellation_hours' => isset($settings_input['cancellation_hours']) ? max(0, intval($settings_input['cancellation_hours'])) : 0,
+            'no_show_auto_blacklist' => isset($settings_input['no_show_auto_blacklist']) ? max(0, intval($settings_input['no_show_auto_blacklist'])) : 0,
+            'weekend_enabled' => !empty($settings_input['weekend_enabled']) ? 'yes' : 'no',
+            'special_closed_dates' => isset($settings_input['special_closed_dates']) ? sanitize_textarea_field($settings_input['special_closed_dates']) : '',
+        );
+
+        $updated = $rb_location->update_settings($location_id, $data);
+
+        if ($updated === false) {
+            $redirect_args['message'] = 'location_settings_error';
+            $redirect_args['error'] = rawurlencode(__('Could not save the location settings. Please try again.', 'restaurant-booking'));
+        } else {
+            $redirect_args['message'] = 'location_settings_saved';
+        }
+
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+        exit;
+    }
+
     public function display_admin_notices() {
         if (!isset($_GET['message'])) {
             return;
@@ -4088,6 +4652,9 @@ class RB_Admin {
             case 'saved':
                 $text = '✅ ' . rb_t('settings_saved_successfully');
                 break;
+            case 'location_settings_saved':
+                $text = '✅ ' . rb_t('location_settings_saved', __('Location settings saved successfully.', 'restaurant-booking'));
+                break;
             case 'added':
                 $text = rb_t('table_added');
                 break;
@@ -4120,6 +4687,10 @@ class RB_Admin {
                 break;
             case 'location_error':
                 $text = isset($_GET['error']) ? esc_html(urldecode($_GET['error'])) : rb_t('location_creation_failed', __('Could not create the location. Please try again.', 'restaurant-booking'));
+                $type = 'error';
+                break;
+            case 'location_settings_error':
+                $text = isset($_GET['error']) ? esc_html(urldecode($_GET['error'])) : __('Could not save the location settings. Please try again.', 'restaurant-booking');
                 $type = 'error';
                 break;
             case 'error':
