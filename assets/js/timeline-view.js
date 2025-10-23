@@ -35,6 +35,7 @@
         this.$viewButtons = {};
         this.$backButton = null;
         this.$drawerToggle = null;
+        this.$filters = this.$container.closest('.rb-manager-timeline').find('.rb-manager-timeline__filters');
         this.sidebarId = 'rb-timeline-sidebar-' + Math.floor(Math.random() * 1000000);
         this.drawerLastFocus = null;
         this._boundDrawerKeydown = $.proxy(this.onDrawerKeydown, this);
@@ -767,6 +768,27 @@
             self.$container.toggleClass('rb-timeline-view-week', currentView === 'week');
             self.$container.toggleClass('rb-timeline-view-day', currentView === 'day');
             self.$container.toggleClass('rb-timeline-drawer-open', !!self.drawerOpen);
+        }
+
+        self.updateHeaderFiltersVisibility(currentView);
+    };
+
+    TimelineApp.prototype.updateHeaderFiltersVisibility = function (mode) {
+        if (!this.$filters || !this.$filters.length) {
+            return;
+        }
+
+        var normalized = this.normalizeViewMode(mode || this.viewMode) || 'day';
+        var shouldHide = normalized === 'month' || normalized === 'week';
+
+        this.$filters.toggleClass('rb-timeline-filters-hidden', shouldHide);
+
+        if (shouldHide) {
+            this.$filters.attr('aria-hidden', 'true');
+            this.$filters.attr('hidden', 'hidden');
+        } else {
+            this.$filters.removeAttr('aria-hidden');
+            this.$filters.removeAttr('hidden');
         }
     };
 

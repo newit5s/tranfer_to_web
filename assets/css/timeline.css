@@ -197,6 +197,10 @@
     --rb-timeline-toolbar-offset: 0px;
 }
 
+.rb-manager-timeline__filters.rb-timeline-filters-hidden {
+    display: none !important;
+}
+
 .rb-timeline-main-content {
     display: flex;
     flex-direction: column;
