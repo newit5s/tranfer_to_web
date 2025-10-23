@@ -300,16 +300,17 @@ body.admin-bar {
 }
 
 .rb-manager--gmail .rb-manager-timeline__content {
-    background: var(--rb-gmail-surface);
-    border-radius: var(--rb-gmail-radius);
-    border: 1px solid var(--rb-gmail-border);
-    padding: 16px;
-    box-shadow: 0 12px 24px var(--rb-gmail-shadow);
-    overflow-x: auto;
+    background: transparent;
+    border-radius: 0;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    overflow: visible;
 }
 
 .rb-manager--gmail .rb-manager-timeline__content .rb-timeline-app {
     min-height: 320px;
+    padding: 0;
 }
 
 .rb-manager--gmail .rb-manager-create,
