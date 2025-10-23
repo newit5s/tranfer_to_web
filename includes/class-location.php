@@ -168,4 +168,195 @@ class RB_Location {
 
         return true;
     }
+
+    /**
+     * Create a new location row and seed default tables.
+     *
+     * @param array $data Location data.
+     *
+     * @return int|WP_Error Inserted location ID on success.
+     */
+    public function create($data = array()) {
+        $defaults = array(
+            'name' => '',
+            'slug' => '',
+            'email' => '',
+            'hotline' => '',
+            'address' => '',
+            'opening_time' => '09:00:00',
+            'closing_time' => '22:00:00',
+            'time_slot_interval' => 30,
+            'min_advance_booking' => 2,
+            'max_advance_booking' => 30,
+            'default_table_count' => 10,
+            'default_capacity' => 4,
+            'shift_notes' => '',
+            'languages' => 'vi,en,ja',
+        );
+
+        $data = wp_parse_args($data, $defaults);
+
+        $name = sanitize_text_field($data['name']);
+        if ('' === $name) {
+            return new WP_Error('rb_location_missing_name', __('Location name is required.', 'restaurant-booking'));
+        }
+
+        $slug = $this->generate_unique_slug($data['slug'], $name);
+        $email = !empty($data['email']) ? sanitize_email($data['email']) : '';
+        $hotline = !empty($data['hotline']) ? sanitize_text_field($data['hotline']) : '';
+        $address = !empty($data['address']) ? sanitize_text_field($data['address']) : '';
+        $shift_notes = !empty($data['shift_notes']) ? sanitize_textarea_field($data['shift_notes']) : '';
+
+        $opening_time = $this->normalize_time_value($data['opening_time'], '09:00:00');
+        $closing_time = $this->normalize_time_value($data['closing_time'], '22:00:00');
+
+        $time_slot_interval = isset($data['time_slot_interval']) ? (int) $data['time_slot_interval'] : 30;
+        $min_advance_booking = isset($data['min_advance_booking']) ? (int) $data['min_advance_booking'] : 2;
+        $max_advance_booking = isset($data['max_advance_booking']) ? (int) $data['max_advance_booking'] : 30;
+        $default_table_count = max(1, isset($data['default_table_count']) ? (int) $data['default_table_count'] : 10);
+        $default_capacity = max(1, isset($data['default_capacity']) ? (int) $data['default_capacity'] : 4);
+
+        $languages = $this->prepare_language_list($data['languages']);
+
+        $table = $this->wpdb->prefix . 'rb_locations';
+
+        $inserted = $this->wpdb->insert(
+            $table,
+            array(
+                'slug' => $slug,
+                'name' => $name,
+                'email' => $email ?: null,
+                'hotline' => $hotline ?: null,
+                'address' => $address ?: null,
+                'opening_time' => $opening_time,
+                'closing_time' => $closing_time,
+                'time_slot_interval' => $time_slot_interval,
+                'min_advance_booking' => $min_advance_booking,
+                'max_advance_booking' => $max_advance_booking,
+                'default_table_count' => $default_table_count,
+                'default_capacity' => $default_capacity,
+                'shift_notes' => $shift_notes ?: null,
+                'languages' => $languages,
+            ),
+            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%s', '%s')
+        );
+
+        if (false === $inserted) {
+            return new WP_Error('rb_location_create_failed', __('Could not create the location.', 'restaurant-booking'));
+        }
+
+        $location_id = (int) $this->wpdb->insert_id;
+
+        $this->create_default_tables_for_location($location_id, $default_table_count, $default_capacity);
+
+        /**
+         * Fires after a new location has been created.
+         *
+         * @param int   $location_id Inserted location ID.
+         * @param array $data        Sanitized data used to create the location.
+         */
+        do_action('rb_location_created', $location_id, array(
+            'slug' => $slug,
+            'name' => $name,
+            'email' => $email,
+            'hotline' => $hotline,
+            'address' => $address,
+            'opening_time' => $opening_time,
+            'closing_time' => $closing_time,
+            'time_slot_interval' => $time_slot_interval,
+            'min_advance_booking' => $min_advance_booking,
+            'max_advance_booking' => $max_advance_booking,
+            'default_table_count' => $default_table_count,
+            'default_capacity' => $default_capacity,
+            'shift_notes' => $shift_notes,
+            'languages' => $languages,
+        ));
+
+        return $location_id;
+    }
+
+    private function generate_unique_slug($preferred_slug, $name) {
+        $base_slug = sanitize_title($preferred_slug);
+
+        if ('' === $base_slug) {
+            $base_slug = sanitize_title($name);
+        }
+
+        if ('' === $base_slug) {
+            $base_slug = 'location-' . strtolower(wp_generate_password(4, false));
+        }
+
+        $slug = $base_slug;
+        $suffix = 2;
+
+        while ($this->get_by_slug($slug)) {
+            $slug = $base_slug . '-' . $suffix;
+            $suffix++;
+            if ($suffix > 50) {
+                $slug = $base_slug . '-' . uniqid();
+                break;
+            }
+        }
+
+        return $slug;
+    }
+
+    private function normalize_time_value($value, $fallback) {
+        $value = trim((string) $value);
+
+        if (preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $value)) {
+            return strlen($value) === 5 ? $value . ':00' : $value;
+        }
+
+        return $fallback;
+    }
+
+    private function prepare_language_list($languages) {
+        if (is_array($languages)) {
+            $language_codes = $languages;
+        } else {
+            $language_codes = preg_split('/[,]+/', (string) $languages);
+        }
+
+        $language_codes = array_filter(array_map(function ($code) {
+            return sanitize_text_field(trim($code));
+        }, $language_codes));
+
+        if (empty($language_codes)) {
+            $language_codes = array('vi', 'en', 'ja');
+        }
+
+        return implode(',', $language_codes);
+    }
+
+    private function create_default_tables_for_location($location_id, $table_count, $default_capacity) {
+        $tables_table = $this->wpdb->prefix . 'rb_tables';
+
+        $existing = (int) $this->wpdb->get_var(
+            $this->wpdb->prepare(
+                "SELECT COUNT(*) FROM {$tables_table} WHERE location_id = %d",
+                $location_id
+            )
+        );
+
+        if ($existing > 0) {
+            return;
+        }
+
+        for ($i = 1; $i <= $table_count; $i++) {
+            $capacity = $default_capacity > 0 ? $default_capacity : (($i <= 4) ? 2 : (($i <= 8) ? 4 : 6));
+
+            $this->wpdb->insert(
+                $tables_table,
+                array(
+                    'location_id' => (int) $location_id,
+                    'table_number' => $i,
+                    'capacity' => $capacity,
+                    'is_available' => 1,
+                    'created_at' => current_time('mysql'),
+                ),
+                array('%d', '%d', '%d', '%d', '%s')
+            );
+        }
+    }
 }

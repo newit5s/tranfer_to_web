@@ -2119,7 +2119,7 @@ class RB_Admin {
     
     public function display_settings_page() {
         $settings = get_option('rb_settings', array());
-        
+
         // Default values
         $defaults = array(
             'working_hours_mode' => 'simple',
@@ -2175,6 +2175,15 @@ class RB_Admin {
         foreach ($portal_locations as $portal_location) {
             $portal_location_map[$portal_location['id']] = $portal_location['name'];
         }
+
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        $all_locations = $rb_location ? $rb_location->all(array('orderby' => 'id', 'order' => 'ASC')) : array();
         ?>
         <div class="wrap">
             <h1>⚙️ <?php rb_e('settings'); ?> - <?php rb_e('restaurant_booking'); ?></h1>
@@ -2632,7 +2641,109 @@ class RB_Admin {
                 <!-- Tab 5: Advanced -->
                 <div id="tab-advanced" class="rb-tab-content" style="display: <?php echo $active_tab === 'advanced' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('advanced_settings'); ?></h2>
-                    
+
+                    <div class="rb-location-management">
+                        <h3><?php echo esc_html(rb_t('manage_locations', __('Manage locations', 'restaurant-booking'))); ?></h3>
+                        <p class="description"><?php echo esc_html(rb_t('location_inherits_settings', __('New locations inherit the global booking settings. You can fine-tune them later.', 'restaurant-booking'))); ?></p>
+
+                        <h4><?php echo esc_html(rb_t('existing_locations', __('Existing locations', 'restaurant-booking'))); ?></h4>
+                        <?php if (!empty($all_locations)) : ?>
+                            <table class="widefat fixed striped">
+                                <thead>
+                                    <tr>
+                                        <th><?php rb_e('id'); ?></th>
+                                        <th><?php echo esc_html(rb_t('location_name', __('Location name', 'restaurant-booking'))); ?></th>
+                                        <th><?php echo esc_html(rb_t('slug', __('Slug', 'restaurant-booking'))); ?></th>
+                                        <th><?php echo esc_html(rb_t('default_tables', __('Default tables', 'restaurant-booking'))); ?></th>
+                                        <th><?php echo esc_html(rb_t('default_capacity', __('Default capacity', 'restaurant-booking'))); ?></th>
+                                        <th><?php echo esc_html(rb_t('supported_languages', __('Supported languages', 'restaurant-booking'))); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($all_locations as $location_item) : ?>
+                                        <tr>
+                                            <td><?php echo esc_html((int) $location_item->id); ?></td>
+                                            <td><?php echo esc_html($location_item->name); ?></td>
+                                            <td><?php echo esc_html($location_item->slug); ?></td>
+                                            <td><?php echo esc_html((int) $location_item->default_table_count); ?></td>
+                                            <td><?php echo esc_html((int) $location_item->default_capacity); ?></td>
+                                            <td><?php echo esc_html($location_item->languages); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php else : ?>
+                            <p class="description"><?php echo esc_html(rb_t('no_locations_yet', __('No locations yet.', 'restaurant-booking'))); ?></p>
+                        <?php endif; ?>
+
+                        <h4 style="margin-top: 30px;"><?php echo esc_html(rb_t('add_new_location', __('Add new location', 'restaurant-booking'))); ?></h4>
+                        <?php
+                        $location_nonce_field = wp_nonce_field('rb_create_location', 'rb_create_location_nonce', true, false);
+                        echo str_replace('<input', '<input form="rb-create-location-form"', $location_nonce_field);
+                        ?>
+                        <input type="hidden" name="action" value="create_location" form="rb-create-location-form">
+                        <input type="hidden" name="rb_tab" value="advanced" form="rb-create-location-form">
+
+                        <table class="form-table rb-location-form-table">
+                            <tr>
+                                <th scope="row"><label for="rb-location-name"><?php echo esc_html(rb_t('location_name', __('Location name', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="text" id="rb-location-name" name="location[name]" form="rb-create-location-form" class="regular-text" required>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-slug"><?php echo esc_html(rb_t('location_slug_optional', __('Slug (optional)', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="text" id="rb-location-slug" name="location[slug]" form="rb-create-location-form" class="regular-text" placeholder="">
+                                    <p class="description"><?php echo esc_html(rb_t('location_slug_desc', __('Leave empty to generate from the name automatically.', 'restaurant-booking'))); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-email"><?php rb_e('contact_email'); ?></label></th>
+                                <td>
+                                    <input type="email" id="rb-location-email" name="location[email]" form="rb-create-location-form" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-hotline"><?php rb_e('hotline'); ?></label></th>
+                                <td>
+                                    <input type="text" id="rb-location-hotline" name="location[hotline]" form="rb-create-location-form" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-address"><?php rb_e('location_address'); ?></label></th>
+                                <td>
+                                    <input type="text" id="rb-location-address" name="location[address]" form="rb-create-location-form" class="regular-text">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-default-tables"><?php echo esc_html(rb_t('default_tables', __('Default tables', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-default-tables" name="location[default_table_count]" form="rb-create-location-form" class="small-text" min="1" max="50" value="10">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-default-capacity"><?php echo esc_html(rb_t('default_capacity', __('Default capacity', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="number" id="rb-location-default-capacity" name="location[default_capacity]" form="rb-create-location-form" class="small-text" min="1" max="20" value="4">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="rb-location-languages"><?php echo esc_html(rb_t('supported_languages', __('Supported languages', 'restaurant-booking'))); ?></label></th>
+                                <td>
+                                    <input type="text" id="rb-location-languages" name="location[languages]" form="rb-create-location-form" class="regular-text" placeholder="<?php echo esc_attr(rb_t('location_languages_placeholder', __('e.g. vi,en,ja', 'restaurant-booking'))); ?>">
+                                    <p class="description"><?php echo esc_html(rb_t('location_languages_desc', __('Comma-separated language codes (e.g. vi,en,ja).', 'restaurant-booking'))); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p class="submit">
+                            <button type="submit" class="button button-primary" form="rb-create-location-form">
+                                <?php echo esc_html(rb_t('create_location', __('Create location', 'restaurant-booking'))); ?>
+                            </button>
+                        </p>
+                    </div>
+
                     <table class="form-table">
                         <tr>
                             <th scope="row"><?php rb_e('database_cleanup'); ?></th>
@@ -2674,6 +2785,8 @@ class RB_Admin {
                     </p>
                 </div>
             </form>
+
+            <form id="rb-create-location-form" method="post" action="" style="display:none;"></form>
 
             <div id="tab-portal-accounts" class="rb-tab-content" style="display: <?php echo $active_tab === 'portal-accounts' ? 'block' : 'none'; ?>;">
                 <h2><?php esc_html_e('Portal Accounts', 'restaurant-booking'); ?></h2>
@@ -2863,6 +2976,18 @@ class RB_Admin {
                 background: #f0f6fc;
                 border-radius: 5px;
                 border-left: 4px solid #2271b1;
+            }
+
+            .rb-location-management {
+                background: #fff;
+                border: 1px solid #ccd0d4;
+                border-radius: 5px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .rb-location-management h4 {
+                margin-top: 20px;
             }
 
             .rb-current-lang-display .rb-lang-flag {
@@ -3082,7 +3207,7 @@ class RB_Admin {
             exit;
         }
 
-        if (!isset($_GET['_wpnonce']) && !isset($_POST['rb_nonce'])) {
+        if (!isset($_GET['_wpnonce']) && !isset($_POST['rb_nonce']) && !isset($_POST['rb_create_location_nonce'])) {
             return;
         }
 
@@ -3145,6 +3270,14 @@ class RB_Admin {
                         $this->update_admin_booking();
                     }
                     break;
+            }
+        }
+
+        if (isset($_POST['action']) && isset($_POST['rb_create_location_nonce'])) {
+            $action = sanitize_text_field($_POST['action']);
+
+            if ($action === 'create_location' && wp_verify_nonce($_POST['rb_create_location_nonce'], 'rb_create_location')) {
+                $this->create_location();
             }
         }
     }
@@ -3605,10 +3738,84 @@ class RB_Admin {
         wp_redirect($redirect_url);
         exit;
     }
-    
+
+    private function create_location() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You are not allowed to create locations.', 'restaurant-booking'));
+        }
+
+        $input = isset($_POST['location']) ? (array) wp_unslash($_POST['location']) : array();
+
+        $name = isset($input['name']) ? sanitize_text_field($input['name']) : '';
+
+        if ('' === $name) {
+            $this->redirect_location_response('location_error', new WP_Error('rb_location_missing_name', rb_t('location_name_required', __('Please enter a location name.', 'restaurant-booking'))));
+        }
+
+        $slug = isset($input['slug']) ? sanitize_text_field($input['slug']) : '';
+        $email = isset($input['email']) ? sanitize_email($input['email']) : '';
+        $hotline = isset($input['hotline']) ? sanitize_text_field($input['hotline']) : '';
+        $address = isset($input['address']) ? sanitize_text_field($input['address']) : '';
+        $default_tables = isset($input['default_table_count']) ? max(1, intval($input['default_table_count'])) : 10;
+        $default_capacity = isset($input['default_capacity']) ? max(1, intval($input['default_capacity'])) : 4;
+        $languages = isset($input['languages']) ? $input['languages'] : '';
+
+        global $rb_location;
+
+        if (!$rb_location) {
+            require_once RB_PLUGIN_DIR . 'includes/class-location.php';
+            $rb_location = new RB_Location();
+        }
+
+        if (!$rb_location) {
+            $this->redirect_location_response('location_error', new WP_Error('rb_location_helper_missing', __('Unable to load the location manager.', 'restaurant-booking')));
+        }
+
+        $global_settings = get_option('rb_settings', array());
+
+        $location_data = array(
+            'name' => $name,
+            'slug' => sanitize_title($slug),
+            'email' => $email,
+            'hotline' => $hotline,
+            'address' => $address,
+            'opening_time' => isset($global_settings['opening_time']) ? $global_settings['opening_time'] : '09:00',
+            'closing_time' => isset($global_settings['closing_time']) ? $global_settings['closing_time'] : '22:00',
+            'time_slot_interval' => isset($global_settings['time_slot_interval']) ? intval($global_settings['time_slot_interval']) : 30,
+            'min_advance_booking' => isset($global_settings['min_advance_booking']) ? intval($global_settings['min_advance_booking']) : 2,
+            'max_advance_booking' => isset($global_settings['max_advance_booking']) ? intval($global_settings['max_advance_booking']) : 30,
+            'default_table_count' => $default_tables,
+            'default_capacity' => $default_capacity,
+            'languages' => $languages,
+        );
+
+        $created = $rb_location->create($location_data);
+
+        if (is_wp_error($created)) {
+            $this->redirect_location_response('location_error', $created);
+        }
+
+        $this->redirect_location_response('location_created');
+    }
+
+    private function redirect_location_response($message, $error = null) {
+        $args = array(
+            'page' => 'rb-settings',
+            'rb_tab' => 'advanced',
+            'message' => $message,
+        );
+
+        if ($error instanceof WP_Error) {
+            $args['error'] = rawurlencode($error->get_error_message());
+        }
+
+        wp_safe_redirect(add_query_arg($args, admin_url('admin.php')));
+        exit;
+    }
+
     private function save_settings() {
         $settings = isset($_POST['rb_settings']) ? $_POST['rb_settings'] : array();
-        
+
         $clean_settings = array(
             // Working hours
             'working_hours_mode' => isset($settings['working_hours_mode']) ? sanitize_text_field($settings['working_hours_mode']) : 'simple',
@@ -3713,6 +3920,13 @@ class RB_Admin {
                 break;
             case 'invalid_table':
                 $text = rb_t('invalid_table_selection', __('Please select a valid table for this location.', 'restaurant-booking'));
+                $type = 'error';
+                break;
+            case 'location_created':
+                $text = '🏢 ' . rb_t('location_created_successfully', __('Location created successfully.', 'restaurant-booking'));
+                break;
+            case 'location_error':
+                $text = isset($_GET['error']) ? esc_html(urldecode($_GET['error'])) : rb_t('location_creation_failed', __('Could not create the location. Please try again.', 'restaurant-booking'));
                 $type = 'error';
                 break;
             case 'error':
