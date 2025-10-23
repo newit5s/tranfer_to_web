@@ -138,16 +138,26 @@ body.rb-modal-open {
     border-radius: 50%;
     border: 1px solid transparent;
     background: rgba(34, 113, 177, 0.08);
-    color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.rb-new-close::before,
-.rb-new-close::after {
+.rb-new-close-icon {
+    position: relative;
+    width: 20px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rb-new-close-icon::before,
+.rb-new-close-icon::after {
     content: '';
     position: absolute;
-    top: 50%;
     left: 50%;
     width: 18px;
     height: 2px;
@@ -157,12 +167,12 @@ body.rb-modal-open {
     transition: transform 0.2s ease, background 0.2s ease;
 }
 
-.rb-new-close::before {
-    transform: translate(-50%, -50%) rotate(45deg);
+.rb-new-close-icon::before {
+    transform: translate(-50%, -4px) rotate(0deg);
 }
 
-.rb-new-close::after {
-    transform: translate(-50%, -50%) rotate(-45deg);
+.rb-new-close-icon::after {
+    transform: translate(-50%, 4px) rotate(0deg);
 }
 
 .rb-new-close:hover,
@@ -171,11 +181,16 @@ body.rb-modal-open {
     border-color: rgba(34, 113, 177, 0.25);
 }
 
-.rb-new-close:hover::before,
-.rb-new-close:hover::after,
-.rb-new-close:focus-visible::before,
-.rb-new-close:focus-visible::after {
+.rb-new-close:hover .rb-new-close-icon::before,
+.rb-new-close:focus-visible .rb-new-close-icon::before {
     background: var(--rb-new-primary);
+    transform: translate(-50%, 0) rotate(45deg);
+}
+
+.rb-new-close:hover .rb-new-close-icon::after,
+.rb-new-close:focus-visible .rb-new-close-icon::after {
+    background: var(--rb-new-primary);
+    transform: translate(-50%, 0) rotate(-45deg);
 }
 
 /* Stepper */
@@ -371,6 +386,7 @@ body.rb-modal-open {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     background-color: #ffffff;
     color: var(--rb-new-text);
+    width: 100%;
 }
 
 .rb-new-form-group textarea {
@@ -547,6 +563,13 @@ body.rb-modal-open {
     color: var(--rb-new-text);
 }
 
+.rb-new-location-info__note {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: var(--rb-new-muted);
+    line-height: 1.5;
+}
+
 .rb-new-location-info__grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -682,6 +705,10 @@ body.rb-modal-open {
     .rb-new-form-actions .rb-new-btn-secondary,
     .rb-new-form-actions .rb-new-btn-primary {
         width: 100%;
+    }
+
+    .rb-new-form-actions .rb-new-btn-primary {
+        order: -1;
     }
 }
 
