@@ -115,6 +115,7 @@ body.rb-modal-open {
     max-height: 92vh;
     overflow-y: auto;
     padding: 32px 36px 36px;
+    box-sizing: border-box;
     animation: rb-modal-in 0.28s ease;
 }
 
@@ -561,6 +562,13 @@ body.rb-modal-open {
     font-size: 16px;
     font-weight: 600;
     color: var(--rb-new-text);
+}
+
+.rb-new-location-info__note {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: var(--rb-new-muted);
+    line-height: 1.5;
 }
 
 .rb-new-location-info__grid {
