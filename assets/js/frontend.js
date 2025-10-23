@@ -1260,6 +1260,8 @@
                 var name = $item.attr('data-name') || '';
                 var phone = $item.attr('data-phone') || '';
                 var email = $item.attr('data-email') || '';
+                var phoneLinkValue = $item.attr('data-phone-link') || '';
+                var emailLinkValue = $item.attr('data-email-link') || '';
                 var total = $item.attr('data-total') || '0';
                 var completed = $item.attr('data-completed') || '0';
                 var cancelled = $item.attr('data-cancelled') || '0';
@@ -1281,14 +1283,14 @@
 
                 var $phoneLink = customerDetail.find('[data-field="phone"]').text(phone);
                 if (phone) {
-                    $phoneLink.attr('href', 'tel:' + phone).show();
+                    $phoneLink.attr('href', 'tel:' + (phoneLinkValue || phone)).show();
                 } else {
                     $phoneLink.removeAttr('href').hide();
                 }
 
                 var $emailLink = customerDetail.find('[data-field="email"]').text(email);
                 if (email) {
-                    $emailLink.attr('href', 'mailto:' + email).show();
+                    $emailLink.attr('href', 'mailto:' + (emailLinkValue || email)).show();
                 } else {
                     $emailLink.removeAttr('href').hide();
                 }
