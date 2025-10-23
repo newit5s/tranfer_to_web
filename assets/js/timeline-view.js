@@ -35,6 +35,10 @@
         this.$viewButtons = {};
         this.$backButton = null;
         this.$drawerToggle = null;
+        this.$filters = this.$container.closest('.rb-manager-timeline').find('.rb-manager-timeline__filters');
+        this.sidebarId = 'rb-timeline-sidebar-' + Math.floor(Math.random() * 1000000);
+        this.drawerLastFocus = null;
+        this._boundDrawerKeydown = $.proxy(this.onDrawerKeydown, this);
         this.hasRendered = false;
         this.init();
     };
@@ -399,9 +403,16 @@
         var toggleLabel = self.strings.sidebarToggleLabel || title;
         var allLabel = self.strings.allTablesLabel || 'All tables';
 
-        var $sidebar = $('<aside class="rb-timeline-sidebar is-open" />');
+        var $sidebar = $('<aside class="rb-timeline-sidebar is-open" />')
+            .attr('id', self.sidebarId)
+            .attr('role', 'complementary')
+            .attr('aria-hidden', 'false');
         var $header = $('<div class="rb-timeline-sidebar-header" />');
-        var $title = $('<h3 class="rb-timeline-sidebar-title" />').text(title);
+        var $titleId = self.sidebarId + '-title';
+        var $title = $('<h3 class="rb-timeline-sidebar-title" />')
+            .attr('id', $titleId)
+            .text(title);
+        $sidebar.attr('aria-labelledby', $titleId);
         var $toggle = $('<button type="button" class="rb-timeline-sidebar-toggle" aria-expanded="true" />')
             .text(toggleLabel)
             .on('click', function (event) {
@@ -584,6 +595,7 @@
         var $rightGroup = $('<div class="rb-timeline-toolbar-group rb-timeline-toolbar-group--right" />');
         self.$drawerToggle = $('<button type="button" class="rb-timeline-drawer-toggle" aria-expanded="false" />')
             .text(self.getDrawerLabel(false))
+            .attr('aria-controls', self.sidebarId)
             .on('click', function (event) {
                 event.preventDefault();
                 self.toggleDrawer();
@@ -677,7 +689,8 @@
 
         if (options.pushHistory !== false) {
             this.viewHistory = this.viewHistory || [];
-            this.viewHistory.push({ mode: this.viewMode, date: this.activeDate });
+            var historyDate = options.historyDate || date || this.activeDate;
+            this.viewHistory.push({ mode: this.viewMode, date: historyDate });
         }
 
         this.viewMode = 'day';
@@ -737,6 +750,9 @@
             self.$drawerToggle.css('display', isMobile ? 'inline-flex' : 'none');
             self.$drawerToggle.attr('aria-expanded', self.drawerOpen ? 'true' : 'false');
             self.$drawerToggle.text(self.getDrawerLabel(self.drawerOpen));
+            if (self.sidebarId) {
+                self.$drawerToggle.attr('aria-controls', self.sidebarId);
+            }
         }
 
         if (self.$sidebar) {
@@ -752,6 +768,27 @@
             self.$container.toggleClass('rb-timeline-view-week', currentView === 'week');
             self.$container.toggleClass('rb-timeline-view-day', currentView === 'day');
             self.$container.toggleClass('rb-timeline-drawer-open', !!self.drawerOpen);
+        }
+
+        self.updateHeaderFiltersVisibility(currentView);
+    };
+
+    TimelineApp.prototype.updateHeaderFiltersVisibility = function (mode) {
+        if (!this.$filters || !this.$filters.length) {
+            return;
+        }
+
+        var normalized = this.normalizeViewMode(mode || this.viewMode) || 'day';
+        var shouldHide = normalized === 'month' || normalized === 'week';
+
+        this.$filters.toggleClass('rb-timeline-filters-hidden', shouldHide);
+
+        if (shouldHide) {
+            this.$filters.attr('aria-hidden', 'true');
+            this.$filters.attr('hidden', 'hidden');
+        } else {
+            this.$filters.removeAttr('aria-hidden');
+            this.$filters.removeAttr('hidden');
         }
     };
 
@@ -799,6 +836,7 @@
 
         if (!this.isMobile) {
             this.drawerOpen = false;
+            this.unbindDrawerKeydown();
         }
 
         this.updateSidebarResponsiveState();
@@ -823,6 +861,7 @@
             $('body').toggleClass('rb-timeline-drawer-open', this.drawerOpen);
         } else {
             this.$sidebar.removeClass('rb-timeline-sidebar--drawer');
+            this.$sidebar.removeClass('is-open');
             if (this.$drawerOverlay) {
                 this.$drawerOverlay.removeClass('is-visible');
             }
@@ -837,6 +876,8 @@
                 $toggle.attr('aria-expanded', this.$sidebar.hasClass('is-open') ? 'true' : 'false');
             }
         }
+
+        this.applyDrawerAriaState();
     };
 
     TimelineApp.prototype.openDrawer = function () {
@@ -845,8 +886,11 @@
         }
 
         this.drawerOpen = true;
+        this.drawerLastFocus = document.activeElement || null;
         this.updateSidebarResponsiveState();
         this.updateToolbarState();
+        this.bindDrawerKeydown();
+        this.focusDrawer();
     };
 
     TimelineApp.prototype.closeDrawer = function (skipFocus) {
@@ -857,9 +901,26 @@
         this.drawerOpen = false;
         this.updateSidebarResponsiveState();
         this.updateToolbarState();
+        this.unbindDrawerKeydown();
 
-        if (!skipFocus && this.isMobile && this.$drawerToggle && this.$drawerToggle.length) {
-            this.$drawerToggle.trigger('focus');
+        if (!skipFocus && this.isMobile) {
+            var $restoreTarget = null;
+            if (this.drawerLastFocus && typeof document !== 'undefined') {
+                var focusRoot = document.body || document.documentElement;
+                if (focusRoot && focusRoot.contains && focusRoot.contains(this.drawerLastFocus)) {
+                    $restoreTarget = $(this.drawerLastFocus);
+                }
+            }
+
+            if ($restoreTarget && $restoreTarget.length) {
+                $restoreTarget.trigger('focus');
+            } else if (this.$drawerToggle && this.$drawerToggle.length) {
+                this.$drawerToggle.trigger('focus');
+            }
+        }
+
+        if (!this.drawerOpen) {
+            this.drawerLastFocus = null;
         }
     };
 
@@ -872,6 +933,84 @@
             this.closeDrawer();
         } else {
             this.openDrawer();
+        }
+    };
+
+    TimelineApp.prototype.applyDrawerAriaState = function () {
+        if (!this.$sidebar || !this.$sidebar.length) {
+            return;
+        }
+
+        if (this.isMobile) {
+            this.$sidebar.attr('role', 'dialog');
+            this.$sidebar.attr('aria-modal', this.drawerOpen ? 'true' : 'false');
+            this.$sidebar.attr('aria-hidden', this.drawerOpen ? 'false' : 'true');
+
+            if (this.drawerOpen) {
+                this.$sidebar.attr('tabindex', '-1');
+            } else {
+                this.$sidebar.removeAttr('tabindex');
+            }
+        } else {
+            this.$sidebar.attr('role', 'complementary');
+            this.$sidebar.attr('aria-modal', 'false');
+            this.$sidebar.attr('aria-hidden', 'false');
+            this.$sidebar.removeAttr('tabindex');
+        }
+    };
+
+    TimelineApp.prototype.focusDrawer = function () {
+        if (!this.drawerOpen || !this.$sidebar || !this.$sidebar.length) {
+            return;
+        }
+
+        var $focusTarget = this.$sidebar.find('.rb-timeline-sidebar-close').first();
+        if (!$focusTarget.length) {
+            $focusTarget = this.$sidebar.find('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])').first();
+        }
+
+        var $sidebar = this.$sidebar;
+
+        if ($focusTarget.length) {
+            setTimeout(function () {
+                $focusTarget.trigger('focus');
+            }, 0);
+        } else {
+            setTimeout(function () {
+                $sidebar.trigger('focus');
+            }, 0);
+        }
+    };
+
+    TimelineApp.prototype.bindDrawerKeydown = function () {
+        if (!this._boundDrawerKeydown) {
+            return;
+        }
+
+        $(document).off('keydown.rbTimelineDrawer').on('keydown.rbTimelineDrawer', this._boundDrawerKeydown);
+    };
+
+    TimelineApp.prototype.unbindDrawerKeydown = function () {
+        if (!this._boundDrawerKeydown) {
+            return;
+        }
+
+        $(document).off('keydown.rbTimelineDrawer', this._boundDrawerKeydown);
+    };
+
+    TimelineApp.prototype.onDrawerKeydown = function (event) {
+        if (!this.drawerOpen) {
+            return;
+        }
+
+        if (!event) {
+            return;
+        }
+
+        var key = event.key || event.keyCode;
+        if (key === 'Escape' || key === 'Esc' || key === 27) {
+            event.preventDefault();
+            this.closeDrawer();
         }
     };
 
