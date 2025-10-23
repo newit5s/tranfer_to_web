@@ -107,6 +107,10 @@ class RB_Assets_Manager {
             'languageSwitching' => rb_t('language_switching', __('Switching language…', 'restaurant-booking')),
             'languageSwitched' => rb_t('language_switched', __('Language switched', 'restaurant-booking')),
             'languageSwitchFailed' => rb_t('language_switch_failed', __('Could not change language. Please try again.', 'restaurant-booking')),
+            'advanceNoteGeneric' => rb_t('advance_booking_note', __('If you would like to book within 2 hours or cannot select a time slot, please contact the restaurant hotline or email for assistance.', 'restaurant-booking')),
+            'advanceNoteHotlineOnly' => rb_t('advance_booking_note_hotline_only', __('If you would like to book within 2 hours or cannot select a time slot, please call %1$s for assistance.', 'restaurant-booking')),
+            'advanceNoteEmailOnly' => rb_t('advance_booking_note_email_only', __('If you would like to book within 2 hours or cannot select a time slot, please email %1$s for assistance.', 'restaurant-booking')),
+            'advanceNoteHotlineEmail' => rb_t('advance_booking_note_hotline_email', __('If you would like to book within 2 hours or cannot select a time slot, please contact %1$s or %2$s for assistance.', 'restaurant-booking')),
         ));
     }
 
