@@ -767,7 +767,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                             <span class="rb-gmail-filters-toggle-icon" aria-hidden="true">▾</span>
                         </button>
 
-                        <div class="rb-gmail-filter-panel" id="<?php echo esc_attr($filters_panel_id); ?>" data-rb-filters-panel>
+                        <div
+                            class="rb-gmail-filter-panel"
+                            id="<?php echo esc_attr($filters_panel_id); ?>"
+                            data-rb-filters-panel
+                            aria-hidden="false"
+                        >
                             <form class="rb-gmail-filter-form" method="get">
                                 <input type="hidden" name="location_id" value="<?php echo esc_attr($location_id); ?>">
                                 <input type="hidden" name="rb_section" value="dashboard">
@@ -1598,9 +1603,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     $is_loyal = $completed >= 5;
                                     $is_problem = !$is_blacklisted && $problem_rate > 50;
                                     $can_promote_vip = !$is_vip && $completed >= 3;
+                                    $raw_phone = !empty($customer->phone) ? $customer->phone : '';
+                                    $phone_href = $raw_phone ? preg_replace('/[^0-9+]/', '', $raw_phone) : '';
+                                    $raw_email = !empty($customer->email) ? sanitize_email($customer->email) : '';
                                     $contact_bits = array_filter(array(
-                                        !empty($customer->phone) ? $customer->phone : '',
-                                        !empty($customer->email) ? $customer->email : '',
+                                        $raw_phone,
+                                        $raw_email,
                                     ));
                                     $contact_summary = implode(' • ', $contact_bits);
                                     $note_preview = $notes ? wp_trim_words($notes, 16) : '';
@@ -1611,13 +1619,27 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     $meta_text = $last_visit
                                         ? sprintf('%s: %s', $this->t('last_visit', __('Last visit', 'restaurant-booking')), $last_visit)
                                         : sprintf('%s: %s', $this->t('total_bookings', __('Total bookings', 'restaurant-booking')), number_format_i18n($total));
+                                    $call_text = $this->t('call_customer_action', __('Call', 'restaurant-booking'));
+                                    $email_text = $this->t('email_customer_action', __('Email', 'restaurant-booking'));
+                                    $call_label = $raw_phone ? sprintf(
+                                        /* translators: %s: customer name. */
+                                        $this->t('call_customer_named', __('Call %s', 'restaurant-booking')),
+                                        $customer->name
+                                    ) : '';
+                                    $email_label = $raw_email ? sprintf(
+                                        /* translators: %s: customer name. */
+                                        $this->t('email_customer_named', __('Email %s', 'restaurant-booking')),
+                                        $customer->name
+                                    ) : '';
                                 ?>
                                     <article
                                         class="rb-inbox-item"
                                         data-customer-id="<?php echo esc_attr($customer->id); ?>"
                                         data-name="<?php echo esc_attr($customer->name); ?>"
                                         data-phone="<?php echo esc_attr($customer->phone); ?>"
+                                        data-phone-link="<?php echo esc_attr($phone_href); ?>"
                                         data-email="<?php echo esc_attr($customer->email); ?>"
+                                        data-email-link="<?php echo esc_attr($raw_email); ?>"
                                         data-total="<?php echo esc_attr($total); ?>"
                                         data-completed="<?php echo esc_attr($completed); ?>"
                                         data-cancelled="<?php echo esc_attr($cancelled); ?>"
@@ -1649,22 +1671,46 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                             <div class="rb-inbox-item__row rb-inbox-item__snippet" data-contact-summary <?php echo !empty($contact_summary) ? '' : 'hidden'; ?>>
                                                 <span><?php echo esc_html($contact_summary); ?></span>
                                             </div>
+                                            <div class="rb-inbox-item__row rb-inbox-item__actions" data-card-actions data-rb-ignore-detail <?php echo $raw_phone || $raw_email ? '' : 'hidden'; ?>>
+                                                <?php if ($raw_phone && $phone_href) : ?>
+                                                    <a
+                                                        class="rb-inbox-item__chip rb-inbox-item__chip--call"
+                                                        href="tel:<?php echo esc_attr($phone_href); ?>"
+                                                        aria-label="<?php echo esc_attr($call_label); ?>"
+                                                        data-rb-ignore-detail
+                                                    >
+                                                        <span aria-hidden="true">📞</span>
+                                                        <span><?php echo esc_html($call_text); ?></span>
+                                                    </a>
+                                                <?php endif; ?>
+                                                <?php if ($raw_email) : ?>
+                                                    <a
+                                                        class="rb-inbox-item__chip rb-inbox-item__chip--email"
+                                                        href="mailto:<?php echo esc_attr($raw_email); ?>"
+                                                        aria-label="<?php echo esc_attr($email_label); ?>"
+                                                        data-rb-ignore-detail
+                                                    >
+                                                        <span aria-hidden="true">✉️</span>
+                                                        <span><?php echo esc_html($email_text); ?></span>
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
                                             <div class="rb-inbox-item__row rb-inbox-item__note" data-note-preview <?php echo $note_preview ? '' : 'hidden'; ?>>
                                                 <span class="rb-inbox-badge rb-inbox-badge--note"><?php echo esc_html($this->t('notes', __('Notes', 'restaurant-booking'))); ?></span>
                                                 <span data-note-text><?php echo esc_html($note_preview); ?></span>
                                             </div>
                                         </div>
                                         <div class="rb-inbox-item__status rb-inbox-item__metrics">
-                                            <div class="rb-inbox-metric">
+                                            <div class="rb-inbox-metric" data-metric-label="<?php echo esc_attr($this->t('total_bookings', __('Total bookings', 'restaurant-booking'))); ?>">
                                                 <span class="rb-inbox-metric__label"><?php echo esc_html($this->t('total_bookings', __('Total bookings', 'restaurant-booking'))); ?></span>
                                                 <strong><?php echo number_format_i18n($total); ?></strong>
                                             </div>
-                                            <div class="rb-inbox-metric">
+                                            <div class="rb-inbox-metric" data-metric-label="<?php echo esc_attr($this->t('completed_bookings', __('Completed', 'restaurant-booking'))); ?>">
                                                 <span class="rb-inbox-metric__label"><?php echo esc_html($this->t('completed_bookings', __('Completed', 'restaurant-booking'))); ?></span>
                                                 <strong><?php echo number_format_i18n($completed); ?></strong>
                                                 <small><?php echo esc_html($success_rate); ?>%</small>
                                             </div>
-                                            <div class="rb-inbox-metric">
+                                            <div class="rb-inbox-metric" data-metric-label="<?php echo esc_attr($this->t('problem_rate', __('Problem rate', 'restaurant-booking'))); ?>">
                                                 <span class="rb-inbox-metric__label"><?php echo esc_html($this->t('problem_rate', __('Problem rate', 'restaurant-booking'))); ?></span>
                                                 <strong><?php echo number_format_i18n($cancelled + $no_shows); ?></strong>
                                                 <small><?php echo esc_html($problem_rate); ?>%</small>

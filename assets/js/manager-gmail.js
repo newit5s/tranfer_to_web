@@ -64,12 +64,20 @@
             });
 
             this.layouts.on('click', this.cardSelector, function (event) {
+                if (self.shouldIgnoreCardActivation(event)) {
+                    return;
+                }
+
                 var card = $(this);
                 self.focusCard(card);
                 self.openDetail();
             });
 
             this.layouts.on('keydown', this.cardSelector, function (event) {
+                if (self.shouldIgnoreCardActivation(event)) {
+                    return;
+                }
+
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     $(this).trigger('click');
@@ -224,8 +232,14 @@
         },
 
         closePanels: function () {
-            this.closeDetail();
-            this.closeSidebar();
+            if (this.layouts.filter('.has-detail-open').length) {
+                this.closeDetail();
+            }
+
+            if (this.layouts.filter('.is-sidebar-open').length || this.sidebar.filter('.is-open').length) {
+                this.closeSidebar();
+            }
+
             this.closeFilters();
         },
 
@@ -268,16 +282,27 @@
                 return;
             }
 
+            this.closeDetail();
+            this.closeSidebar();
+
             var isOpen = toolbar.hasClass('is-filters-open');
             isOpen = !isOpen;
 
             toolbar.toggleClass('is-filters-open', isOpen);
             panel.toggleClass('is-open', isOpen);
 
+            if (!panel.attr('tabindex')) {
+                panel.attr('tabindex', '-1');
+            }
+
             if (isOpen) {
                 panel.removeAttr('hidden');
+                panel.attr('aria-hidden', 'false');
+                panel.trigger('focus');
             } else {
                 panel.attr('hidden', 'hidden');
+                panel.attr('aria-hidden', 'true');
+                button.trigger('focus');
             }
 
             button.attr('aria-expanded', isOpen ? 'true' : 'false');
@@ -300,6 +325,7 @@
                 toolbar.removeClass('is-filters-open');
                 panel.removeClass('is-open');
                 panel.attr('hidden', 'hidden');
+                panel.attr('aria-hidden', 'true');
 
                 if (button.length) {
                     button.attr('aria-expanded', 'false');
@@ -317,22 +343,29 @@
                     return;
                 }
 
+                if (!panel.attr('tabindex')) {
+                    panel.attr('tabindex', '-1');
+                }
+
                 if (!isMobile) {
                     toolbar.removeClass('is-filters-open');
                     panel.removeClass('is-open');
                     panel.removeAttr('hidden');
+                    panel.attr('aria-hidden', 'false');
                     if (button.length) {
                         button.attr('aria-expanded', 'true');
                     }
                 } else if (toolbar.hasClass('is-filters-open')) {
                     panel.addClass('is-open');
                     panel.removeAttr('hidden');
+                    panel.attr('aria-hidden', 'false');
                     if (button.length) {
                         button.attr('aria-expanded', 'true');
                     }
                 } else {
                     panel.removeClass('is-open');
                     panel.attr('hidden', 'hidden');
+                    panel.attr('aria-hidden', 'true');
                     if (button.length) {
                         button.attr('aria-expanded', 'false');
                     }
@@ -408,6 +441,28 @@
             }
         },
 
+        shouldIgnoreCardActivation: function (event) {
+            if (!event) {
+                return false;
+            }
+
+            var target = $(event.target);
+
+            if (!target.length) {
+                return false;
+            }
+
+            if (target.is('button, a, input, select, textarea, label, [role="button"], [aria-haspopup="true"]')) {
+                return true;
+            }
+
+            if (target.closest('[data-rb-ignore-detail]').length) {
+                return true;
+            }
+
+            return false;
+        },
+
         handleGlobalKeydown: function (event) {
             if (!this.layout.length) {
                 return;
@@ -423,7 +478,11 @@
             }
 
             if (event.key === 'Escape') {
-                if (this.layout.hasClass('has-detail-open') || this.layout.hasClass('is-sidebar-open')) {
+                var hasOverlay = this.layout.hasClass('has-detail-open') || this.layout.hasClass('is-sidebar-open');
+                var filtersOpen = this.layouts.find('.rb-gmail-toolbar.is-filters-open').length > 0;
+
+                if (hasOverlay || filtersOpen) {
+                    event.preventDefault();
                     this.closePanels();
                 }
             }
