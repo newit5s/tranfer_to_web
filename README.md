@@ -72,6 +72,7 @@ restaurant-booking-manager/
 - Chọn chi nhánh, ngày, giờ, số khách với gợi ý khung giờ thay thế nếu hết chỗ.
 - Xác thực dữ liệu đầu vào (email, điện thoại), hỗ trợ đa ngôn ngữ và chuyển ngôn ngữ ngay trên widget.
 - Gửi email xác nhận kèm token, cho phép khách cập nhật trạng thái qua đường dẫn bảo mật.
+- Thẻ thông tin chi nhánh (địa chỉ, hotline, email) cập nhật theo lựa chọn và có thể bật/tắt trong tab Appearance.
 
 ### Dành cho nhân viên (Portal)
 - Đăng nhập bằng tài khoản nội bộ, giới hạn chi nhánh theo phân quyền.
@@ -80,7 +81,7 @@ restaurant-booking-manager/
 - Quản lý bàn theo chi nhánh (thêm/xoá/bật tắt), cập nhật cấu hình giờ mở cửa, buffer time.
 
 ### Dành cho quản trị viên WordPress
-- Giao diện quản trị riêng với tab **General**, **Locations**, **Portal Accounts**, **Email & Automation**, **Tools**.
+- Giao diện quản trị riêng với tab **General**, **Locations**, **Appearance**, **Portal Accounts**, **Email & Automation**, **Tools**.
 - Sinh portal account, đặt lại mật khẩu, gán nhiều chi nhánh trên cùng một tài khoản.
 - Công cụ dọn lịch cũ và reset plugin (tùy chọn) qua AJAX có nonce bảo vệ.
 
@@ -118,6 +119,7 @@ restaurant-booking-manager/
 3. **Portal Accounts**: khởi tạo tài khoản, gán nhiều chi nhánh, đặt mật khẩu, bật/tắt trạng thái. Có thể reset mật khẩu từng tài khoản.
 4. **Email & Automation**: bật cron gửi email xác nhận/nhắc nhở, cấu hình nội dung email và buffer time.
 5. **Tools**: dọn lịch cũ theo mốc thời gian, reset plugin về trạng thái ban đầu (xóa dữ liệu – cẩn trọng).
+6. **Appearance**: tinh chỉnh màu chủ đạo, nền modal, font chữ, bo góc và bật/tắt các thành phần (chuyển ngôn ngữ, tóm tắt đặt bàn, thẻ thông tin chi nhánh) cho widget đặt bàn.
 
 ## 🧭 Shortcode & Block
 

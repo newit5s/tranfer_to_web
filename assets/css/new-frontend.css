@@ -50,7 +50,7 @@ body.rb-modal-open {
     color: #ffffff;
     padding: 14px 32px;
     border: none;
-    border-radius: 999px;
+    border-radius: var(--rb-new-radius-button);
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -523,6 +523,52 @@ body.rb-modal-open {
     background: var(--rb-new-primary);
     color: #ffffff;
     border-color: var(--rb-new-primary);
+}
+
+/* Location info card */
+.rb-new-location-info {
+    margin-top: 24px;
+    padding: 18px 20px;
+    border-radius: var(--rb-new-radius-card);
+    border: 1px solid var(--rb-new-border);
+    background: var(--rb-new-surface);
+    box-shadow: 0 12px 24px rgba(24, 58, 99, 0.08);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.rb-new-location-info.is-empty {
+    display: none;
+}
+
+.rb-new-location-info__title {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--rb-new-text);
+}
+
+.rb-new-location-info__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px 18px;
+}
+
+.rb-new-location-info__item {
+    margin: 0;
+    font-size: 14px;
+    color: var(--rb-new-muted);
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+}
+
+.rb-new-location-info__item.is-hidden {
+    display: none;
+}
+
+.rb-new-location-info__label {
+    font-weight: 600;
+    color: var(--rb-new-text);
 }
 
 /* Booking summary */
