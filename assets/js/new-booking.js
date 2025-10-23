@@ -54,6 +54,7 @@
             }
             this.bindEvents();
             this.setInitialValues();
+            this.updateLocationMeta();
             this.preventBodyScroll();
             this.updateStepper(1);
         },
@@ -80,6 +81,7 @@
 
             // Date/location change - update time slots
             $(document).on('change', '#rb-new-date, #rb-new-location, #rb-new-guests', this.updateTimeSlots.bind(this));
+            $(document).on('change', '#rb-new-location', this.updateLocationMeta.bind(this));
 
             // Check-in change - update checkout options
             $(document).on('change', '#rb-new-time', this.updateCheckoutSelect.bind(this));
@@ -767,6 +769,47 @@
             return (hours * 3600) + (minutes * 60) + seconds;
         },
 
+        updateLocationMeta: function() {
+            const $container = $('.rb-new-location-info');
+            if (!$container.length) {
+                return;
+            }
+
+            const $select = $('#rb-new-location');
+            const $selected = $select.length ? $select.find('option:selected') : null;
+
+            const address = $selected && $selected.length ? ($selected.data('address') || '') : '';
+            const hotline = $selected && $selected.length ? ($selected.data('hotline') || '') : '';
+            const email = $selected && $selected.length ? ($selected.data('email') || '') : '';
+
+            const updateField = (field, value, targetSelector) => {
+                const $item = $container.find(`.rb-new-location-info__item[data-field="${field}"]`);
+                if (!$item.length) {
+                    return;
+                }
+
+                if (targetSelector) {
+                    $(targetSelector).text(value || '');
+                }
+
+                if (value) {
+                    $item.removeClass('is-hidden');
+                } else {
+                    $item.addClass('is-hidden');
+                }
+            };
+
+            updateField('address', address, '#rb-new-location-address');
+            updateField('hotline', hotline, '#rb-new-location-hotline');
+            updateField('email', email, '#rb-new-location-email');
+
+            if (address || hotline || email) {
+                $container.removeClass('is-empty');
+            } else {
+                $container.addClass('is-empty');
+            }
+        },
+
         handleAjaxError: function() {
             if (this.currentStep === 2) {
                 this.showBookingError(this.strings.connectionError);
@@ -824,6 +867,7 @@
                 .css('border-color', '');
             this.availableSlots = [];
             $('#rb-new-checkout').empty().append(`<option value="">${this.strings.selectTime}</option>`);
+            this.updateLocationMeta();
         },
 
         updateStepper: function(step) {

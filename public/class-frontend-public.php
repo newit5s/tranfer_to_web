@@ -92,13 +92,18 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         $default_location_id = (int) $default_location['id'];
         $current_language = rb_get_current_language();
 
-        $settings = get_option('rb_settings', array(
+        $settings_raw = get_option('rb_settings', array());
+        $settings_defaults = array(
             'opening_time' => '09:00',
             'closing_time' => '22:00',
             'time_slot_interval' => 30,
             'min_advance_booking' => 2,
-            'max_advance_booking' => 30
-        ));
+            'max_advance_booking' => 30,
+            'frontend_enable_language_switcher' => 'yes',
+            'frontend_show_summary' => 'yes',
+            'frontend_show_location_contact' => 'yes',
+        );
+        $settings = wp_parse_args($settings_raw, $settings_defaults);
 
         $opening_time = isset($settings['opening_time']) ? $settings['opening_time'] : '09:00';
         $closing_time = isset($settings['closing_time']) ? $settings['closing_time'] : '22:00';
@@ -111,6 +116,16 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         $max_date = date('Y-m-d', strtotime('+' . $max_days . ' days'));
 
         $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
+
+        $default_location_address = isset($default_location['address']) ? $default_location['address'] : '';
+        $default_location_hotline = isset($default_location['hotline']) ? $default_location['hotline'] : '';
+        $default_location_email = isset($default_location['email']) ? $default_location['email'] : '';
+        $has_contact_info = !empty($default_location_address) || !empty($default_location_hotline) || !empty($default_location_email);
+        $location_info_classes = array('rb-new-location-info');
+        if (!$has_contact_info) {
+            $location_info_classes[] = 'is-empty';
+        }
+        $location_info_class_attr = implode(' ', array_map('sanitize_html_class', $location_info_classes));
 
         // Get available languages for switcher
         $available_languages = rb_get_available_languages();
@@ -201,18 +216,20 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                     <div class="rb-new-step rb-new-step-availability active" data-step="1">
                         <div class="rb-new-modal-header">
                             <h2><?php echo esc_html(rb_t('check_availability', __('Check Availability', 'restaurant-booking'))); ?></h2>
-                            
-                            <div class="rb-new-language-switcher">
-                                <select id="rb-new-language-select" class="rb-new-lang-select">
-                                    <?php foreach ($languages as $code => $label) : ?>
-                                        <option value="<?php echo esc_attr($code); ?>"
-                                            <?php selected($code, $current_language); ?>>
-                                            <?php echo esc_html($label); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <p class="rb-new-language-status" role="status" aria-live="polite" hidden></p>
-                            </div>
+
+                            <?php if ('yes' === $settings['frontend_enable_language_switcher']) : ?>
+                                <div class="rb-new-language-switcher">
+                                    <select id="rb-new-language-select" class="rb-new-lang-select">
+                                        <?php foreach ($languages as $code => $label) : ?>
+                                            <option value="<?php echo esc_attr($code); ?>"
+                                                <?php selected($code, $current_language); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="rb-new-language-status" role="status" aria-live="polite" hidden></p>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <form id="rb-new-availability-form" class="rb-new-form">
@@ -281,34 +298,58 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                                 <div class="rb-new-suggestion-list"></div>
                             </div>
                         </form>
+
+                        <?php if ('yes' === $settings['frontend_show_location_contact']) : ?>
+                            <div class="<?php echo esc_attr($location_info_class_attr); ?>" aria-live="polite">
+                                <h4 class="rb-new-location-info__title"><?php echo esc_html(rb_t('location_contact', __('Location contact', 'restaurant-booking'))); ?></h4>
+                                <div class="rb-new-location-info__grid">
+                                    <p class="rb-new-location-info__item <?php echo empty($default_location_address) ? 'is-hidden' : ''; ?>" data-field="address">
+                                        <span class="rb-new-location-info__label"><?php echo esc_html(rb_t('address', __('Address', 'restaurant-booking'))); ?>:</span>
+                                        <span id="rb-new-location-address"><?php echo esc_html($default_location_address); ?></span>
+                                    </p>
+                                    <p class="rb-new-location-info__item <?php echo empty($default_location_hotline) ? 'is-hidden' : ''; ?>" data-field="hotline">
+                                        <span class="rb-new-location-info__label"><?php echo esc_html(rb_t('hotline', __('Hotline', 'restaurant-booking'))); ?>:</span>
+                                        <span id="rb-new-location-hotline"><?php echo esc_html($default_location_hotline); ?></span>
+                                    </p>
+                                    <p class="rb-new-location-info__item <?php echo empty($default_location_email) ? 'is-hidden' : ''; ?>" data-field="email">
+                                        <span class="rb-new-location-info__label"><?php echo esc_html(rb_t('email', __('Email', 'restaurant-booking'))); ?>:</span>
+                                        <span id="rb-new-location-email"><?php echo esc_html($default_location_email); ?></span>
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Step 2: Booking Details -->
                     <div class="rb-new-step rb-new-step-details" data-step="2" hidden>
                         <div class="rb-new-modal-header">
                             <h2><?php echo esc_html(rb_t('booking_details', __('Booking Details', 'restaurant-booking'))); ?></h2>
-                            
-                            <div class="rb-new-language-switcher">
-                                <select class="rb-new-lang-select rb-new-lang-select-step2">
-                                    <?php foreach ($languages as $code => $label) : ?>
-                                        <option value="<?php echo esc_attr($code); ?>"
-                                            <?php selected($code, $current_language); ?>>
-                                            <?php echo esc_html($label); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <p class="rb-new-language-status" role="status" aria-live="polite" hidden></p>
-                            </div>
+
+                            <?php if ('yes' === $settings['frontend_enable_language_switcher']) : ?>
+                                <div class="rb-new-language-switcher">
+                                    <select class="rb-new-lang-select rb-new-lang-select-step2">
+                                        <?php foreach ($languages as $code => $label) : ?>
+                                            <option value="<?php echo esc_attr($code); ?>"
+                                                <?php selected($code, $current_language); ?>>
+                                                <?php echo esc_html($label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="rb-new-language-status" role="status" aria-live="polite" hidden></p>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
-                        <div class="rb-new-booking-summary">
-                            <h3><?php echo esc_html(rb_t('reservation_summary', __('Reservation Summary', 'restaurant-booking'))); ?></h3>
-                            <div class="rb-new-summary-content">
-                                <p><strong><?php echo esc_html(rb_t('location', __('Location', 'restaurant-booking'))); ?>:</strong> <span id="rb-new-summary-location"></span></p>
-                                <p><strong><?php echo esc_html(rb_t('date_time', __('Date & Time', 'restaurant-booking'))); ?>:</strong> <span id="rb-new-summary-datetime"></span></p>
-                                <p><strong><?php echo esc_html(rb_t('guests', __('Guests', 'restaurant-booking'))); ?>:</strong> <span id="rb-new-summary-guests"></span></p>
+                        <?php if ('yes' === $settings['frontend_show_summary']) : ?>
+                            <div class="rb-new-booking-summary">
+                                <h3><?php echo esc_html(rb_t('reservation_summary', __('Reservation Summary', 'restaurant-booking'))); ?></h3>
+                                <div class="rb-new-summary-content">
+                                    <p><strong><?php echo esc_html(rb_t('location', __('Location', 'restaurant-booking'))); ?>:</strong> <span id="rb-new-summary-location"></span></p>
+                                    <p><strong><?php echo esc_html(rb_t('date_time', __('Date & Time', 'restaurant-booking'))); ?>:</strong> <span id="rb-new-summary-datetime"></span></p>
+                                    <p><strong><?php echo esc_html(rb_t('guests', __('Guests', 'restaurant-booking'))); ?>:</strong> <span id="rb-new-summary-guests"></span></p>
+                                </div>
                             </div>
-                        </div>
+                        <?php endif; ?>
 
                         <form id="rb-new-booking-form" class="rb-new-form">
                             <?php wp_nonce_field('rb_booking_nonce', 'rb_nonce'); ?>

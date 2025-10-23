@@ -38,7 +38,21 @@ function rb_activate_plugin() {
         'closing_time' => '22:00',
         'time_slot_interval' => 30,
         'admin_email' => get_option('admin_email'),
-        'enable_email' => 'yes'
+        'enable_email' => 'yes',
+        'frontend_primary_color' => '#2271b1',
+        'frontend_primary_dark_color' => '#185b8f',
+        'frontend_primary_light_color' => '#3a8ad6',
+        'frontend_background_color' => '#f5f7fb',
+        'frontend_surface_color' => '#ffffff',
+        'frontend_text_color' => '#1c2a39',
+        'frontend_muted_text_color' => '#52637a',
+        'frontend_card_radius' => 18,
+        'frontend_button_radius' => 12,
+        'frontend_field_radius' => 10,
+        'frontend_font_family' => 'modern',
+        'frontend_enable_language_switcher' => 'yes',
+        'frontend_show_summary' => 'yes',
+        'frontend_show_location_contact' => 'yes'
     ));
 
     flush_rewrite_rules();

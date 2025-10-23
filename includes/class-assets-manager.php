@@ -123,17 +123,80 @@ class RB_Assets_Manager {
         if (!$this->should_enqueue_assets()) {
             return;
         }
+        $settings = get_option('rb_settings', array());
+        $defaults = array(
+            'frontend_primary_color' => '#2271b1',
+            'frontend_primary_dark_color' => '#185b8f',
+            'frontend_primary_light_color' => '#3a8ad6',
+            'frontend_background_color' => '#f5f7fb',
+            'frontend_surface_color' => '#ffffff',
+            'frontend_text_color' => '#1c2a39',
+            'frontend_muted_text_color' => '#52637a',
+            'frontend_card_radius' => 18,
+            'frontend_button_radius' => 12,
+            'frontend_field_radius' => 10,
+            'frontend_font_family' => 'modern',
+        );
+
+        $settings = wp_parse_args($settings, $defaults);
+
+        $primary = sanitize_hex_color($settings['frontend_primary_color']);
+        $primary_dark = sanitize_hex_color($settings['frontend_primary_dark_color']);
+        $primary_light = sanitize_hex_color($settings['frontend_primary_light_color']);
+        $background = sanitize_hex_color($settings['frontend_background_color']);
+        $surface = sanitize_hex_color($settings['frontend_surface_color']);
+        $text = sanitize_hex_color($settings['frontend_text_color']);
+        $muted = sanitize_hex_color($settings['frontend_muted_text_color']);
+
+        $primary = $primary ? $primary : '#2271b1';
+        $primary_dark = $primary_dark ? $primary_dark : '#185b8f';
+        $primary_light = $primary_light ? $primary_light : '#3a8ad6';
+        $background = $background ? $background : '#f5f7fb';
+        $surface = $surface ? $surface : '#ffffff';
+        $text = $text ? $text : '#1c2a39';
+        $muted = $muted ? $muted : '#52637a';
+
+        $card_radius = max(0, min(60, intval($settings['frontend_card_radius'])));
+        $button_radius = max(0, min(60, intval($settings['frontend_button_radius'])));
+        $field_radius = max(0, min(60, intval($settings['frontend_field_radius'])));
+
+        $font_map = array(
+            'modern' => "'Roboto', 'Segoe UI', 'Open Sans', 'Helvetica Neue', Arial, sans-serif",
+            'system' => "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+            'serif' => '"Playfair Display", Georgia, "Times New Roman", serif',
+            'rounded' => "'Nunito', 'Quicksand', 'Poppins', 'Segoe UI', sans-serif",
+        );
+
+        $font_key = isset($settings['frontend_font_family']) ? sanitize_text_field($settings['frontend_font_family']) : 'modern';
+        if (!isset($font_map[$font_key])) {
+            $font_key = 'modern';
+        }
+        $font_stack = $font_map[$font_key];
         ?>
         <style>
+            :root {
+                --rb-new-bg: <?php echo esc_attr($background); ?>;
+                --rb-new-surface: <?php echo esc_attr($surface); ?>;
+                --rb-new-text: <?php echo esc_attr($text); ?>;
+                --rb-new-muted: <?php echo esc_attr($muted); ?>;
+                --rb-new-primary: <?php echo esc_attr($primary); ?>;
+                --rb-new-primary-dark: <?php echo esc_attr($primary_dark); ?>;
+                --rb-new-primary-light: <?php echo esc_attr($primary_light); ?>;
+                --rb-new-radius-card: <?php echo esc_attr($card_radius); ?>px;
+                --rb-new-radius-button: <?php echo esc_attr($button_radius); ?>px;
+                --rb-new-radius-control: <?php echo esc_attr($field_radius); ?>px;
+                --rb-new-font: <?php echo $font_stack; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+            }
+
             body.rb-modal-open {
                 overflow: hidden;
                 padding-right: 15px;
             }
 
             .rb-new-suggestion-btn.selected {
-                background: #5c4033 !important;
+                background: var(--rb-new-primary) !important;
                 color: #ffffff !important;
-                border-color: #5c4033 !important;
+                border-color: var(--rb-new-primary) !important;
                 transform: translateY(-1px);
             }
 

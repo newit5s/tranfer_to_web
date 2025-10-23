@@ -2155,12 +2155,26 @@ class RB_Admin {
             'cancellation_hours' => 2,
             'weekend_enabled' => 'yes',
             'no_show_auto_blacklist' => 3,
+            'frontend_primary_color' => '#2271b1',
+            'frontend_primary_dark_color' => '#185b8f',
+            'frontend_primary_light_color' => '#3a8ad6',
+            'frontend_background_color' => '#f5f7fb',
+            'frontend_surface_color' => '#ffffff',
+            'frontend_text_color' => '#1c2a39',
+            'frontend_muted_text_color' => '#52637a',
+            'frontend_card_radius' => 18,
+            'frontend_button_radius' => 12,
+            'frontend_field_radius' => 10,
+            'frontend_font_family' => 'modern',
+            'frontend_enable_language_switcher' => 'yes',
+            'frontend_show_summary' => 'yes',
+            'frontend_show_location_contact' => 'yes',
         );
         
         $settings = wp_parse_args($settings, $defaults);
 
         $active_tab = isset($_GET['rb_tab']) ? sanitize_key($_GET['rb_tab']) : 'language';
-        $allowed_tabs = array('language', 'hours', 'booking', 'notifications', 'policies', 'advanced', 'portal-accounts');
+        $allowed_tabs = array('language', 'hours', 'booking', 'appearance', 'notifications', 'policies', 'advanced', 'portal-accounts');
         if (!in_array($active_tab, $allowed_tabs, true)) {
             $active_tab = 'language';
         }
@@ -2202,6 +2216,7 @@ class RB_Admin {
                     <a href="#tab-language" class="nav-tab <?php echo $active_tab === 'language' ? 'nav-tab-active' : ''; ?>">🌐 <?php rb_e('language'); ?></a>
                     <a href="#tab-hours" class="nav-tab <?php echo $active_tab === 'hours' ? 'nav-tab-active' : ''; ?>">🕐 <?php rb_e('working_hours'); ?></a>
                     <a href="#tab-booking" class="nav-tab <?php echo $active_tab === 'booking' ? 'nav-tab-active' : ''; ?>">📅 <?php rb_e('booking_settings'); ?></a>
+                    <a href="#tab-appearance" class="nav-tab <?php echo $active_tab === 'appearance' ? 'nav-tab-active' : ''; ?>">🎨 <?php echo esc_html(rb_t('appearance', __('Appearance', 'restaurant-booking'))); ?></a>
                     <a href="#tab-notifications" class="nav-tab <?php echo $active_tab === 'notifications' ? 'nav-tab-active' : ''; ?>">🔔 <?php rb_e('notifications'); ?></a>
                     <a href="#tab-policies" class="nav-tab <?php echo $active_tab === 'policies' ? 'nav-tab-active' : ''; ?>">📋 <?php rb_e('policies'); ?></a>
                     <a href="#tab-advanced" class="nav-tab <?php echo $active_tab === 'advanced' ? 'nav-tab-active' : ''; ?>">🔧 <?php rb_e('advanced'); ?></a>
@@ -2439,7 +2454,7 @@ class RB_Admin {
                 <!-- Tab 2: Booking Settings -->
                 <div id="tab-booking" class="rb-tab-content" style="display: <?php echo $active_tab === 'booking' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('booking_settings'); ?></h2>
-                    
+
                     <table class="form-table">
                         <tr>
                             <th scope="row">
@@ -2518,7 +2533,134 @@ class RB_Admin {
                         </tr>
                     </table>
                 </div>
-                
+
+                <!-- Tab: Appearance -->
+                <div id="tab-appearance" class="rb-tab-content" style="display: <?php echo $active_tab === 'appearance' ? 'block' : 'none'; ?>;">
+                    <h2><?php echo esc_html(rb_t('frontend_appearance', __('Frontend appearance', 'restaurant-booking'))); ?></h2>
+                    <p class="description"><?php echo esc_html(rb_t('frontend_appearance_desc', __('Adjust colors, typography and optional elements of the booking widget without touching code.', 'restaurant-booking'))); ?></p>
+
+                    <h3><?php echo esc_html(rb_t('color_palette', __('Color palette', 'restaurant-booking'))); ?></h3>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="frontend_primary_color"><?php echo esc_html(rb_t('primary_color', __('Primary color', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="color" id="frontend_primary_color" name="rb_settings[frontend_primary_color]" value="<?php echo esc_attr($settings['frontend_primary_color']); ?>">
+                                <p class="description"><?php echo esc_html(rb_t('primary_color_desc', __('Used for buttons, progress steps and highlighted states.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_primary_dark_color"><?php echo esc_html(rb_t('primary_dark_color', __('Primary (hover)', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="color" id="frontend_primary_dark_color" name="rb_settings[frontend_primary_dark_color]" value="<?php echo esc_attr($settings['frontend_primary_dark_color']); ?>">
+                                <p class="description"><?php echo esc_html(rb_t('primary_dark_color_desc', __('Gradient accent for hover states and outlines.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_primary_light_color"><?php echo esc_html(rb_t('primary_light_color', __('Primary (light)', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="color" id="frontend_primary_light_color" name="rb_settings[frontend_primary_light_color]" value="<?php echo esc_attr($settings['frontend_primary_light_color']); ?>">
+                                <p class="description"><?php echo esc_html(rb_t('primary_light_color_desc', __('Secondary tone used in gradients and subtle backgrounds.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_background_color"><?php echo esc_html(rb_t('background_color', __('Background color', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="color" id="frontend_background_color" name="rb_settings[frontend_background_color]" value="<?php echo esc_attr($settings['frontend_background_color']); ?>">
+                                <p class="description"><?php echo esc_html(rb_t('background_color_desc', __('Backdrop color for the inline widget layout.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_surface_color"><?php echo esc_html(rb_t('surface_color', __('Surface color', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="color" id="frontend_surface_color" name="rb_settings[frontend_surface_color]" value="<?php echo esc_attr($settings['frontend_surface_color']); ?>">
+                                <p class="description"><?php echo esc_html(rb_t('surface_color_desc', __('Used for the modal content and cards.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_text_color"><?php echo esc_html(rb_t('text_color', __('Text color', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="color" id="frontend_text_color" name="rb_settings[frontend_text_color]" value="<?php echo esc_attr($settings['frontend_text_color']); ?>">
+                                <p class="description"><?php echo esc_html(rb_t('text_color_desc', __('Primary text color applied to headings and labels.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_muted_text_color"><?php echo esc_html(rb_t('muted_text_color', __('Muted text', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="color" id="frontend_muted_text_color" name="rb_settings[frontend_muted_text_color]" value="<?php echo esc_attr($settings['frontend_muted_text_color']); ?>">
+                                <p class="description"><?php echo esc_html(rb_t('muted_text_color_desc', __('Secondary text for helper descriptions and captions.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <h3><?php echo esc_html(rb_t('typography_and_shape', __('Typography & shape', 'restaurant-booking'))); ?></h3>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="frontend_font_family"><?php echo esc_html(rb_t('font_family', __('Font family', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <select name="rb_settings[frontend_font_family]" id="frontend_font_family">
+                                    <option value="modern" <?php selected($settings['frontend_font_family'], 'modern'); ?>><?php echo esc_html(rb_t('font_modern', __('Modern (Roboto, Segoe UI, Open Sans)', 'restaurant-booking'))); ?></option>
+                                    <option value="system" <?php selected($settings['frontend_font_family'], 'system'); ?>><?php echo esc_html(rb_t('font_system', __('System UI (San Francisco, Segoe UI, Roboto)', 'restaurant-booking'))); ?></option>
+                                    <option value="serif" <?php selected($settings['frontend_font_family'], 'serif'); ?>><?php echo esc_html(rb_t('font_serif', __('Elegant serif (Playfair Display, Georgia)', 'restaurant-booking'))); ?></option>
+                                    <option value="rounded" <?php selected($settings['frontend_font_family'], 'rounded'); ?>><?php echo esc_html(rb_t('font_rounded', __('Rounded (Nunito, Quicksand)', 'restaurant-booking'))); ?></option>
+                                </select>
+                                <p class="description"><?php echo esc_html(rb_t('font_family_desc', __('Applies to headings, buttons and form controls in the widget.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_card_radius"><?php echo esc_html(rb_t('card_corner_radius', __('Card corner radius', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="number" id="frontend_card_radius" name="rb_settings[frontend_card_radius]" value="<?php echo esc_attr($settings['frontend_card_radius']); ?>" min="0" max="60" class="small-text"> px
+                                <p class="description"><?php echo esc_html(rb_t('card_corner_radius_desc', __('Controls the curve of modal panels and summary cards.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_button_radius"><?php echo esc_html(rb_t('button_radius', __('Button radius', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="number" id="frontend_button_radius" name="rb_settings[frontend_button_radius]" value="<?php echo esc_attr($settings['frontend_button_radius']); ?>" min="0" max="60" class="small-text"> px
+                                <p class="description"><?php echo esc_html(rb_t('button_radius_desc', __('Affects primary and secondary actions.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="frontend_field_radius"><?php echo esc_html(rb_t('field_radius', __('Field radius', 'restaurant-booking'))); ?></label></th>
+                            <td>
+                                <input type="number" id="frontend_field_radius" name="rb_settings[frontend_field_radius]" value="<?php echo esc_attr($settings['frontend_field_radius']); ?>" min="0" max="60" class="small-text"> px
+                                <p class="description"><?php echo esc_html(rb_t('field_radius_desc', __('Applies to inputs, selects and textareas inside the widget.', 'restaurant-booking'))); ?></p>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <h3><?php echo esc_html(rb_t('widget_elements', __('Widget elements', 'restaurant-booking'))); ?></h3>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><?php echo esc_html(rb_t('language_switcher', __('Language switcher', 'restaurant-booking'))); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="rb_settings[frontend_enable_language_switcher]" value="yes" <?php checked($settings['frontend_enable_language_switcher'], 'yes'); ?>>
+                                    <?php echo esc_html(rb_t('language_switcher_desc', __('Display the language selector inside steps 1 and 2.', 'restaurant-booking'))); ?>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html(rb_t('reservation_summary', __('Reservation summary', 'restaurant-booking'))); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="rb_settings[frontend_show_summary]" value="yes" <?php checked($settings['frontend_show_summary'], 'yes'); ?>>
+                                    <?php echo esc_html(rb_t('reservation_summary_desc', __('Show the booking recap on step 2 before confirmation.', 'restaurant-booking'))); ?>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html(rb_t('location_contact_card', __('Location contact card', 'restaurant-booking'))); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="rb_settings[frontend_show_location_contact]" value="yes" <?php checked($settings['frontend_show_location_contact'], 'yes'); ?>>
+                                    <?php echo esc_html(rb_t('location_contact_card_desc', __('Show address, hotline and email beneath the availability form.', 'restaurant-booking'))); ?>
+                                </label>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
                 <!-- Tab 3: Notifications -->
                 <div id="tab-notifications" class="rb-tab-content" style="display: <?php echo $active_tab === 'notifications' ? 'block' : 'none'; ?>;">
                     <h2><?php rb_e('notification_settings'); ?></h2>
@@ -3821,6 +3963,36 @@ class RB_Admin {
     private function save_settings() {
         $settings = isset($_POST['rb_settings']) ? $_POST['rb_settings'] : array();
 
+        $primary_color = isset($settings['frontend_primary_color']) ? sanitize_hex_color($settings['frontend_primary_color']) : '';
+        $primary_dark_color = isset($settings['frontend_primary_dark_color']) ? sanitize_hex_color($settings['frontend_primary_dark_color']) : '';
+        $primary_light_color = isset($settings['frontend_primary_light_color']) ? sanitize_hex_color($settings['frontend_primary_light_color']) : '';
+        $background_color = isset($settings['frontend_background_color']) ? sanitize_hex_color($settings['frontend_background_color']) : '';
+        $surface_color = isset($settings['frontend_surface_color']) ? sanitize_hex_color($settings['frontend_surface_color']) : '';
+        $text_color = isset($settings['frontend_text_color']) ? sanitize_hex_color($settings['frontend_text_color']) : '';
+        $muted_text_color = isset($settings['frontend_muted_text_color']) ? sanitize_hex_color($settings['frontend_muted_text_color']) : '';
+
+        $primary_color = $primary_color ? $primary_color : '#2271b1';
+        $primary_dark_color = $primary_dark_color ? $primary_dark_color : '#185b8f';
+        $primary_light_color = $primary_light_color ? $primary_light_color : '#3a8ad6';
+        $background_color = $background_color ? $background_color : '#f5f7fb';
+        $surface_color = $surface_color ? $surface_color : '#ffffff';
+        $text_color = $text_color ? $text_color : '#1c2a39';
+        $muted_text_color = $muted_text_color ? $muted_text_color : '#52637a';
+
+        $card_radius = isset($settings['frontend_card_radius']) ? intval($settings['frontend_card_radius']) : 18;
+        $button_radius = isset($settings['frontend_button_radius']) ? intval($settings['frontend_button_radius']) : 12;
+        $field_radius = isset($settings['frontend_field_radius']) ? intval($settings['frontend_field_radius']) : 10;
+
+        $card_radius = max(0, min(60, $card_radius));
+        $button_radius = max(0, min(60, $button_radius));
+        $field_radius = max(0, min(60, $field_radius));
+
+        $allowed_fonts = array('modern', 'system', 'serif', 'rounded');
+        $font_family = isset($settings['frontend_font_family']) ? sanitize_text_field($settings['frontend_font_family']) : 'modern';
+        if (!in_array($font_family, $allowed_fonts, true)) {
+            $font_family = 'modern';
+        }
+
         $clean_settings = array(
             // Working hours
             'working_hours_mode' => isset($settings['working_hours_mode']) ? sanitize_text_field($settings['working_hours_mode']) : 'simple',
@@ -3857,6 +4029,22 @@ class RB_Admin {
             'cancellation_hours' => isset($settings['cancellation_hours']) ? intval($settings['cancellation_hours']) : 2,
             'no_show_auto_blacklist' => isset($settings['no_show_auto_blacklist']) ? intval($settings['no_show_auto_blacklist']) : 3,
             'special_closed_dates' => isset($settings['special_closed_dates']) ? sanitize_textarea_field($settings['special_closed_dates']) : '',
+
+            // Appearance
+            'frontend_primary_color' => $primary_color,
+            'frontend_primary_dark_color' => $primary_dark_color,
+            'frontend_primary_light_color' => $primary_light_color,
+            'frontend_background_color' => $background_color,
+            'frontend_surface_color' => $surface_color,
+            'frontend_text_color' => $text_color,
+            'frontend_muted_text_color' => $muted_text_color,
+            'frontend_card_radius' => $card_radius,
+            'frontend_button_radius' => $button_radius,
+            'frontend_field_radius' => $field_radius,
+            'frontend_font_family' => $font_family,
+            'frontend_enable_language_switcher' => isset($settings['frontend_enable_language_switcher']) ? 'yes' : 'no',
+            'frontend_show_summary' => isset($settings['frontend_show_summary']) ? 'yes' : 'no',
+            'frontend_show_location_contact' => isset($settings['frontend_show_location_contact']) ? 'yes' : 'no',
         );
         
         update_option('rb_settings', $clean_settings);
