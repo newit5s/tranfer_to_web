@@ -174,6 +174,8 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         $modal_class_attr = implode(' ', array_map('sanitize_html_class', $modal_classes));
         $modal_aria_hidden = $show_button ? 'true' : 'false';
 
+        $default_booking_date = $min_date;
+
         $wrapper_classes = array('rb-booking-widget-new');
         if (!$show_button) {
             $wrapper_classes[] = 'rb-booking-widget-inline';
@@ -254,8 +256,12 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                                 <div class="rb-new-form-group">
                                     <label for="rb-new-date"><?php echo esc_html(rb_t('booking_date', __('Date', 'restaurant-booking'))); ?></label>
                                     <input type="date" id="rb-new-date" name="booking_date"
-                                        min="<?php echo $min_date; ?>"
-                                        max="<?php echo $max_date; ?>" required>
+                                        value="<?php echo esc_attr($default_booking_date); ?>"
+                                        min="<?php echo esc_attr($min_date); ?>"
+                                        max="<?php echo esc_attr($max_date); ?>"
+                                        data-default-date="<?php echo esc_attr($default_booking_date); ?>"
+                                        data-min-date="<?php echo esc_attr($min_date); ?>"
+                                        data-max-date="<?php echo esc_attr($max_date); ?>" required>
                                 </div>
 
                                 <div class="rb-new-form-group">

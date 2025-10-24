@@ -1191,6 +1191,51 @@ body.rb-timeline-modal-open {
     right: -8px;
 }
 
+.rb-timeline-live-region {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.rb-timeline-loading {
+    padding: 40px 0;
+    text-align: center;
+    color: #475569;
+}
+
+.rb-timeline-error {
+    padding: 28px;
+    text-align: center;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    background: #fff1f2;
+    box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.15);
+}
+
+.rb-timeline-error__message {
+    margin: 0;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.rb-timeline-error__actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.rb-timeline-error__retry {
+    cursor: pointer;
+}
+
 .rb-timeline-empty {
     padding: 24px;
     text-align: center;

@@ -1609,10 +1609,16 @@ class RB_Admin {
                  data-nonce="<?php echo esc_attr($timeline_nonce); ?>"
                  data-date="<?php echo esc_attr($timeline_date); ?>"
                  data-location="<?php echo esc_attr($selected_location_id); ?>"
-                 data-context="admin">
-                <div class="rb-timeline-loading" style="padding: 40px 0; text-align: center;">
+                 data-context="admin"
+                 aria-busy="true">
+                <div class="rb-timeline-loading" role="status" aria-live="polite">
                     <?php esc_html_e('Loading timeline data…', 'restaurant-booking'); ?>
                 </div>
+                <noscript>
+                    <div class="rb-timeline-error">
+                        <?php esc_html_e('Timeline data requires JavaScript. Please enable JavaScript and reload the page.', 'restaurant-booking'); ?>
+                    </div>
+                </noscript>
             </div>
         </div>
         <?php

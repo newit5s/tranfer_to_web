@@ -24,6 +24,52 @@
         rb_ajax.confirm_set_vip = rb_ajax.confirm_set_vip || 'Upgrade this customer to VIP?';
         rb_ajax.confirm_blacklist = rb_ajax.confirm_blacklist || 'Blacklist this customer?';
         rb_ajax.confirm_unblacklist = rb_ajax.confirm_unblacklist || 'Remove this customer from blacklist?';
+
+        var phoneUtils = window.rbPhoneUtils || {};
+
+        phoneUtils.sanitize = phoneUtils.sanitize || function(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+
+            var cleaned = value.replace(/[^0-9+\-\s]/g, '');
+            var hasLeadingPlus = cleaned.charAt(0) === '+';
+            cleaned = cleaned.replace(/\+/g, '');
+
+            if (hasLeadingPlus) {
+                cleaned = '+' + cleaned;
+            }
+
+            return cleaned.replace(/\s{2,}/g, ' ');
+        };
+
+        phoneUtils.getDigitsLength = phoneUtils.getDigitsLength || function(value) {
+            if (typeof value !== 'string') {
+                return 0;
+            }
+
+            return value.replace(/\D/g, '').length;
+        };
+
+        phoneUtils.isValid = phoneUtils.isValid || function(value) {
+            if (typeof value !== 'string') {
+                return false;
+            }
+
+            var trimmed = value.trim();
+            if (!trimmed) {
+                return false;
+            }
+
+            var digitsLength = phoneUtils.getDigitsLength(trimmed);
+            if (digitsLength < 8 || digitsLength > 20) {
+                return false;
+            }
+
+            return /^\+?[0-9][0-9\s-]{6,19}$/.test(trimmed);
+        };
+
+        window.rbPhoneUtils = phoneUtils;
         
         // Modal handling
         var modal = $('#rb-booking-modal');
@@ -289,9 +335,12 @@
         }
         
         // Form validation
-        $('#rb-booking-form, #rb-booking-form-inline').find('input[type="tel"]').on('input', function() {
-            // Only allow numbers
-            this.value = this.value.replace(/[^0-9]/g, '');
+        $(document).on('input', '#rb-booking-form input[type="tel"], #rb-booking-form-inline input[type="tel"], #rb-portal-details-form input[type="tel"]', function() {
+            var $input = $(this);
+            var sanitized = phoneUtils.sanitize($input.val());
+            if ($input.val() !== sanitized) {
+                $input.val(sanitized);
+            }
         });
         
         // Set minimum date to today
@@ -315,9 +364,11 @@
         
         // Enhanced phone validation
         $('#rb-booking-form, #rb-booking-form-inline, #rb-portal-details-form').on('submit', function(e) {
-            var phone = $(this).find('input[type="tel"]').val().replace(/\D+/g, '');
+            var $phoneInput = $(this).find('input[type="tel"]');
+            var sanitizedPhone = phoneUtils.sanitize($phoneInput.val() || '');
+            $phoneInput.val(sanitizedPhone);
 
-            if (phone.length < 8 || phone.length > 15) {
+            if (!phoneUtils.isValid(sanitizedPhone)) {
                 e.preventDefault();
 
                 var messageContainer = '#rb-form-message';

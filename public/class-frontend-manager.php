@@ -462,10 +462,16 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     data-date="<?php echo esc_attr($timeline_date); ?>"
                     data-nonce="<?php echo esc_attr($timeline_nonce); ?>"
                     data-context="frontend"
+                    aria-busy="true"
                 >
-                    <div class="rb-timeline-loading" style="padding: 40px 0; text-align: center;">
+                    <div class="rb-timeline-loading" role="status" aria-live="polite">
                         <?php esc_html_e('Loading timeline data…', 'restaurant-booking'); ?>
                     </div>
+                    <noscript>
+                        <div class="rb-timeline-error">
+                            <?php esc_html_e('Timeline data requires JavaScript. Please enable JavaScript and reload the page.', 'restaurant-booking'); ?>
+                        </div>
+                    </noscript>
                 </div>
             </div>
         </section>
@@ -973,7 +979,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                             </label>
                             <label>
                                 <?php echo esc_html($this->t('phone_number', __('Phone number', 'restaurant-booking'))); ?>
-                                <input type="tel" name="customer_phone" required pattern="[0-9]{8,15}">
+                                <input type="tel" name="customer_phone" required pattern="\+?[0-9][0-9\s-]{6,19}">
                             </label>
                             <label>
                                 <?php echo esc_html($this->t('email', __('Email', 'restaurant-booking'))); ?>
@@ -1231,7 +1237,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     </label>
                     <label>
                         <?php echo esc_html($this->t('phone_number', __('Phone number', 'restaurant-booking'))); ?> *
-                        <input type="tel" name="customer_phone" required pattern="[0-9]{8,15}">
+                        <input type="tel" name="customer_phone" required pattern="\+?[0-9][0-9\s-]{6,19}">
                     </label>
                     <label>
                         <?php echo esc_html($this->t('email', __('Email', 'restaurant-booking'))); ?> *
