@@ -158,6 +158,7 @@ return array(
     'timeline_hide_tables' => 'Hide tables',
     'timeline_no_calendar_data' => 'No calendar data available.',
     'timeline_no_week_data' => 'No weekly data available.',
+    'timeline_create_at' => 'Create booking at %s',
     'checkin_time' => 'Check-in Time',
     'checkout_time' => 'Check-out Time',
     'current_status' => 'Current Status',

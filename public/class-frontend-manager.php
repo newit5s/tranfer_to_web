@@ -354,9 +354,13 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     'location_id' => $selected_location_id,
                                     'rb_section' => $key,
                                 ), remove_query_arg(array('rb_section')));
+                                $is_active = $section === $key;
                                 ?>
-                                <li class="<?php echo $section === $key ? 'is-active' : ''; ?>">
-                                    <a href="<?php echo esc_url($url); ?>">
+                                <?php
+                                $aria_current_attr = $is_active ? ' aria-current="page"' : '';
+                                ?>
+                                <li class="<?php echo $is_active ? 'is-active' : ''; ?>"<?php echo $aria_current_attr; ?>>
+                                    <a href="<?php echo esc_url($url); ?>"<?php echo $aria_current_attr; ?>>
                                         <span class="rb-gmail-nav-icon" aria-hidden="true"><?php echo esc_html($item['icon']); ?></span>
                                         <span class="rb-gmail-nav-label"><?php echo esc_html($item['label']); ?></span>
                                     </a>
@@ -447,6 +451,17 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         $timeline_nonce = wp_create_nonce('rb_timeline_nonce');
+        $timeline_base_url = remove_query_arg(
+            array('rb_section', 'timeline_date', 'prefill_date', 'prefill_checkin', 'prefill_checkout', 'prefill_table', 'prefill_source')
+        );
+        $timeline_create_url = add_query_arg(
+            array(
+                'location_id' => $location_id,
+                'rb_section' => 'create',
+            ),
+            $timeline_base_url
+        );
+        $timeline_default_duration = apply_filters('rb_timeline_default_duration', 120, $location_id, $location_settings);
 
         ob_start();
         ?>
@@ -486,6 +501,8 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     data-date="<?php echo esc_attr($timeline_date); ?>"
                     data-nonce="<?php echo esc_attr($timeline_nonce); ?>"
                     data-context="frontend"
+                    data-create-url="<?php echo esc_url($timeline_create_url); ?>"
+                    data-default-duration="<?php echo esc_attr((int) $timeline_default_duration); ?>"
                     aria-busy="true"
                 >
                     <div class="rb-timeline-loading" role="status" aria-live="polite">
@@ -1225,6 +1242,36 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         $time_interval = isset($location_settings['time_slot_interval']) ? intval($location_settings['time_slot_interval']) : 30;
         $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
 
+        $prefill_date = isset($_GET['prefill_date']) ? sanitize_text_field(wp_unslash($_GET['prefill_date'])) : '';
+        $prefill_checkin = isset($_GET['prefill_checkin']) ? sanitize_text_field(wp_unslash($_GET['prefill_checkin'])) : '';
+        $prefill_checkout = isset($_GET['prefill_checkout']) ? sanitize_text_field(wp_unslash($_GET['prefill_checkout'])) : '';
+
+        $selected_booking_date = '';
+        if ($prefill_date && preg_match('/^\d{4}-\d{2}-\d{2}$/', $prefill_date)) {
+            $selected_booking_date = $prefill_date;
+        }
+
+        $selected_booking_time = '';
+        if ($prefill_checkin && preg_match('/^\d{2}:\d{2}$/', $prefill_checkin)) {
+            $selected_booking_time = $prefill_checkin;
+            if (!in_array($prefill_checkin, $time_slots, true)) {
+                $time_slots[] = $prefill_checkin;
+            }
+        }
+
+        $selected_checkout_time = '';
+        if ($prefill_checkout && preg_match('/^\d{2}:\d{2}$/', $prefill_checkout)) {
+            $selected_checkout_time = $prefill_checkout;
+            if (!in_array($prefill_checkout, $time_slots, true)) {
+                $time_slots[] = $prefill_checkout;
+            }
+        }
+
+        if (!empty($time_slots)) {
+            $time_slots = array_values(array_unique($time_slots));
+            sort($time_slots);
+        }
+
         $min_hours = isset($location_settings['min_advance_booking']) ? intval($location_settings['min_advance_booking']) : 2;
         if ($min_hours < 0) {
             $min_hours = 0;
@@ -1277,20 +1324,20 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                     </label>
                     <label>
                         <?php echo esc_html($this->t('date', __('Date', 'restaurant-booking'))); ?> *
-                        <input type="date" name="booking_date" min="<?php echo esc_attr($min_date); ?>" max="<?php echo esc_attr($max_date); ?>" required>
+                        <input type="date" name="booking_date" min="<?php echo esc_attr($min_date); ?>" max="<?php echo esc_attr($max_date); ?>" value="<?php echo esc_attr($selected_booking_date); ?>" required>
                     </label>
                     <label>
                         <?php echo esc_html($this->t('time', __('Time', 'restaurant-booking'))); ?> *
                         <select name="booking_time" required>
                             <option value=""><?php echo esc_html($this->t('select_a_time', __('Select a time', 'restaurant-booking'))); ?></option>
                             <?php foreach ($time_slots as $slot) : ?>
-                                <option value="<?php echo esc_attr($slot); ?>"><?php echo esc_html($slot); ?></option>
+                                <option value="<?php echo esc_attr($slot); ?>" <?php selected($selected_booking_time, $slot); ?>><?php echo esc_html($slot); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </label>
                     <label>
                         <?php echo esc_html($this->t('checkout_time', __('Checkout time', 'restaurant-booking'))); ?> *
-                        <input type="time" name="checkout_time" step="300" required>
+                        <input type="time" name="checkout_time" step="300" value="<?php echo esc_attr($selected_checkout_time); ?>" required>
                     </label>
                     <label>
                         <?php echo esc_html($this->t('source', __('Source', 'restaurant-booking'))); ?>
@@ -1843,7 +1890,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
             <div id="rb-manager-history" class="rb-manager-history" hidden>
                 <div class="rb-manager-history-inner">
-                    <button type="button" class="rb-manager-history-close">&times;</button>
+                    <button type="button" class="rb-manager-history-close" aria-label="<?php echo esc_attr($this->t('close_history_dialog', __('Close history dialog', 'restaurant-booking'))); ?>">&times;</button>
                     <div id="rb-manager-history-content"></div>
                 </div>
             </div>

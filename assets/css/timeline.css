@@ -857,6 +857,14 @@ body.rb-timeline-drawer-open {
     overflow: visible;
 }
 
+.rb-timeline-column-body--interactive {
+    cursor: crosshair;
+}
+
+.rb-timeline-column-body--interactive .rb-timeline-booking {
+    cursor: default;
+}
+
 .rb-timeline-column-placeholder {
     position: absolute;
     top: 50%;

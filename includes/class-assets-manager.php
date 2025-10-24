@@ -387,6 +387,8 @@ class RB_Assets_Manager {
             'checkin' => rb_t('checkin_time', __('Check-in Time', 'restaurant-booking')),
             'checkout' => rb_t('checkout_time', __('Check-out Time', 'restaurant-booking')),
             'cleanup' => rb_t('cleanup_time', __('Cleanup Time', 'restaurant-booking')),
+            'createBooking' => rb_t('create_booking', __('Create Booking', 'restaurant-booking')),
+            'createBookingAt' => rb_t('timeline_create_at', __('Create booking at %s', 'restaurant-booking')),
             'available' => rb_t('available', __('Available', 'restaurant-booking')),
             'occupied' => rb_t('occupied', __('Occupied', 'restaurant-booking')),
             'reserved' => rb_t('reserved', __('Reserved', 'restaurant-booking')),
@@ -432,6 +434,7 @@ class RB_Assets_Manager {
             'nonce' => wp_create_nonce('rb_timeline_nonce'),
             'context' => $context,
             'strings' => $strings,
+            'defaultDuration' => (int) apply_filters('rb_timeline_default_duration', 120, 0, array()),
         ));
 
         $this->timeline_enqueued = true;

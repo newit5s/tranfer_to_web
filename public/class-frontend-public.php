@@ -185,7 +185,31 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         }
 
         $modal_class_attr = implode(' ', array_map('sanitize_html_class', $modal_classes));
-        $modal_aria_hidden = $show_button ? 'true' : 'false';
+
+        $modal_content_attributes = array(
+            'class' => 'rb-new-modal-content',
+            'aria-labelledby' => 'rb-new-booking-modal-title',
+        );
+
+        if ($show_button) {
+            $modal_content_attributes['role'] = 'dialog';
+            $modal_content_attributes['aria-modal'] = 'true';
+        } else {
+            $modal_content_attributes['role'] = 'region';
+        }
+
+        $modal_content_attr = '';
+        foreach ($modal_content_attributes as $attr_key => $attr_value) {
+            if ($attr_value === '') {
+                continue;
+            }
+
+            $modal_content_attr .= sprintf(
+                ' %s="%s"',
+                esc_attr($attr_key),
+                esc_attr($attr_value)
+            );
+        }
 
         $default_booking_date = $min_date;
 
@@ -208,8 +232,12 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                 </button>
             <?php endif; ?>
 
-            <div id="rb-new-booking-modal" class="<?php echo esc_attr($modal_class_attr); ?>" aria-hidden="<?php echo esc_attr($modal_aria_hidden); ?>" data-inline-mode="<?php echo $show_button ? '0' : '1'; ?>">
-                <div class="rb-new-modal-content" role="dialog" aria-modal="true">
+            <div
+                id="rb-new-booking-modal"
+                class="<?php echo esc_attr($modal_class_attr); ?>"
+                <?php if ($show_button) : ?>aria-hidden="true"<?php endif; ?>
+                data-inline-mode="<?php echo $show_button ? '0' : '1'; ?>">
+                <div<?php echo $modal_content_attr; ?>>
                     <button type="button" class="rb-new-close" aria-label="<?php esc_attr_e('Close booking form', 'restaurant-booking'); ?>">
                         <span class="rb-new-close-icon" aria-hidden="true"></span>
                     </button>
@@ -232,11 +260,12 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                     <!-- Step 1: Check Availability -->
                     <div class="rb-new-step rb-new-step-availability active" data-step="1">
                         <div class="rb-new-modal-header">
-                            <h2><?php echo esc_html(rb_t('check_availability', __('Check Availability', 'restaurant-booking'))); ?></h2>
+                            <h2 id="rb-new-booking-modal-title"><?php echo esc_html(rb_t('check_availability', __('Check Availability', 'restaurant-booking'))); ?></h2>
 
                             <?php if ('yes' === $settings['frontend_enable_language_switcher']) : ?>
                                 <div class="rb-new-language-switcher">
-                                    <select id="rb-new-language-select" class="rb-new-lang-select">
+                                    <label class="rb-new-visually-hidden" for="rb-new-language-select"><?php echo esc_html(rb_t('language', __('Language', 'restaurant-booking'))); ?></label>
+                                    <select id="rb-new-language-select" class="rb-new-lang-select" aria-label="<?php echo esc_attr(rb_t('language', __('Language', 'restaurant-booking'))); ?>">
                                         <?php foreach ($languages as $code => $label) : ?>
                                             <option value="<?php echo esc_attr($code); ?>"
                                                 <?php selected($code, $current_language); ?>>
@@ -384,7 +413,8 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
                             <?php if ('yes' === $settings['frontend_enable_language_switcher']) : ?>
                                 <div class="rb-new-language-switcher">
-                                    <select class="rb-new-lang-select rb-new-lang-select-step2">
+                                    <label class="rb-new-visually-hidden" for="rb-new-language-select-step2"><?php echo esc_html(rb_t('language', __('Language', 'restaurant-booking'))); ?></label>
+                                    <select id="rb-new-language-select-step2" class="rb-new-lang-select rb-new-lang-select-step2" aria-label="<?php echo esc_attr(rb_t('language', __('Language', 'restaurant-booking'))); ?>">
                                         <?php foreach ($languages as $code => $label) : ?>
                                             <option value="<?php echo esc_attr($code); ?>"
                                                 <?php selected($code, $current_language); ?>>

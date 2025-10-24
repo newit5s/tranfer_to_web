@@ -8,6 +8,15 @@
         this.ajaxUrl = this.$container.data('ajaxUrl') || config.ajaxUrl || '';
         this.nonce = this.$container.data('nonce') || config.nonce || '';
         this.strings = (window.rbTimelineConfig && window.rbTimelineConfig.strings) || {};
+        this.createBookingUrl = this.$container.data('createUrl') || config.createUrl || '';
+        var defaultDuration = parseInt(this.$container.data('defaultDuration'), 10);
+        if (isNaN(defaultDuration) || defaultDuration <= 0) {
+            defaultDuration = parseInt(config.defaultDuration, 10);
+        }
+        if (isNaN(defaultDuration) || defaultDuration <= 0) {
+            defaultDuration = 120;
+        }
+        this.defaultDuration = defaultDuration;
         this.nowTimer = null;
         this.activeDate = null;
         this.activeLocation = null;
@@ -380,8 +389,173 @@
             start: start,
             end: end,
             timeSlots: parsedSlots.map(function (slot) { return slot.label; }),
-            parseTime: parseTime
+            parseTime: parseTime,
+            formatTime: formatMinutes
         };
+    };
+
+    TimelineApp.prototype.formatMinutesValue = function (minutes) {
+        if (typeof minutes !== 'number' || !isFinite(minutes)) {
+            return '00:00';
+        }
+
+        var total = Math.max(0, Math.round(minutes));
+        var hours = Math.floor(total / 60);
+        var mins = total % 60;
+
+        var hourText = hours < 10 ? '0' + hours : String(hours);
+        var minuteText = mins < 10 ? '0' + mins : String(mins);
+        return hourText + ':' + minuteText;
+    };
+
+    TimelineApp.prototype.buildCreateBookingUrl = function (params) {
+        if (!this.createBookingUrl) {
+            return '';
+        }
+
+        var url = String(this.createBookingUrl);
+        var hash = '';
+        var hashIndex = url.indexOf('#');
+        if (hashIndex !== -1) {
+            hash = url.substring(hashIndex);
+            url = url.substring(0, hashIndex);
+        }
+
+        var basePath = url;
+        var existingParams = {};
+        var queryIndex = url.indexOf('?');
+        if (queryIndex !== -1) {
+            basePath = url.substring(0, queryIndex);
+            var queryString = url.substring(queryIndex + 1);
+            if (queryString) {
+                queryString.split('&').forEach(function (segment) {
+                    if (!segment) {
+                        return;
+                    }
+                    var parts = segment.split('=');
+                    var key = decodeURIComponent(parts.shift().replace(/\+/g, ' '));
+                    if (!key) {
+                        return;
+                    }
+                    var value = parts.length ? decodeURIComponent(parts.join('=').replace(/\+/g, ' ')) : '';
+                    existingParams[key] = value;
+                });
+            }
+        }
+
+        var merged = $.extend({}, existingParams, params || {});
+        Object.keys(merged).forEach(function (key) {
+            if (merged[key] === null || typeof merged[key] === 'undefined' || merged[key] === '') {
+                delete merged[key];
+            }
+        });
+
+        var query = $.param(merged);
+        return (basePath || '') + (query ? '?' + query : '') + hash;
+    };
+
+    TimelineApp.prototype.navigateToCreateBooking = function (params, event) {
+        if (!this.createBookingUrl) {
+            return;
+        }
+
+        var targetUrl = this.buildCreateBookingUrl(params);
+        if (!targetUrl) {
+            return;
+        }
+
+        if (event && (event.metaKey || event.ctrlKey || event.button === 1)) {
+            window.open(targetUrl, '_blank');
+            return;
+        }
+
+        window.location.href = targetUrl;
+    };
+
+    TimelineApp.prototype.handleTimelineBodyClick = function (event, table) {
+        if (!event || (event.which && event.which !== 1)) {
+            return;
+        }
+
+        if (!this.activeDate || !this.createBookingUrl) {
+            return;
+        }
+
+        if ($(event.target).closest('.rb-timeline-booking').length) {
+            return;
+        }
+
+        event.preventDefault();
+
+        var meta = this.timelineMeta || this.buildTimelineMeta([]);
+        if (!meta || typeof meta.start === 'undefined' || typeof meta.end === 'undefined') {
+            return;
+        }
+
+        var interval = meta.interval || 30;
+        if (interval <= 0) {
+            interval = 30;
+        }
+
+        var minuteHeight = meta.interval > 0 ? (meta.slotHeight / meta.interval) : (meta.slotHeight / 30);
+        if (!minuteHeight || !isFinite(minuteHeight)) {
+            minuteHeight = meta.slotHeight ? (meta.slotHeight / 30) : 1;
+        }
+        if (!minuteHeight || !isFinite(minuteHeight) || minuteHeight <= 0) {
+            minuteHeight = 1;
+        }
+
+        var rect = event.currentTarget.getBoundingClientRect();
+        var offsetY = event.clientY - rect.top;
+        if (offsetY < 0) {
+            offsetY = 0;
+        }
+
+        var minutesFromStart = offsetY / minuteHeight;
+        var snappedIntervals = Math.round(minutesFromStart / interval);
+        var startMinutes = meta.start + (snappedIntervals * interval);
+
+        if (startMinutes < meta.start) {
+            startMinutes = meta.start;
+        }
+
+        if (startMinutes > meta.end - interval) {
+            startMinutes = Math.max(meta.start, meta.end - interval);
+        }
+
+        var defaultDuration = this.defaultDuration || interval;
+        if (defaultDuration < interval) {
+            defaultDuration = interval;
+        }
+
+        var endMinutes = startMinutes + defaultDuration;
+        if (endMinutes > meta.end) {
+            endMinutes = meta.end;
+            if (endMinutes <= startMinutes) {
+                endMinutes = startMinutes + interval;
+            }
+        }
+
+        var startTime = this.formatMinutesValue(startMinutes);
+        var endTime = this.formatMinutesValue(endMinutes);
+
+        var params = {
+            prefill_date: this.activeDate,
+            prefill_checkin: startTime,
+            prefill_checkout: endTime,
+            prefill_source: 'timeline'
+        };
+
+        if (table && typeof table.table_number !== 'undefined' && table.table_number !== null && table.table_number !== '') {
+            params.prefill_table = table.table_number;
+        }
+
+        var message = this.strings.createBookingAt
+            ? this.strings.createBookingAt.replace('%s', startTime)
+            : ((this.strings.createBooking || 'Create booking') + ' ' + startTime);
+
+        this.updateLiveRegion(message);
+        this.navigateToCreateBooking(params, event);
     };
 
     TimelineApp.prototype.cleanupTableSelectionState = function (keys) {
@@ -1981,6 +2155,13 @@
             });
         } else {
             $body.append($('<div class="rb-timeline-column-placeholder" />').text(self.strings.noBookings || 'No bookings for this table.'));
+        }
+
+        if (self.createBookingUrl) {
+            $body.addClass('rb-timeline-column-body--interactive');
+            $body.on('click', function (event) {
+                self.handleTimelineBodyClick(event, table);
+            });
         }
 
         if (typeof self.nowOffset === 'number') {

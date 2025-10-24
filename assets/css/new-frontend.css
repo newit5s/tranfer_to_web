@@ -28,6 +28,18 @@ body.rb-modal-open {
     overflow: hidden;
 }
 
+.rb-new-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
 .rb-booking-widget-new {
     position: relative;
     font-family: var(--rb-new-font);
@@ -359,14 +371,14 @@ body.rb-modal-open {
 
 .rb-new-form-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 18px;
 }
 
 #rb-new-booking-modal .rb-new-form-grid,
 .rb-booking-widget-inline .rb-new-form-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 18px;
 }
 
@@ -386,7 +398,7 @@ body.rb-modal-open {
 }
 
 .rb-new-form-group-wide {
-    grid-column: span 2;
+    grid-column: 1 / -1;
 }
 
 .rb-new-form-group label {
@@ -718,6 +730,12 @@ body.rb-modal-open {
     .rb-booking-widget-inline .rb-new-form-grid {
         grid-template-columns: 1fr;
     }
+
+    .rb-new-form-group-wide,
+    #rb-new-booking-modal .rb-new-form-group-wide,
+    .rb-booking-widget-inline .rb-new-form-group-wide {
+        grid-column: auto;
+    }
 }
 
 @media (max-width: 640px) {
@@ -746,6 +764,12 @@ body.rb-modal-open {
     #rb-new-booking-modal .rb-new-form-grid,
     .rb-booking-widget-inline .rb-new-form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .rb-new-form-group-wide,
+    #rb-new-booking-modal .rb-new-form-group-wide,
+    .rb-booking-widget-inline .rb-new-form-group-wide {
+        grid-column: auto;
     }
 
     .rb-new-form-actions {
