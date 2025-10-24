@@ -782,13 +782,227 @@ class RB_Booking {
             );
         }
 
+        $week_view = $this->build_timeline_week_view($date, $location_id);
+        $month_view = $this->build_timeline_month_view($date, $location_id);
+
         return array(
             'date' => $date,
             'location_id' => $location_id,
             'time_slots' => $time_slots,
             'tables' => $tables_list,
             'cleanup_buffer' => $this->get_cleanup_buffer_seconds(),
+            'week_view' => $week_view,
+            'month_view' => $month_view,
         );
+    }
+
+    private function build_timeline_week_view($date, $location_id) {
+        $timestamp = strtotime($date);
+        if (!$timestamp) {
+            return null;
+        }
+
+        $start_of_week = (int) get_option('start_of_week', 1);
+        $day_of_week = (int) date('w', $timestamp);
+        $offset = ($day_of_week - $start_of_week + 7) % 7;
+
+        $week_start_ts = strtotime('-' . $offset . ' days', $timestamp);
+        $week_end_ts = strtotime('+6 days', $week_start_ts);
+
+        $week_start = date('Y-m-d', $week_start_ts);
+        $week_end = date('Y-m-d', $week_end_ts);
+
+        $counts = $this->get_timeline_booking_counts($location_id, $week_start, $week_end);
+
+        $days = array();
+        $summary_total = 0;
+        $summary_status = array();
+
+        for ($i = 0; $i < 7; $i++) {
+            $current_ts = strtotime('+' . $i . ' days', $week_start_ts);
+            $current_date = date('Y-m-d', $current_ts);
+
+            $day_counts = isset($counts[$current_date]) ? $counts[$current_date] : array('total' => 0, 'status_counts' => array());
+            $total = (int) $day_counts['total'];
+            $status_counts = $day_counts['status_counts'];
+
+            $summary_total += $total;
+            foreach ($status_counts as $status => $count) {
+                if (!isset($summary_status[$status])) {
+                    $summary_status[$status] = 0;
+                }
+                $summary_status[$status] += (int) $count;
+            }
+
+            $days[] = array(
+                'date' => $current_date,
+                'weekday' => $this->format_timeline_date('D', $current_ts),
+                'label' => $this->format_timeline_date('M j', $current_ts),
+                'total_bookings' => $total,
+                'bookings_count' => $total,
+                'status_counts' => $status_counts,
+                'summary' => array(
+                    'total' => $total,
+                    'status_counts' => $status_counts,
+                ),
+            );
+        }
+
+        return array(
+            'start' => $week_start,
+            'end' => $week_end,
+            'label' => sprintf('%s – %s', $this->format_timeline_date('M j', $week_start_ts), $this->format_timeline_date('M j', $week_end_ts)),
+            'days' => $days,
+            'summary' => array(
+                'total' => $summary_total,
+                'status_counts' => $summary_status,
+            ),
+        );
+    }
+
+    private function build_timeline_month_view($date, $location_id) {
+        $timestamp = strtotime($date);
+        if (!$timestamp) {
+            return null;
+        }
+
+        $start_of_week = (int) get_option('start_of_week', 1);
+
+        $month_start_ts = strtotime(date('Y-m-01', $timestamp));
+        $month_end_ts = strtotime(date('Y-m-t', $timestamp));
+
+        $calendar_start_offset = ((int) date('w', $month_start_ts) - $start_of_week + 7) % 7;
+        $calendar_end_offset = (6 - ((int) date('w', $month_end_ts) - $start_of_week + 7) % 7);
+
+        $calendar_start_ts = strtotime('-' . $calendar_start_offset . ' days', $month_start_ts);
+        $calendar_end_ts = strtotime('+' . $calendar_end_offset . ' days', $month_end_ts);
+
+        $calendar_start = date('Y-m-d', $calendar_start_ts);
+        $calendar_end = date('Y-m-d', $calendar_end_ts);
+
+        $counts = $this->get_timeline_booking_counts($location_id, $calendar_start, $calendar_end);
+
+        $weeks = array();
+        $summary_total = 0;
+        $summary_status = array();
+        $month_identifier = date('Y-m', $month_start_ts);
+
+        $current_ts = $calendar_start_ts;
+        while ($current_ts <= $calendar_end_ts) {
+            $week = array();
+
+            for ($i = 0; $i < 7; $i++) {
+                $current_date = date('Y-m-d', $current_ts);
+                $day_counts = isset($counts[$current_date]) ? $counts[$current_date] : array('total' => 0, 'status_counts' => array());
+                $total = (int) $day_counts['total'];
+                $status_counts = $day_counts['status_counts'];
+                $is_current_month = strpos($current_date, $month_identifier) === 0;
+
+                if ($is_current_month) {
+                    $summary_total += $total;
+                    foreach ($status_counts as $status => $count) {
+                        if (!isset($summary_status[$status])) {
+                            $summary_status[$status] = 0;
+                        }
+                        $summary_status[$status] += (int) $count;
+                    }
+                }
+
+                $week[] = array(
+                    'date' => $current_date,
+                    'day' => (int) date('d', $current_ts),
+                    'label' => $this->format_timeline_date('j', $current_ts),
+                    'is_current_month' => $is_current_month,
+                    'bookings_count' => $total,
+                    'status_counts' => $status_counts,
+                    'summary' => array(
+                        'total' => $total,
+                        'status_counts' => $status_counts,
+                    ),
+                );
+
+                $current_ts = strtotime('+1 day', $current_ts);
+            }
+
+            $weeks[] = $week;
+        }
+
+        $weekday_labels = array();
+        for ($i = 0; $i < 7; $i++) {
+            $weekday_labels[] = $this->format_timeline_date('D', strtotime('+' . $i . ' days', $calendar_start_ts));
+        }
+
+        return array(
+            'start' => $calendar_start,
+            'end' => $calendar_end,
+            'current' => date('Y-m-d', $month_start_ts),
+            'label' => $this->format_timeline_date('F Y', $month_start_ts),
+            'weekdays' => $weekday_labels,
+            'weeks' => $weeks,
+            'summary' => array(
+                'total' => $summary_total,
+                'status_counts' => $summary_status,
+            ),
+        );
+    }
+
+    private function get_timeline_booking_counts($location_id, $start_date, $end_date) {
+        $location_id = (int) $location_id;
+        $start_date = sanitize_text_field($start_date);
+        $end_date = sanitize_text_field($end_date);
+
+        if (!$start_date || !$end_date) {
+            return array();
+        }
+
+        $bookings_table = $this->wpdb->prefix . 'rb_bookings';
+        $prepared = $this->wpdb->prepare(
+            "SELECT booking_date, status, COUNT(*) AS total
+             FROM {$bookings_table}
+             WHERE booking_date BETWEEN %s AND %s
+               AND location_id = %d
+             GROUP BY booking_date, status",
+            $start_date,
+            $end_date,
+            $location_id
+        );
+
+        $results = $this->wpdb->get_results($prepared, ARRAY_A);
+
+        $counts = array();
+
+        foreach ($results as $row) {
+            $day = isset($row['booking_date']) ? $row['booking_date'] : '';
+            if (!$day) {
+                continue;
+            }
+
+            if (!isset($counts[$day])) {
+                $counts[$day] = array(
+                    'total' => 0,
+                    'status_counts' => array(),
+                );
+            }
+
+            $count = isset($row['total']) ? (int) $row['total'] : 0;
+            $status = isset($row['status']) ? $row['status'] : '';
+
+            $counts[$day]['total'] += $count;
+
+            if ($status) {
+                $counts[$day]['status_counts'][$status] = $count;
+            }
+        }
+
+        return $counts;
+    }
+
+    private function format_timeline_date($format, $timestamp) {
+        if (function_exists('wp_date')) {
+            return wp_date($format, $timestamp);
+        }
+
+        return date_i18n($format, $timestamp);
     }
 
     public function update_table_status($table_id, $status, $booking_id = null) {
