@@ -9,6 +9,10 @@
     const RBBookingNew = {
         modal: null,
         isInline: false,
+        focusTrapNamespace: '.rbBookingFocusTrap',
+        focusableSelectors: 'a[href], area[href], input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])',
+        lastActiveElement: null,
+        boundFocusinHandler: null,
         currentStep: 1,
         selectedData: {},
         currentLanguage: '',
@@ -168,6 +172,54 @@
             });
         },
 
+        getFocusableElements: function() {
+            if (!this.modal || !this.modal.length) {
+                return $();
+            }
+
+            return this.modal
+                .find(this.focusableSelectors)
+                .filter(':visible');
+        },
+
+        focusFirstElement: function() {
+            const focusable = this.getFocusableElements();
+            if (focusable.length) {
+                focusable.first().trigger('focus');
+            }
+        },
+
+        enableFocusTrap: function() {
+            if (this.isInline || !this.modal.length) {
+                return;
+            }
+
+            this.disableFocusTrap();
+
+            this.boundFocusinHandler = (event) => {
+                if (!this.modal.hasClass('show')) {
+                    return;
+                }
+
+                if (!this.modal[0].contains(event.target)) {
+                    this.focusFirstElement();
+                }
+            };
+
+            $(document).on('focusin' + this.focusTrapNamespace, this.boundFocusinHandler);
+        },
+
+        disableFocusTrap: function() {
+            if (this.isInline || !this.modal.length) {
+                return;
+            }
+
+            if (this.boundFocusinHandler) {
+                $(document).off('focusin' + this.focusTrapNamespace, this.boundFocusinHandler);
+                this.boundFocusinHandler = null;
+            }
+        },
+
         openModal: function(e) {
             if (this.isInline) {
                 return;
@@ -175,13 +227,18 @@
 
             if (e) {
                 e.preventDefault();
+                this.lastActiveElement = e.currentTarget || document.activeElement;
+            } else {
+                this.lastActiveElement = document.activeElement;
             }
             this.modal.addClass('show').attr('aria-hidden', 'false');
             this.modal.trigger('show');
 
+            this.enableFocusTrap();
+
             // Focus first input for accessibility
             setTimeout(() => {
-                this.modal.find('input, select').first().focus();
+                this.focusFirstElement();
             }, 300);
         },
 
@@ -195,7 +252,13 @@
             }
             this.modal.removeClass('show').attr('aria-hidden', 'true');
             this.modal.trigger('hide');
+            this.disableFocusTrap();
             this.resetToStep1();
+
+            if (this.lastActiveElement && typeof this.lastActiveElement.focus === 'function') {
+                this.lastActiveElement.focus();
+            }
+            this.lastActiveElement = null;
         },
 
         handleModalClick: function(e) {
@@ -209,12 +272,36 @@
         },
 
         handleKeydown: function(e) {
-            if (this.isInline) {
+            if (this.isInline || !this.modal || !this.modal.length) {
                 return;
             }
 
             if (e.key === 'Escape' && this.modal.hasClass('show')) {
                 this.closeModal();
+                return;
+            }
+
+            if (e.key === 'Tab' && this.modal.hasClass('show')) {
+                const focusable = this.getFocusableElements();
+
+                if (!focusable.length) {
+                    e.preventDefault();
+                    return;
+                }
+
+                const first = focusable.get(0);
+                const last = focusable.get(focusable.length - 1);
+                const activeElement = document.activeElement;
+
+                if (e.shiftKey) {
+                    if (activeElement === first || !this.modal[0].contains(activeElement)) {
+                        e.preventDefault();
+                        $(last).trigger('focus');
+                    }
+                } else if (activeElement === last) {
+                    e.preventDefault();
+                    $(first).trigger('focus');
+                }
             }
         },
 
