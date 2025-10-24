@@ -1240,7 +1240,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         $opening_time = isset($location_settings['opening_time']) ? substr($location_settings['opening_time'], 0, 5) : '09:00';
         $closing_time = isset($location_settings['closing_time']) ? substr($location_settings['closing_time'], 0, 5) : '22:00';
         $time_interval = isset($location_settings['time_slot_interval']) ? intval($location_settings['time_slot_interval']) : 30;
-        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
+        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval, $location_settings);
 
         $prefill_date = isset($_GET['prefill_date']) ? sanitize_text_field(wp_unslash($_GET['prefill_date'])) : '';
         $prefill_checkin = isset($_GET['prefill_checkin']) ? sanitize_text_field(wp_unslash($_GET['prefill_checkin'])) : '';
@@ -2080,25 +2080,6 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         </div>
         <?php
         return ob_get_clean();
-    }
-
-    protected function generate_time_slots($start = null, $end = null, $interval = null) {
-        $slots = array();
-
-        $start_time = strtotime($start);
-        $end_time = strtotime($end);
-        $interval = max(5, (int) $interval);
-
-        if (!$start_time || !$end_time || $start_time >= $end_time) {
-            return $slots;
-        }
-
-        while ($start_time < $end_time) {
-            $slots[] = date('H:i', $start_time);
-            $start_time += $interval * MINUTE_IN_SECONDS;
-        }
-
-        return $slots;
     }
 
     private function render_manager_login($atts, $locations) {

@@ -104,11 +104,22 @@ abstract class RB_Frontend_Base {
         );
     }
 
-    protected function generate_time_slots($start = null, $end = null, $interval = null) {
+    protected function generate_time_slots($start = null, $end = null, $interval = null, $settings_override = array()) {
         $settings = get_option('rb_settings', array());
 
+        if (!is_array($settings)) {
+            $settings = array();
+        }
+
+        if (!empty($settings_override) && is_array($settings_override)) {
+            $settings = array_merge($settings, $settings_override);
+        }
+
         $mode = isset($settings['working_hours_mode']) ? $settings['working_hours_mode'] : 'simple';
-        $interval = $interval ?: (isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : 30);
+        $interval = (int) $interval;
+        if ($interval <= 0) {
+            $interval = isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : 30;
+        }
         $buffer = isset($settings['booking_buffer_time']) ? intval($settings['booking_buffer_time']) : 0;
 
         $slots = array();
@@ -143,13 +154,25 @@ abstract class RB_Frontend_Base {
 
     protected function generate_shift_slots($start, $end, $interval, $buffer = 0) {
         $slots = array();
+
         $start_time = strtotime($start);
         $end_time = strtotime($end);
-        $step = ($interval + $buffer) * MINUTE_IN_SECONDS;
 
-        while ($start_time < $end_time) {
+        if ($start_time === false || $end_time === false || $start_time >= $end_time) {
+            return $slots;
+        }
+
+        $interval_seconds = max(1, (int) $interval) * MINUTE_IN_SECONDS;
+
+        // Ensure the generated slots never exceed the configured closing time.
+        $latest_start = $end_time - $interval_seconds;
+        if ($latest_start < $start_time) {
+            $latest_start = $start_time;
+        }
+
+        while ($start_time <= $latest_start) {
             $slots[] = date('H:i', $start_time);
-            $start_time += $step;
+            $start_time += $interval_seconds;
         }
 
         return $slots;
@@ -184,12 +207,17 @@ abstract class RB_Frontend_Base {
         $min_advance = isset($settings['min_advance_booking']) ? intval($settings['min_advance_booking']) : 2;
         $max_advance = isset($settings['max_advance_booking']) ? intval($settings['max_advance_booking']) : 30;
 
-        $booking_timestamp = strtotime($date);
+        $start_of_day = strtotime($date . ' 00:00:00');
+        $end_of_day = strtotime($date . ' 23:59:59');
+        if ($start_of_day === false || $end_of_day === false) {
+            return false;
+        }
+
         $now = current_time('timestamp');
         $min_timestamp = $now + ($min_advance * HOUR_IN_SECONDS);
         $max_timestamp = $now + ($max_advance * DAY_IN_SECONDS);
 
-        if ($booking_timestamp < $min_timestamp || $booking_timestamp > $max_timestamp) {
+        if ($end_of_day < $min_timestamp || $start_of_day > $max_timestamp) {
             return false;
         }
 

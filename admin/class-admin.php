@@ -1033,7 +1033,7 @@ class RB_Admin {
         $closing_time = isset($location_settings['closing_time']) ? substr($location_settings['closing_time'], 0, 5) : '22:00';
         $time_interval = isset($location_settings['time_slot_interval']) ? intval($location_settings['time_slot_interval']) : 30;
 
-        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
+        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval, $location_settings);
 
         $form_values = array(
             'customer_name'   => '',
@@ -4508,11 +4508,22 @@ class RB_Admin {
     /**
      * Generate time slots với hỗ trợ giờ nghỉ trưa & 2 ca
      */
-    private function generate_time_slots($start = null, $end = null, $interval = null) {
+    private function generate_time_slots($start = null, $end = null, $interval = null, $settings_override = array()) {
         $settings = get_option('rb_settings', array());
-        
+
+        if (!is_array($settings)) {
+            $settings = array();
+        }
+
+        if (!empty($settings_override) && is_array($settings_override)) {
+            $settings = array_merge($settings, $settings_override);
+        }
+
         $mode = isset($settings['working_hours_mode']) ? $settings['working_hours_mode'] : 'simple';
-        $interval = $interval ?: (isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : 30);
+        $interval = (int) $interval;
+        if ($interval <= 0) {
+            $interval = isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : 30;
+        }
         $buffer = isset($settings['booking_buffer_time']) ? intval($settings['booking_buffer_time']) : 0;
         
         $slots = array();
@@ -4562,13 +4573,22 @@ class RB_Admin {
         $slots = array();
         $start_time = strtotime($start);
         $end_time = strtotime($end);
-        $step = ($interval + $buffer) * 60; // Convert to seconds
-        
-        while ($start_time < $end_time) {
-            $slots[] = date('H:i', $start_time);
-            $start_time += $step;
+
+        if ($start_time === false || $end_time === false || $start_time >= $end_time) {
+            return $slots;
         }
-        
+
+        $interval_seconds = max(1, (int) $interval) * 60;
+        $latest_start = $end_time - $interval_seconds;
+        if ($latest_start < $start_time) {
+            $latest_start = $start_time;
+        }
+
+        while ($start_time <= $latest_start) {
+            $slots[] = date('H:i', $start_time);
+            $start_time += $interval_seconds;
+        }
+
         return $slots;
     }
 
@@ -4612,15 +4632,20 @@ class RB_Admin {
         $min_advance = isset($settings['min_advance_booking']) ? intval($settings['min_advance_booking']) : 2;
         $max_advance = isset($settings['max_advance_booking']) ? intval($settings['max_advance_booking']) : 30;
         
-        $booking_datetime = strtotime($date);
+        $start_of_day = strtotime($date . ' 00:00:00');
+        $end_of_day = strtotime($date . ' 23:59:59');
+        if ($start_of_day === false || $end_of_day === false) {
+            return false;
+        }
+
         $now = current_time('timestamp');
         $min_datetime = $now + ($min_advance * 3600); // hours to seconds
         $max_datetime = $now + ($max_advance * 86400); // days to seconds
-        
-        if ($booking_datetime < $min_datetime || $booking_datetime > $max_datetime) {
+
+        if ($end_of_day < $min_datetime || $start_of_day > $max_datetime) {
             return false;
         }
-        
+
         return true;
     }
 

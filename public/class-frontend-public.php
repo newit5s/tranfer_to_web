@@ -128,7 +128,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         $min_date = date('Y-m-d', strtotime('+' . $min_hours . ' hours'));
         $max_date = date('Y-m-d', strtotime('+' . $max_days . ' days'));
 
-        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval);
+        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $time_interval, $settings);
 
         $default_location_address = isset($default_location['address']) ? $default_location['address'] : '';
         $default_location_hotline = isset($default_location['hotline']) ? $default_location['hotline'] : '';
@@ -896,7 +896,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
         $closing_time = isset($settings['closing_time']) ? $settings['closing_time'] : null;
         $interval = isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : null;
 
-        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $interval);
+        $time_slots = $this->generate_time_slots($opening_time, $closing_time, $interval, $settings);
         $available_slots = array();
         $current_timestamp = current_time('timestamp');
 
