@@ -158,6 +158,7 @@ return array(
     'timeline_hide_tables' => '一覧を閉じる',
     'timeline_no_calendar_data' => 'カレンダーのデータがありません。',
     'timeline_no_week_data' => '週間データがありません。',
+    'timeline_create_at' => '%s に予約を作成',
     'checkin_time' => 'チェックイン時間',
     'checkout_time' => 'チェックアウト時間',
     'current_status' => '現在のステータス',

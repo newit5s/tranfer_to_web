@@ -1049,6 +1049,34 @@ class RB_Admin {
             'table_number'    => null,
         );
 
+        if (!$is_edit) {
+            $prefill_date = isset($_GET['prefill_date']) ? sanitize_text_field(wp_unslash($_GET['prefill_date'])) : '';
+            if ($prefill_date && preg_match('/^\d{4}-\d{2}-\d{2}$/', $prefill_date)) {
+                $form_values['booking_date'] = $prefill_date;
+            }
+
+            $prefill_checkin = isset($_GET['prefill_checkin']) ? sanitize_text_field(wp_unslash($_GET['prefill_checkin'])) : '';
+            if ($prefill_checkin && preg_match('/^\d{2}:\d{2}$/', $prefill_checkin)) {
+                $form_values['booking_time'] = $prefill_checkin;
+                if (!in_array($prefill_checkin, $time_slots, true)) {
+                    $time_slots[] = $prefill_checkin;
+                }
+            }
+
+            $prefill_checkout = isset($_GET['prefill_checkout']) ? sanitize_text_field(wp_unslash($_GET['prefill_checkout'])) : '';
+            if ($prefill_checkout && preg_match('/^\d{2}:\d{2}$/', $prefill_checkout)) {
+                $form_values['checkout_time'] = $prefill_checkout;
+                if (!in_array($prefill_checkout, $time_slots, true)) {
+                    $time_slots[] = $prefill_checkout;
+                }
+            }
+
+            if (!empty($time_slots)) {
+                $time_slots = array_values(array_unique($time_slots));
+                sort($time_slots);
+            }
+        }
+
         if ($is_edit && $editing_booking) {
             $form_values['customer_name'] = $editing_booking->customer_name;
             $form_values['customer_phone'] = $editing_booking->customer_phone;
@@ -1542,6 +1570,16 @@ class RB_Admin {
             $selected_location_id = (int) $location_ids[0];
         }
 
+        $location_settings = $rb_location->get_settings($selected_location_id);
+        $timeline_default_duration = apply_filters('rb_timeline_default_duration', 120, $selected_location_id, $location_settings);
+        $timeline_create_url = add_query_arg(
+            array(
+                'page' => 'rb-create-booking',
+                'location_id' => $selected_location_id,
+            ),
+            admin_url('admin.php')
+        );
+
         $current_date = function_exists('wp_date') ? wp_date('Y-m-d') : date_i18n('Y-m-d');
         $timeline_date = isset($_GET['timeline_date']) ? sanitize_text_field(wp_unslash($_GET['timeline_date'])) : $current_date;
         if (empty($timeline_date)) {
@@ -1610,6 +1648,8 @@ class RB_Admin {
                  data-date="<?php echo esc_attr($timeline_date); ?>"
                  data-location="<?php echo esc_attr($selected_location_id); ?>"
                  data-context="admin"
+                 data-create-url="<?php echo esc_url($timeline_create_url); ?>"
+                 data-default-duration="<?php echo esc_attr((int) $timeline_default_duration); ?>"
                  aria-busy="true">
                 <div class="rb-timeline-loading" role="status" aria-live="polite">
                     <?php esc_html_e('Loading timeline data…', 'restaurant-booking'); ?>

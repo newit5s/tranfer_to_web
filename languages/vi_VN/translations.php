@@ -158,6 +158,7 @@ return array(
     'timeline_hide_tables' => 'Ẩn danh sách bàn',
     'timeline_no_calendar_data' => 'Chưa có dữ liệu lịch.',
     'timeline_no_week_data' => 'Chưa có dữ liệu tuần.',
+    'timeline_create_at' => 'Tạo đặt bàn lúc %s',
     'checkin_time' => 'Giờ check-in',
     'checkout_time' => 'Giờ check-out',
     'current_status' => 'Trạng thái hiện tại',
