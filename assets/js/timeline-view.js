@@ -38,6 +38,10 @@
         this.$filters = this.$container.closest('.rb-manager-timeline').find('.rb-manager-timeline__filters');
         this.sidebarId = 'rb-timeline-sidebar-' + Math.floor(Math.random() * 1000000);
         this.drawerLastFocus = null;
+        this.lastFetchParams = {};
+        this.liveRegionTimer = null;
+        this.$liveRegion = $('<div class="rb-timeline-live-region" aria-live="polite" aria-atomic="true" />');
+        this.$container.prepend(this.$liveRegion);
         this._boundDrawerKeydown = $.proxy(this.onDrawerKeydown, this);
         this.hasRendered = false;
         this.init();
@@ -53,11 +57,73 @@
         self.fetchData();
     };
 
+    TimelineApp.prototype.restoreLiveRegion = function () {
+        if (!this.$liveRegion || !this.$liveRegion.length) {
+            this.$liveRegion = $('<div class="rb-timeline-live-region" aria-live="polite" aria-atomic="true" />');
+        }
+
+        this.$container.prepend(this.$liveRegion);
+    };
+
+    TimelineApp.prototype.updateLiveRegion = function (message) {
+        if (!this.$liveRegion || !this.$liveRegion.length) {
+            return;
+        }
+
+        if (this.liveRegionTimer) {
+            clearTimeout(this.liveRegionTimer);
+            this.liveRegionTimer = null;
+        }
+
+        this.$liveRegion.text('');
+
+        if (message) {
+            var self = this;
+            this.liveRegionTimer = setTimeout(function () {
+                self.$liveRegion.text(message);
+                self.liveRegionTimer = null;
+            }, 50);
+        }
+    };
+
+    TimelineApp.prototype.renderLoadingState = function () {
+        var message = this.strings.loadingMessage || 'Loading timeline data…';
+        this.clearNowTimer();
+        this.$container.empty();
+        this.restoreLiveRegion();
+        this.$container
+            .attr('aria-busy', 'true')
+            .append($('<div class="rb-timeline-loading" role="status" aria-live="polite" />').text(message));
+        this.updateLiveRegion(message);
+    };
+
     TimelineApp.prototype.renderError = function (message) {
         this.clearNowTimer();
-        this.$container.empty().append(
-            $('<div class="rb-timeline-empty" />').text(message || 'An unexpected error occurred.')
-        );
+        this.$container.removeClass('rb-timeline-loading-state');
+        this.$container.attr('aria-busy', 'false');
+        var errorMessage = message || this.strings.loadingError || 'Unable to load timeline data.';
+        var retryLabel = this.strings.retry || 'Retry';
+
+        this.$container.empty();
+        this.restoreLiveRegion();
+
+        var $error = $('<div class="rb-timeline-error" role="alert" aria-live="assertive" />')
+            .append($('<p class="rb-timeline-error__message" />').text(errorMessage));
+
+        if (this.ajaxUrl) {
+            var self = this;
+            var $actions = $('<div class="rb-timeline-error__actions" />');
+            $('<button type="button" class="button button-secondary rb-timeline-error__retry" />')
+                .text(retryLabel)
+                .on('click', function () {
+                    self.fetchData($.extend({}, self.lastFetchParams));
+                })
+                .appendTo($actions);
+            $error.append($actions);
+        }
+
+        this.$container.append($error);
+        this.updateLiveRegion(errorMessage);
     };
 
     TimelineApp.prototype.fetchData = function (options) {
@@ -66,6 +132,21 @@
 
         var targetDate = options.date || self.$container.data('date');
         var targetLocation = options.location || self.$container.data('location');
+
+        self.lastFetchParams = {
+            date: targetDate,
+            location: targetLocation
+        };
+
+        var hasLayout = self.$container.find('.rb-timeline-layout').length > 0;
+        var hasError = self.$container.find('.rb-timeline-error').length > 0;
+
+        if (!hasLayout || hasError) {
+            self.renderLoadingState();
+        } else {
+            self.$container.attr('aria-busy', 'true');
+            self.updateLiveRegion(self.strings.loadingMessage || 'Loading timeline data…');
+        }
 
         self.$container.addClass('rb-timeline-loading-state');
 
@@ -89,6 +170,9 @@
                     options.onSuccess(response.data);
                 }
             } else {
+                if (window.console && typeof window.console.error === 'function') {
+                    window.console.error('Timeline data response error', response);
+                }
                 var message = (response && response.data && response.data.message)
                     ? response.data.message
                     : (self.strings.loadingError || 'Unable to load timeline data.');
@@ -100,6 +184,9 @@
         }).fail(function () {
             self.$container.removeClass('rb-timeline-loading-state');
             self.renderError(self.strings.loadingError || 'Unable to load timeline data.');
+            if (window.console && typeof window.console.error === 'function') {
+                window.console.error('Timeline data request failed');
+            }
             if (typeof options.onError === 'function') {
                 options.onError();
             }
@@ -111,6 +198,7 @@
         self.clearNowTimer();
         self.$container.find('.rb-timeline-now').remove();
         self.$container.empty();
+        self.restoreLiveRegion();
 
         self.currentData = data || {};
         self.activeDate = self.currentData && self.currentData.date ? self.currentData.date : null;
@@ -172,6 +260,8 @@
 
         self.ensureResponsiveHandlers();
         self.renderMain();
+        self.$container.attr('aria-busy', 'false');
+        self.updateLiveRegion(self.strings.loadingComplete || 'Timeline data loaded.');
         self.hasRendered = true;
     };
 

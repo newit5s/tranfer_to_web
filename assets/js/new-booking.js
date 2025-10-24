@@ -13,6 +13,12 @@
         selectedData: {},
         currentLanguage: '',
         availableSlots: [],
+        defaultDate: '',
+        minDate: '',
+        maxDate: '',
+        $dateInput: null,
+        $availabilityForm: null,
+        isInitializingSlots: false,
         
         // Localized strings (will be populated by WordPress)
         strings: window.rbBookingStrings || {
@@ -44,6 +50,24 @@
 
             if (!this.modal.length) {
                 return;
+            }
+
+            this.$dateInput = $('#rb-new-date');
+            this.$availabilityForm = $('#rb-new-availability-form');
+
+            if (this.$dateInput && this.$dateInput.length) {
+                this.defaultDate = this.$dateInput.data('defaultDate')
+                    || this.$dateInput.val()
+                    || this.$dateInput.attr('value')
+                    || this.$dateInput.attr('min')
+                    || '';
+                this.minDate = this.$dateInput.data('minDate') || this.$dateInput.attr('min') || '';
+                this.maxDate = this.$dateInput.data('maxDate') || this.$dateInput.attr('max') || '';
+
+                if (this.defaultDate) {
+                    this.$dateInput.val(this.defaultDate);
+                    this.$dateInput.attr('value', this.defaultDate);
+                }
             }
 
             this.isInline = this.modal.data('inline-mode') === 1 || this.modal.hasClass('rb-new-modal-inline');
@@ -98,16 +122,34 @@
 
             // Restart booking
             $(document).on('click', '.rb-new-restart-btn', this.handleRestart.bind(this));
+
+            $(document).on('input', '#rb-new-customer-phone', this.handlePhoneInput.bind(this));
         },
 
-        setInitialValues: function() {
-            // Set default date to tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const dateString = tomorrow.toISOString().split('T')[0];
-            $('#rb-new-date').val(dateString);
-            
-            // Load initial time slots
+        setInitialValues: function(isReset) {
+            if (isReset && this.$availabilityForm && this.$availabilityForm.length) {
+                const formElement = this.$availabilityForm[0];
+                if (formElement) {
+                    formElement.reset();
+                }
+            }
+
+            if (this.$dateInput && this.$dateInput.length) {
+                const defaultDate = this.defaultDate || this.$dateInput.attr('value') || this.$dateInput.attr('min');
+                if (defaultDate) {
+                    this.$dateInput.val(defaultDate);
+                    this.$dateInput.attr('value', defaultDate);
+                }
+            }
+
+            if (isReset) {
+                const $timeSelect = $('#rb-new-time');
+                if ($timeSelect.length) {
+                    $timeSelect.empty().append(`<option value="">${this.strings.selectTime}</option>`);
+                }
+            }
+
+            this.isInitializingSlots = true;
             this.updateTimeSlots();
         },
 
@@ -503,6 +545,8 @@
             this.selectedData = {};
             this.clearAllMessages();
             this.clearForm();
+            this.setInitialValues(true);
+            this.updateLocationMeta();
             const $successMessage = $('#rb-new-success-message');
             if ($successMessage.length) {
                 const defaultMessage = $successMessage.data('default-message') || $successMessage.text();
@@ -562,9 +606,18 @@
             }
 
             // Phone validation
-            const phone = $('#rb-new-customer-phone').val();
+            const $phoneField = $('#rb-new-customer-phone');
+            let phone = $phoneField.val();
+            if (window.rbPhoneUtils && typeof window.rbPhoneUtils.sanitize === 'function') {
+                const sanitizedPhone = window.rbPhoneUtils.sanitize(phone || '');
+                if (sanitizedPhone !== phone) {
+                    $phoneField.val(sanitizedPhone);
+                }
+                phone = sanitizedPhone;
+            }
+
             if (phone && !this.isValidPhone(phone)) {
-                this.highlightField($('#rb-new-customer-phone'));
+                this.highlightField($phoneField);
                 isValid = false;
                 errorMessage = this.strings.invalidPhone;
             }
@@ -582,8 +635,26 @@
         },
 
         isValidPhone: function(phone) {
-            const phoneRegex = /^[0-9+\-\s]{8,20}$/;
-            return phoneRegex.test(phone);
+            const utils = window.rbPhoneUtils;
+            if (utils && typeof utils.isValid === 'function') {
+                return utils.isValid(phone);
+            }
+
+            if (typeof phone !== 'string') {
+                return false;
+            }
+
+            const trimmed = phone.trim();
+            if (!trimmed) {
+                return false;
+            }
+
+            const digits = trimmed.replace(/\D/g, '');
+            if (digits.length < 8 || digits.length > 20) {
+                return false;
+            }
+
+            return /^\+?[0-9][0-9\s-]{6,19}$/.test(trimmed);
         },
 
         handleBookingResponse: function(response) {
@@ -661,14 +732,32 @@
             }
         },
 
+        handlePhoneInput: function(e) {
+            const $input = $(e.target);
+            if (!$input.length) {
+                return;
+            }
+
+            const utils = window.rbPhoneUtils;
+            if (utils && typeof utils.sanitize === 'function') {
+                const sanitized = utils.sanitize($input.val());
+                if ($input.val() !== sanitized) {
+                    $input.val(sanitized);
+                }
+            }
+        },
+
         updateTimeSlots: function() {
-            const date = $('#rb-new-date').val();
+            const date = this.$dateInput && this.$dateInput.length ? this.$dateInput.val() : $('#rb-new-date').val();
             const locationId = $('#rb-new-location').val();
             const guestCount = $('#rb-new-guests').val();
 
-            if (!date || !locationId || !guestCount) return;
+            if (!date || !locationId || !guestCount || !window.rbBookingAjax || !window.rbBookingAjax.ajaxUrl) {
+                this.isInitializingSlots = false;
+                return;
+            }
 
-            $.ajax({
+            const request = $.ajax({
                 url: window.rbBookingAjax.ajaxUrl,
                 type: 'POST',
                 data: {
@@ -677,8 +766,17 @@
                     date: date,
                     location_id: locationId,
                     guest_count: guestCount
-                },
-                success: this.handleTimeSlotsResponse.bind(this)
+                }
+            });
+
+            request.done(this.handleTimeSlotsResponse.bind(this));
+            request.fail(() => {
+                this.availableSlots = [];
+                $('#rb-new-time').val('');
+                $('#rb-new-checkout').empty().append(`<option value="">${this.strings.selectTime}</option>`);
+            });
+            request.always(() => {
+                this.isInitializingSlots = false;
             });
         },
 
@@ -695,12 +793,23 @@
                     $timeSelect.append(`<option value="${slot}">${slot}</option>`);
                 });
 
-                // Restore selection if still available
-                if (currentTime && this.availableSlots.includes(currentTime)) {
-                    $timeSelect.val(currentTime);
+                let nextSelection = '';
+
+                if (currentTime && this.availableSlots.includes(currentTime) && !this.isInitializingSlots) {
+                    nextSelection = currentTime;
+                } else if (this.availableSlots.length) {
+                    nextSelection = this.availableSlots[0];
+                }
+
+                if (nextSelection) {
+                    $timeSelect.val(nextSelection);
                 }
 
                 this.updateCheckoutSelect();
+            } else {
+                this.availableSlots = [];
+                $('#rb-new-time').val('');
+                $('#rb-new-checkout').empty().append(`<option value="">${this.strings.selectTime}</option>`);
             }
         },
 
@@ -1006,8 +1115,8 @@
                 .removeClass('error')
                 .css('border-color', '');
             this.availableSlots = [];
+            $('#rb-new-time').empty().append(`<option value="">${this.strings.selectTime}</option>`);
             $('#rb-new-checkout').empty().append(`<option value="">${this.strings.selectTime}</option>`);
-            this.updateLocationMeta();
         },
 
         updateStepper: function(step) {
