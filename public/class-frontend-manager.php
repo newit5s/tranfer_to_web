@@ -330,9 +330,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     'location_id' => $selected_location_id,
                                     'rb_section' => $key,
                                 ), remove_query_arg(array('rb_section')));
+                                $is_active = $section === $key;
                                 ?>
-                                <li class="<?php echo $section === $key ? 'is-active' : ''; ?>">
-                                    <a href="<?php echo esc_url($url); ?>">
+                                <li class="<?php echo $is_active ? 'is-active' : ''; ?>">
+                                    <a href="<?php echo esc_url($url); ?>"<?php echo $is_active ? ' aria-current="page"' : ''; ?>>
                                         <span class="rb-gmail-nav-icon" aria-hidden="true"><?php echo esc_html($item['icon']); ?></span>
                                         <span class="rb-gmail-nav-label"><?php echo esc_html($item['label']); ?></span>
                                     </a>
@@ -1862,7 +1863,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
             <div id="rb-manager-history" class="rb-manager-history" hidden>
                 <div class="rb-manager-history-inner">
-                    <button type="button" class="rb-manager-history-close">&times;</button>
+                    <button type="button" class="rb-manager-history-close" aria-label="<?php echo esc_attr($this->t('close_history_dialog', __('Close history dialog', 'restaurant-booking'))); ?>">&times;</button>
                     <div id="rb-manager-history-content"></div>
                 </div>
             </div>
