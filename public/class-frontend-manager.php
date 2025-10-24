@@ -332,8 +332,11 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 ), remove_query_arg(array('rb_section')));
                                 $is_active = $section === $key;
                                 ?>
-                                <li class="<?php echo $is_active ? 'is-active' : ''; ?>">
-                                    <a href="<?php echo esc_url($url); ?>"<?php echo $is_active ? ' aria-current="page"' : ''; ?>>
+                                <?php
+                                $aria_current_attr = $is_active ? ' aria-current="page"' : '';
+                                ?>
+                                <li class="<?php echo $is_active ? 'is-active' : ''; ?>"<?php echo $aria_current_attr; ?>>
+                                    <a href="<?php echo esc_url($url); ?>"<?php echo $aria_current_attr; ?>>
                                         <span class="rb-gmail-nav-icon" aria-hidden="true"><?php echo esc_html($item['icon']); ?></span>
                                         <span class="rb-gmail-nav-label"><?php echo esc_html($item['label']); ?></span>
                                     </a>

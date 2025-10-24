@@ -207,6 +207,33 @@
             };
 
             $(document).on('focusin' + this.focusTrapNamespace, this.boundFocusinHandler);
+
+            this.boundKeydownHandler = (event) => {
+                if (!this.modal.hasClass('show') || event.key !== 'Tab') {
+                    return;
+                }
+
+                const focusable = this.getFocusableElements();
+                if (!focusable.length) {
+                    return;
+                }
+
+                const first = focusable.first()[0];
+                const last = focusable.last()[0];
+                const active = document.activeElement;
+
+                if (event.shiftKey) {
+                    if (active === first || !this.modal[0].contains(active)) {
+                        event.preventDefault();
+                        last.focus();
+                    }
+                } else if (active === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            };
+
+            this.modal.on('keydown' + this.focusTrapNamespace, this.boundKeydownHandler);
         },
 
         disableFocusTrap: function() {
@@ -217,6 +244,11 @@
             if (this.boundFocusinHandler) {
                 $(document).off('focusin' + this.focusTrapNamespace, this.boundFocusinHandler);
                 this.boundFocusinHandler = null;
+            }
+
+            if (this.boundKeydownHandler) {
+                this.modal.off('keydown' + this.focusTrapNamespace, this.boundKeydownHandler);
+                this.boundKeydownHandler = null;
             }
         },
 
