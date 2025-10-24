@@ -112,8 +112,11 @@
             $(document).on('click', '#rb-new-back-btn', this.goBackToStep1.bind(this));
 
             // Date/location change - update time slots
-            $(document).on('change', '#rb-new-date, #rb-new-location, #rb-new-guests', this.updateTimeSlots.bind(this));
-            $(document).on('change', '#rb-new-location', this.updateLocationMeta.bind(this));
+            $(document).on('change', '#rb-new-date, #rb-new-guests', this.updateTimeSlots.bind(this));
+            $(document).on('change', '#rb-new-location', () => {
+                this.updateLocationMeta();
+                this.updateTimeSlots();
+            });
 
             // Check-in change - update checkout options
             $(document).on('change', '#rb-new-time', this.updateCheckoutSelect.bind(this));
@@ -153,6 +156,7 @@
                 }
             }
 
+            this.refreshGuestSelect();
             this.isInitializingSlots = true;
             this.updateTimeSlots();
         },
@@ -1175,6 +1179,50 @@
                 $container.removeClass('is-empty');
             } else {
                 $container.addClass('is-empty');
+            }
+
+            this.refreshGuestSelect();
+        },
+
+        refreshGuestSelect: function() {
+            const $guestSelect = $('#rb-new-guests');
+            if (!$guestSelect.length) {
+                return;
+            }
+
+            const defaultMax = parseInt($guestSelect.data('defaultMax'), 10);
+            const fallbackMax = Number.isFinite(defaultMax) && defaultMax > 0 ? defaultMax : 20;
+
+            const $locationSelect = $('#rb-new-location');
+            const $selected = $locationSelect.length ? $locationSelect.find('option:selected') : null;
+            let locationMax = $selected && $selected.length ? parseInt($selected.data('maxGuests'), 10) : NaN;
+
+            if (!Number.isFinite(locationMax) || locationMax <= 0) {
+                locationMax = fallbackMax;
+            }
+
+            let currentValue = parseInt($guestSelect.val(), 10);
+            if (!Number.isFinite(currentValue) || currentValue < 1) {
+                currentValue = 1;
+            }
+
+            if (currentValue > locationMax) {
+                currentValue = locationMax;
+            }
+
+            const label = this.strings.people || 'people';
+            let optionsHtml = '';
+            for (let i = 1; i <= locationMax; i++) {
+                const selectedAttr = i === currentValue ? ' selected' : '';
+                optionsHtml += `<option value="${i}"${selectedAttr}>${i} ${label}</option>`;
+            }
+
+            $guestSelect.html(optionsHtml);
+            $guestSelect.val(String(currentValue));
+
+            const $hiddenGuests = $('#rb-new-hidden-guests');
+            if ($hiddenGuests.length) {
+                $hiddenGuests.val(String(currentValue));
             }
         },
 

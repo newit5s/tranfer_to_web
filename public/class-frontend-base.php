@@ -35,9 +35,18 @@ abstract class RB_Frontend_Base {
         }
 
         $locations = $this->location_helper->all();
+        $global_settings = get_option('rb_settings', array());
+        $global_max_guests = isset($global_settings['max_guests_per_booking']) ? (int) $global_settings['max_guests_per_booking'] : 20;
         $data = array();
 
         foreach ($locations as $location) {
+            $option_key = 'rb_location_settings_' . (int) $location->id;
+            $stored_settings = get_option($option_key, array());
+            $location_max_guests = isset($stored_settings['max_guests_per_booking']) ? (int) $stored_settings['max_guests_per_booking'] : 0;
+            if ($location_max_guests < 1) {
+                $location_max_guests = $global_max_guests;
+            }
+
             $data[] = array(
                 'id' => (int) $location->id,
                 'name' => $location->name,
@@ -51,6 +60,7 @@ abstract class RB_Frontend_Base {
                 'min_advance_booking' => (int) $location->min_advance_booking,
                 'max_advance_booking' => (int) $location->max_advance_booking,
                 'languages' => array_map('trim', explode(',', $location->languages)),
+                'max_guests_per_booking' => $location_max_guests,
             );
         }
 
@@ -68,6 +78,15 @@ abstract class RB_Frontend_Base {
             return array();
         }
 
+        $global_settings = get_option('rb_settings', array());
+        $global_max_guests = isset($global_settings['max_guests_per_booking']) ? (int) $global_settings['max_guests_per_booking'] : 20;
+        $option_key = 'rb_location_settings_' . (int) $location->id;
+        $stored_settings = get_option($option_key, array());
+        $location_max_guests = isset($stored_settings['max_guests_per_booking']) ? (int) $stored_settings['max_guests_per_booking'] : 0;
+        if ($location_max_guests < 1) {
+            $location_max_guests = $global_max_guests;
+        }
+
         return array(
             'id' => (int) $location->id,
             'name' => $location->name,
@@ -81,6 +100,7 @@ abstract class RB_Frontend_Base {
             'min_advance_booking' => (int) $location->min_advance_booking,
             'max_advance_booking' => (int) $location->max_advance_booking,
             'languages' => array_map('trim', explode(',', $location->languages)),
+            'max_guests_per_booking' => $location_max_guests,
         );
     }
 

@@ -89,6 +89,30 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         add_action('wp_ajax_nopriv_rb_manager_update_settings', array($this, 'handle_manager_update_settings'));
     }
 
+    private function sanitize_manager_time_field($value) {
+        $value = sanitize_text_field($value);
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (!preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $value)) {
+            return null;
+        }
+
+        $parts = explode(':', $value);
+        $hours = isset($parts[0]) ? (int) $parts[0] : 0;
+        $minutes = isset($parts[1]) ? (int) $parts[1] : 0;
+        $seconds = isset($parts[2]) ? (int) $parts[2] : 0;
+
+        if ($hours < 0 || $hours > 23 || $minutes < 0 || $minutes > 59 || $seconds < 0 || $seconds > 59) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    }
+
     public function maybe_handle_manager_login() {
         if (is_admin()) {
             return;
@@ -3069,7 +3093,10 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
 
         foreach ($time_fields as $field) {
             if (array_key_exists($field, $settings_input)) {
-                $data[$field] = sanitize_text_field($settings_input[$field]);
+                $sanitized_time = $this->sanitize_manager_time_field($settings_input[$field]);
+                if ($sanitized_time !== null) {
+                    $data[$field] = $sanitized_time;
+                }
             }
         }
 
@@ -3077,8 +3104,13 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             'time_slot_interval' => array('min' => 5, 'max' => 120),
             'booking_buffer_time' => array('min' => 0, 'max' => 120),
             'min_advance_booking' => array('min' => 0, 'max' => 72),
-            'max_advance_booking' => array('min' => 1, 'max' => 180),
-            'max_guests_per_booking' => array('min' => 1, 'max' => 100),
+            'max_advance_booking' => array('min' => 1, 'max' => 365),
+            'max_guests_per_booking' => array('min' => 1, 'max' => 200),
+            'deposit_amount' => array('min' => 0),
+            'deposit_for_guests' => array('min' => 0),
+            'reminder_hours_before' => array('min' => 0, 'max' => 240),
+            'cancellation_hours' => array('min' => 0, 'max' => 240),
+            'no_show_auto_blacklist' => array('min' => 0, 'max' => 50),
         );
 
         foreach ($numeric_fields as $field => $limits) {
@@ -3095,12 +3127,19 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         $checkbox_fields = array(
-            'lunch_break_enabled',
-            'auto_confirm_enabled',
+            'lunch_break_enabled' => true,
+            'auto_confirm_enabled' => true,
+            'require_deposit' => false,
+            'enable_email' => false,
+            'weekend_enabled' => false,
+            'notify_vip_bookings' => false,
+            'notify_blacklist_events' => false,
         );
 
-        foreach ($checkbox_fields as $field) {
-            $data[$field] = !empty($settings_input[$field]) ? 'yes' : 'no';
+        foreach ($checkbox_fields as $field => $always_present) {
+            if ($always_present || array_key_exists($field, $settings_input)) {
+                $data[$field] = !empty($settings_input[$field]) ? 'yes' : 'no';
+            }
         }
 
         if (array_key_exists('languages', $settings_input)) {
@@ -3116,6 +3155,22 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
             }
 
             $data['languages'] = array_values(array_unique($language_codes));
+        }
+
+        if (array_key_exists('admin_email', $settings_input)) {
+            $data['admin_email'] = sanitize_email($settings_input['admin_email']);
+        }
+
+        if (array_key_exists('special_closed_dates', $settings_input)) {
+            $data['special_closed_dates'] = sanitize_textarea_field($settings_input['special_closed_dates']);
+        }
+
+        if (array_key_exists('vip_notification_recipients', $settings_input)) {
+            $data['vip_notification_recipients'] = sanitize_textarea_field($settings_input['vip_notification_recipients']);
+        }
+
+        if (array_key_exists('blacklist_notification_recipients', $settings_input)) {
+            $data['blacklist_notification_recipients'] = sanitize_textarea_field($settings_input['blacklist_notification_recipients']);
         }
 
         if (isset($data['email']) && $data['email'] !== '' && !is_email($data['email'])) {
