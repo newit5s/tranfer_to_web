@@ -99,11 +99,23 @@ class RB_Frontend_Public extends RB_Frontend_Base {
             'time_slot_interval' => 30,
             'min_advance_booking' => 2,
             'max_advance_booking' => 30,
+            'max_guests_per_booking' => 20,
             'frontend_enable_language_switcher' => 'yes',
             'frontend_show_summary' => 'yes',
             'frontend_show_location_contact' => 'yes',
         );
-        $settings = wp_parse_args($settings_raw, $settings_defaults);
+        $global_settings = wp_parse_args($settings_raw, $settings_defaults);
+
+        $location_settings = array();
+        if ($this->location_helper) {
+            $location_settings = $this->location_helper->get_settings($default_location_id);
+        }
+
+        if (!empty($location_settings)) {
+            $settings = wp_parse_args($location_settings, $global_settings);
+        } else {
+            $settings = $global_settings;
+        }
 
         $opening_time = isset($settings['opening_time']) ? $settings['opening_time'] : '09:00';
         $closing_time = isset($settings['closing_time']) ? $settings['closing_time'] : '22:00';
@@ -111,6 +123,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
         $min_hours = isset($settings['min_advance_booking']) ? intval($settings['min_advance_booking']) : 2;
         $max_days = isset($settings['max_advance_booking']) ? intval($settings['max_advance_booking']) : 30;
+        $max_guests = isset($settings['max_guests_per_booking']) ? max(1, intval($settings['max_guests_per_booking'])) : 20;
 
         $min_date = date('Y-m-d', strtotime('+' . $min_hours . ' hours'));
         $max_date = date('Y-m-d', strtotime('+' . $max_days . ' days'));
@@ -241,12 +254,15 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                                 <div class="rb-new-form-group">
                                     <label for="rb-new-location"><?php echo esc_html(rb_t('location', __('Location', 'restaurant-booking'))); ?></label>
                                     <select id="rb-new-location" name="location_id" required>
-                                        <?php foreach ($locations as $location) : ?>
-                                            <option value="<?php echo esc_attr($location['id']); ?>" 
+                                        <?php foreach ($locations as $location) :
+                                            $location_max_guests = isset($location['max_guests_per_booking']) ? max(1, (int) $location['max_guests_per_booking']) : $max_guests;
+                                            ?>
+                                            <option value="<?php echo esc_attr($location['id']); ?>"
                                                 data-name="<?php echo esc_attr($location['name']); ?>"
                                                 data-address="<?php echo esc_attr($location['address']); ?>"
                                                 data-hotline="<?php echo esc_attr($location['hotline']); ?>"
-                                                data-email="<?php echo esc_attr($location['email']); ?>">
+                                                data-email="<?php echo esc_attr($location['email']); ?>"
+                                                data-max-guests="<?php echo esc_attr($location_max_guests); ?>">
                                                 <?php echo esc_html($location['name']); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -285,9 +301,10 @@ class RB_Frontend_Public extends RB_Frontend_Base {
 
                                 <div class="rb-new-form-group">
                                     <label for="rb-new-guests"><?php echo esc_html(rb_t('number_of_guests', __('Guests', 'restaurant-booking'))); ?></label>
-                                    <select id="rb-new-guests" name="guest_count" required>
-                                        <?php for ($i = 1; $i <= 20; $i++) : ?>
-                                            <option value="<?php echo $i; ?>"><?php echo $i; ?> <?php echo esc_html(rb_t('people', __('people', 'restaurant-booking'))); ?></option>
+                                    <?php $people_label = rb_t('people', __('people', 'restaurant-booking')); ?>
+                                    <select id="rb-new-guests" name="guest_count" required data-default-max="<?php echo esc_attr($max_guests); ?>">
+                                        <?php for ($i = 1; $i <= $max_guests; $i++) : ?>
+                                            <option value="<?php echo esc_attr($i); ?>"><?php echo esc_html($i . ' ' . $people_label); ?></option>
                                         <?php endfor; ?>
                                     </select>
                                 </div>

@@ -89,6 +89,30 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         add_action('wp_ajax_nopriv_rb_manager_update_settings', array($this, 'handle_manager_update_settings'));
     }
 
+    private function sanitize_manager_time_field($value) {
+        $value = sanitize_text_field($value);
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (!preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $value)) {
+            return null;
+        }
+
+        $parts = explode(':', $value);
+        $hours = isset($parts[0]) ? (int) $parts[0] : 0;
+        $minutes = isset($parts[1]) ? (int) $parts[1] : 0;
+        $seconds = isset($parts[2]) ? (int) $parts[2] : 0;
+
+        if ($hours < 0 || $hours > 23 || $minutes < 0 || $minutes > 59 || $seconds < 0 || $seconds > 59) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    }
+
     public function maybe_handle_manager_login() {
         if (is_admin()) {
             return;
@@ -2985,59 +3009,129 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         $settings_input = isset($_POST['location_settings']) ? (array) wp_unslash($_POST['location_settings']) : array();
-        $languages_input = isset($settings_input['languages']) ? (array) $settings_input['languages'] : array();
-        $languages_allowed = function_exists('rb_get_available_languages') ? array_keys(rb_get_available_languages()) : array();
-        $language_codes = array();
 
-        foreach ($languages_input as $language_code) {
-            $language_code = sanitize_text_field($language_code);
-            if (empty($languages_allowed) || in_array($language_code, $languages_allowed, true)) {
-                $language_codes[] = $language_code;
+        $data = array();
+
+        if (array_key_exists('hotline', $settings_input)) {
+            $data['hotline'] = sanitize_text_field($settings_input['hotline']);
+        }
+
+        if (array_key_exists('email', $settings_input)) {
+            $data['email'] = sanitize_email($settings_input['email']);
+        }
+
+        if (array_key_exists('address', $settings_input)) {
+            $data['address'] = sanitize_text_field($settings_input['address']);
+        }
+
+        if (array_key_exists('shift_notes', $settings_input)) {
+            $data['shift_notes'] = sanitize_textarea_field($settings_input['shift_notes']);
+        }
+
+        if (isset($settings_input['working_hours_mode'])) {
+            $mode = $settings_input['working_hours_mode'] === 'advanced' ? 'advanced' : 'simple';
+            $data['working_hours_mode'] = $mode;
+        }
+
+        $time_fields = array(
+            'opening_time',
+            'closing_time',
+            'lunch_break_start',
+            'lunch_break_end',
+            'morning_shift_start',
+            'morning_shift_end',
+            'evening_shift_start',
+            'evening_shift_end',
+        );
+
+        foreach ($time_fields as $field) {
+            if (array_key_exists($field, $settings_input)) {
+                $sanitized_time = $this->sanitize_manager_time_field($settings_input[$field]);
+                if ($sanitized_time !== null) {
+                    $data[$field] = $sanitized_time;
+                }
             }
         }
 
-        $language_codes = array_values(array_unique($language_codes));
-
-        $data = array(
-            'hotline' => isset($settings_input['hotline']) ? sanitize_text_field($settings_input['hotline']) : '',
-            'email' => isset($settings_input['email']) ? sanitize_email($settings_input['email']) : '',
-            'address' => isset($settings_input['address']) ? sanitize_text_field($settings_input['address']) : '',
-            'opening_time' => isset($settings_input['opening_time']) ? sanitize_text_field($settings_input['opening_time']) : '',
-            'closing_time' => isset($settings_input['closing_time']) ? sanitize_text_field($settings_input['closing_time']) : '',
-            'time_slot_interval' => isset($settings_input['time_slot_interval']) ? intval($settings_input['time_slot_interval']) : 30,
-            'booking_buffer_time' => isset($settings_input['booking_buffer_time']) ? intval($settings_input['booking_buffer_time']) : 0,
-            'min_advance_booking' => isset($settings_input['min_advance_booking']) ? intval($settings_input['min_advance_booking']) : 0,
-            'max_advance_booking' => isset($settings_input['max_advance_booking']) ? intval($settings_input['max_advance_booking']) : 30,
-            'max_guests_per_booking' => isset($settings_input['max_guests_per_booking']) ? intval($settings_input['max_guests_per_booking']) : 20,
-            'shift_notes' => isset($settings_input['shift_notes']) ? sanitize_textarea_field($settings_input['shift_notes']) : '',
-            'working_hours_mode' => isset($settings_input['working_hours_mode']) && $settings_input['working_hours_mode'] === 'advanced' ? 'advanced' : 'simple',
-            'lunch_break_enabled' => !empty($settings_input['lunch_break_enabled']) ? 'yes' : 'no',
-            'lunch_break_start' => isset($settings_input['lunch_break_start']) ? sanitize_text_field($settings_input['lunch_break_start']) : '',
-            'lunch_break_end' => isset($settings_input['lunch_break_end']) ? sanitize_text_field($settings_input['lunch_break_end']) : '',
-            'morning_shift_start' => isset($settings_input['morning_shift_start']) ? sanitize_text_field($settings_input['morning_shift_start']) : '',
-            'morning_shift_end' => isset($settings_input['morning_shift_end']) ? sanitize_text_field($settings_input['morning_shift_end']) : '',
-            'evening_shift_start' => isset($settings_input['evening_shift_start']) ? sanitize_text_field($settings_input['evening_shift_start']) : '',
-            'evening_shift_end' => isset($settings_input['evening_shift_end']) ? sanitize_text_field($settings_input['evening_shift_end']) : '',
-            'auto_confirm_enabled' => !empty($settings_input['auto_confirm_enabled']) ? 'yes' : 'no',
-            'require_deposit' => !empty($settings_input['require_deposit']) ? 'yes' : 'no',
-            'deposit_amount' => isset($settings_input['deposit_amount']) ? intval($settings_input['deposit_amount']) : 0,
-            'deposit_for_guests' => isset($settings_input['deposit_for_guests']) ? intval($settings_input['deposit_for_guests']) : 0,
-            'admin_email' => isset($settings_input['admin_email']) ? sanitize_email($settings_input['admin_email']) : '',
-            'enable_email' => !empty($settings_input['enable_email']) ? 'yes' : 'no',
-            'reminder_hours_before' => isset($settings_input['reminder_hours_before']) ? intval($settings_input['reminder_hours_before']) : 24,
-            'special_closed_dates' => isset($settings_input['special_closed_dates']) ? sanitize_textarea_field($settings_input['special_closed_dates']) : '',
-            'cancellation_hours' => isset($settings_input['cancellation_hours']) ? intval($settings_input['cancellation_hours']) : 2,
-            'weekend_enabled' => !empty($settings_input['weekend_enabled']) ? 'yes' : 'no',
-            'no_show_auto_blacklist' => isset($settings_input['no_show_auto_blacklist']) ? intval($settings_input['no_show_auto_blacklist']) : 0,
-            'languages' => $language_codes,
+        $numeric_fields = array(
+            'time_slot_interval' => array('min' => 5, 'max' => 120),
+            'booking_buffer_time' => array('min' => 0, 'max' => 120),
+            'min_advance_booking' => array('min' => 0, 'max' => 72),
+            'max_advance_booking' => array('min' => 1, 'max' => 365),
+            'max_guests_per_booking' => array('min' => 1, 'max' => 200),
+            'deposit_amount' => array('min' => 0),
+            'deposit_for_guests' => array('min' => 0),
+            'reminder_hours_before' => array('min' => 0, 'max' => 240),
+            'cancellation_hours' => array('min' => 0, 'max' => 240),
+            'no_show_auto_blacklist' => array('min' => 0, 'max' => 50),
         );
 
-        if (!empty($data['email']) && !is_email($data['email'])) {
+        foreach ($numeric_fields as $field => $limits) {
+            if (array_key_exists($field, $settings_input)) {
+                $value = intval($settings_input[$field]);
+                if (isset($limits['min'])) {
+                    $value = max($limits['min'], $value);
+                }
+                if (isset($limits['max'])) {
+                    $value = min($limits['max'], $value);
+                }
+                $data[$field] = $value;
+            }
+        }
+
+        $checkbox_fields = array(
+            'lunch_break_enabled' => true,
+            'auto_confirm_enabled' => true,
+            'require_deposit' => false,
+            'enable_email' => false,
+            'weekend_enabled' => false,
+            'notify_vip_bookings' => false,
+            'notify_blacklist_events' => false,
+        );
+
+        foreach ($checkbox_fields as $field => $always_present) {
+            if ($always_present || array_key_exists($field, $settings_input)) {
+                $data[$field] = !empty($settings_input[$field]) ? 'yes' : 'no';
+            }
+        }
+
+        if (array_key_exists('languages', $settings_input)) {
+            $languages_input = (array) $settings_input['languages'];
+            $languages_allowed = function_exists('rb_get_available_languages') ? array_keys(rb_get_available_languages()) : array();
+            $language_codes = array();
+
+            foreach ($languages_input as $language_code) {
+                $language_code = sanitize_text_field($language_code);
+                if (empty($languages_allowed) || in_array($language_code, $languages_allowed, true)) {
+                    $language_codes[] = $language_code;
+                }
+            }
+
+            $data['languages'] = array_values(array_unique($language_codes));
+        }
+
+        if (array_key_exists('admin_email', $settings_input)) {
+            $data['admin_email'] = sanitize_email($settings_input['admin_email']);
+        }
+
+        if (array_key_exists('special_closed_dates', $settings_input)) {
+            $data['special_closed_dates'] = sanitize_textarea_field($settings_input['special_closed_dates']);
+        }
+
+        if (array_key_exists('vip_notification_recipients', $settings_input)) {
+            $data['vip_notification_recipients'] = sanitize_textarea_field($settings_input['vip_notification_recipients']);
+        }
+
+        if (array_key_exists('blacklist_notification_recipients', $settings_input)) {
+            $data['blacklist_notification_recipients'] = sanitize_textarea_field($settings_input['blacklist_notification_recipients']);
+        }
+
+        if (isset($data['email']) && $data['email'] !== '' && !is_email($data['email'])) {
             wp_send_json_error(array('message' => __('Please enter a valid email address.', 'restaurant-booking')));
             wp_die();
         }
 
-        if (!empty($data['admin_email']) && !is_email($data['admin_email'])) {
+        if (isset($data['admin_email']) && $data['admin_email'] !== '' && !is_email($data['admin_email'])) {
             wp_send_json_error(array('message' => __('Please enter a valid notification email.', 'restaurant-booking')));
             wp_die();
         }
