@@ -104,11 +104,22 @@ abstract class RB_Frontend_Base {
         );
     }
 
-    protected function generate_time_slots($start = null, $end = null, $interval = null) {
+    protected function generate_time_slots($start = null, $end = null, $interval = null, $settings_override = array()) {
         $settings = get_option('rb_settings', array());
 
+        if (!is_array($settings)) {
+            $settings = array();
+        }
+
+        if (!empty($settings_override) && is_array($settings_override)) {
+            $settings = array_merge($settings, $settings_override);
+        }
+
         $mode = isset($settings['working_hours_mode']) ? $settings['working_hours_mode'] : 'simple';
-        $interval = $interval ?: (isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : 30);
+        $interval = (int) $interval;
+        if ($interval <= 0) {
+            $interval = isset($settings['time_slot_interval']) ? intval($settings['time_slot_interval']) : 30;
+        }
         $buffer = isset($settings['booking_buffer_time']) ? intval($settings['booking_buffer_time']) : 0;
 
         $slots = array();
