@@ -98,6 +98,7 @@ function rb_init_plugin() {
     require_once RB_PLUGIN_DIR . 'includes/class-assets-manager.php';
     require_once RB_PLUGIN_DIR . 'includes/class-rest.php';
     require_once RB_PLUGIN_DIR . 'includes/class-notification-service.php';
+    require_once RB_PLUGIN_DIR . 'includes/class-svg-icons.php';
 
     // Initialize globals
     global $rb_database, $rb_booking, $rb_customer, $rb_email, $rb_location, $rb_notification_service;
@@ -228,6 +229,13 @@ function rb_frontend_enqueue_scripts() {
     if (file_exists($gmail_style_path)) {
         $gmail_style_version = filemtime($gmail_style_path);
         wp_enqueue_style('rb-manager-gmail', RB_PLUGIN_URL . 'assets/css/manager-gmail-style.css', array('rb-frontend-css'), $gmail_style_version);
+    }
+
+    // Enqueue UI enhancements
+    $ui_enhancements_path = RB_PLUGIN_DIR . 'assets/css/ui-enhancements.css';
+    if (file_exists($ui_enhancements_path)) {
+        $ui_enhancements_version = filemtime($ui_enhancements_path);
+        wp_enqueue_style('rb-ui-enhancements', RB_PLUGIN_URL . 'assets/css/ui-enhancements.css', array('rb-manager-gmail'), $ui_enhancements_version);
     }
 
     if (file_exists($gmail_script_path)) {
