@@ -307,12 +307,12 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         $ajax_nonce = wp_create_nonce('rb_frontend_nonce');
 
         $nav_items = array(
-            'dashboard' => array('icon' => '📊', 'label' => $this->t('dashboard', __('Dashboard', 'restaurant-booking'))),
-            'timeline' => array('icon' => '⏱️', 'label' => $this->t('timeline_view', __('Timeline View', 'restaurant-booking'))),
-            'create' => array('icon' => '📝', 'label' => $this->t('create_booking', __('Create Booking', 'restaurant-booking'))),
-            'tables' => array('icon' => '🍽️', 'label' => $this->t('manage_tables', __('Manage Tables', 'restaurant-booking'))),
-            'customers' => array('icon' => '👥', 'label' => $this->t('customers', __('Customers', 'restaurant-booking'))),
-            'settings' => array('icon' => '⚙️', 'label' => $this->t('location_settings', __('Location Settings', 'restaurant-booking'))),
+            'dashboard' => array('icon' => 'dashboard', 'label' => $this->t('dashboard', __('Dashboard', 'restaurant-booking'))),
+            'timeline' => array('icon' => 'timeline', 'label' => $this->t('timeline_view', __('Timeline View', 'restaurant-booking'))),
+            'create' => array('icon' => 'create', 'label' => $this->t('create_booking', __('Create Booking', 'restaurant-booking'))),
+            'tables' => array('icon' => 'tables', 'label' => $this->t('manage_tables', __('Manage Tables', 'restaurant-booking'))),
+            'customers' => array('icon' => 'customers', 'label' => $this->t('customers', __('Customers', 'restaurant-booking'))),
+            'settings' => array('icon' => 'settings', 'label' => $this->t('location_settings', __('Location Settings', 'restaurant-booking'))),
         );
 
         $available_languages = isset($location_settings['languages']) ? (array) $location_settings['languages'] : array();
@@ -361,7 +361,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                 ?>
                                 <li class="<?php echo $is_active ? 'is-active' : ''; ?>"<?php echo $aria_current_attr; ?>>
                                     <a href="<?php echo esc_url($url); ?>"<?php echo $aria_current_attr; ?>>
-                                        <span class="rb-gmail-nav-icon" aria-hidden="true"><?php echo esc_html($item['icon']); ?></span>
+                                        <span class="rb-gmail-nav-icon"><?php RB_SVG_Icons::render($item['icon'], array('width' => 20, 'height' => 20, 'aria-label' => $item['label'])); ?></span>
                                         <span class="rb-gmail-nav-label"><?php echo esc_html($item['label']); ?></span>
                                     </a>
                                 </li>
@@ -583,27 +583,27 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         $status_filters = array(
             '' => array(
                 'label' => $this->t('all', __('All', 'restaurant-booking')),
-                'icon' => '📬',
+                'icon' => 'all-bookings',
                 'count' => $stats['total'] ?? count($bookings),
             ),
             'pending' => array(
                 'label' => $this->t('pending', __('Pending', 'restaurant-booking')),
-                'icon' => '⏳',
+                'icon' => 'pending',
                 'count' => $stats['pending'] ?? 0,
             ),
             'confirmed' => array(
                 'label' => $this->t('confirmed', __('Confirmed', 'restaurant-booking')),
-                'icon' => '✓',
+                'icon' => 'confirmed',
                 'count' => $stats['confirmed'] ?? 0,
             ),
             'completed' => array(
                 'label' => $this->t('completed', __('Completed', 'restaurant-booking')),
-                'icon' => '✓✓',
+                'icon' => 'completed',
                 'count' => $stats['completed'] ?? 0,
             ),
             'cancelled' => array(
                 'label' => $this->t('cancelled', __('Cancelled', 'restaurant-booking')),
-                'icon' => '✕',
+                'icon' => 'cancelled',
                 'count' => $stats['cancelled'] ?? 0,
             ),
         );
@@ -619,15 +619,15 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
         }
 
         $source_filters = array(
-            '' => array('label' => $this->t('all', __('All', 'restaurant-booking')), 'icon' => '🌐'),
-            'website' => array('label' => $this->t('website', __('Website', 'restaurant-booking')), 'icon' => '🌐'),
-            'phone' => array('label' => $this->t('phone', __('Phone', 'restaurant-booking')), 'icon' => '📞'),
-            'facebook' => array('label' => 'Facebook', 'icon' => '📘'),
-            'zalo' => array('label' => 'Zalo', 'icon' => '💬'),
-            'instagram' => array('label' => 'Instagram', 'icon' => '📷'),
-            'walk-in' => array('label' => $this->t('walk_in', __('Walk-in', 'restaurant-booking')), 'icon' => '🚶'),
-            'email' => array('label' => $this->t('email', __('Email', 'restaurant-booking')), 'icon' => '✉️'),
-            'other' => array('label' => $this->t('other', __('Other', 'restaurant-booking')), 'icon' => '❓'),
+            '' => array('label' => $this->t('all', __('All', 'restaurant-booking')), 'icon' => 'all-bookings'),
+            'website' => array('label' => $this->t('website', __('Website', 'restaurant-booking')), 'icon' => 'website'),
+            'phone' => array('label' => $this->t('phone', __('Phone', 'restaurant-booking')), 'icon' => 'phone'),
+            'facebook' => array('label' => 'Facebook', 'icon' => 'facebook'),
+            'zalo' => array('label' => 'Zalo', 'icon' => 'zalo'),
+            'instagram' => array('label' => 'Instagram', 'icon' => 'instagram'),
+            'walk-in' => array('label' => $this->t('walk_in', __('Walk-in', 'restaurant-booking')), 'icon' => 'walk-in'),
+            'email' => array('label' => $this->t('email', __('Email', 'restaurant-booking')), 'icon' => 'email'),
+            'other' => array('label' => $this->t('other', __('Other', 'restaurant-booking')), 'icon' => 'other'),
         );
 
         $search_placeholder = $this->t('search_bookings_placeholder', __('Search bookings…', 'restaurant-booking'));
@@ -736,7 +736,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     ?>
                                     <li>
                                         <a href="<?php echo esc_url($status_url); ?>" class="rb-gmail-status-link <?php echo $is_active ? 'is-active' : ''; ?>">
-                                            <span class="rb-gmail-status-icon" aria-hidden="true"><?php echo esc_html($info['icon']); ?></span>
+                                            <span class="rb-gmail-status-icon"><?php RB_SVG_Icons::render($info['icon'], array('width' => 18, 'height' => 18, 'aria-label' => $info['label'])); ?></span>
                                             <span class="rb-gmail-status-label"><?php echo esc_html($info['label']); ?></span>
                                             <span class="rb-gmail-status-count"><?php echo esc_html(number_format_i18n($info['count'])); ?></span>
                                         </a>
@@ -762,7 +762,7 @@ class RB_Frontend_Manager extends RB_Frontend_Base {
                                     ?>
                                     <li>
                                         <a href="<?php echo esc_url($source_url); ?>" class="rb-gmail-source-link <?php echo $is_active ? 'is-active' : ''; ?>">
-                                            <span class="rb-gmail-source-icon" aria-hidden="true"><?php echo esc_html($info['icon']); ?></span>
+                                            <span class="rb-gmail-source-icon"><?php RB_SVG_Icons::render($info['icon'], array('width' => 18, 'height' => 18, 'aria-label' => $info['label'])); ?></span>
                                             <span class="rb-gmail-source-label"><?php echo esc_html($info['label']); ?></span>
                                             <span class="rb-gmail-source-count"><?php echo esc_html(number_format_i18n($count)); ?></span>
                                         </a>
