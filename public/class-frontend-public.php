@@ -298,7 +298,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                                     </select>
                                 </div>
 
-                                <div class="rb-new-form-group">
+                                <div class="rb-new-form-group rb-new-form-group--date">
                                     <label for="rb-new-date"><?php echo esc_html(rb_t('booking_date', __('Date', 'restaurant-booking'))); ?></label>
                                     <input type="date" id="rb-new-date" name="booking_date"
                                         value="<?php echo esc_attr($default_booking_date); ?>"
@@ -450,7 +450,7 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                             <div class="rb-new-form-section">
                                 <h3 class="rb-new-section-title"><?php echo esc_html(rb_t('contact_information', __('Contact Information', 'restaurant-booking'))); ?></h3>
                                 
-                                <div class="rb-new-form-grid">
+                                <div class="rb-new-form-grid rb-new-form-grid--contact">
                                     <div class="rb-new-form-group">
                                         <label for="rb-new-customer-name"><?php echo esc_html(rb_t('full_name', __('Full Name', 'restaurant-booking'))); ?> *</label>
                                         <input type="text" id="rb-new-customer-name" name="customer_name" required>
