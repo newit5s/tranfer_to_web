@@ -260,6 +260,11 @@ body.rb-modal-open {
     font-size: 15px;
     font-weight: 600;
     color: var(--rb-new-muted);
+    position: relative;
+    z-index: 1;
+    background: var(--rb-new-surface);
+    padding: 0 6px;
+    border-radius: 6px;
 }
 
 .rb-new-stepper__item.is-active,
@@ -418,6 +423,8 @@ body.rb-modal-open {
     background-color: #ffffff;
     color: var(--rb-new-text);
     width: 100%;
+    min-height: 48px;
+    box-sizing: border-box;
 }
 
 .rb-new-form-group--date {
@@ -429,6 +436,7 @@ body.rb-modal-open {
     appearance: none;
     padding-right: 46px;
     line-height: 1.3;
+    width: 100%;
 }
 
 .rb-new-form-group--date::after {
@@ -465,6 +473,7 @@ body.rb-modal-open {
 
 .rb-new-form-grid--contact {
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
 }
 
 @media (min-width: 821px) {
@@ -683,6 +692,7 @@ body.rb-modal-open {
     display: flex;
     gap: 6px;
     align-items: baseline;
+    min-width: 0;
 }
 
 .rb-new-location-info__item.is-hidden {
@@ -692,6 +702,14 @@ body.rb-modal-open {
 .rb-new-location-info__label {
     font-weight: 600;
     color: var(--rb-new-text);
+    flex-shrink: 0;
+}
+
+.rb-new-location-info__item span:not(.rb-new-location-info__label) {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* Booking summary */
