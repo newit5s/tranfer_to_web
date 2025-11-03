@@ -307,6 +307,11 @@ class RB_Frontend_Public extends RB_Frontend_Base {
                                         data-default-date="<?php echo esc_attr($default_booking_date); ?>"
                                         data-min-date="<?php echo esc_attr($min_date); ?>"
                                         data-max-date="<?php echo esc_attr($max_date); ?>" required>
+                                    <button type="button"
+                                        class="rb-new-date-trigger"
+                                        aria-label="<?php echo esc_attr(rb_t('open_calendar', __('Open calendar', 'restaurant-booking'))); ?>">
+                                        <span class="rb-new-visually-hidden"><?php echo esc_html(rb_t('open_calendar', __('Open calendar', 'restaurant-booking'))); ?></span>
+                                    </button>
                                 </div>
 
                                 <div class="rb-new-form-group">

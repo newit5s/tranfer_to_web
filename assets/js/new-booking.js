@@ -118,6 +118,8 @@
                 this.updateTimeSlots();
             });
 
+            $(document).on('click', '.rb-new-date-trigger', this.handleDateTriggerClick.bind(this));
+
             // Check-in change - update checkout options
             $(document).on('change', '#rb-new-time', this.updateCheckoutSelect.bind(this));
 
@@ -174,6 +176,39 @@
             this.modal.on('hide', function() {
                 $('body').removeClass('rb-modal-open');
             });
+        },
+
+        handleDateTriggerClick: function(event) {
+            event.preventDefault();
+
+            const $button = $(event.currentTarget);
+            const $input = $button.siblings('input[type="date"]').first();
+
+            if (!$input.length) {
+                return;
+            }
+
+            const inputElement = $input[0];
+
+            if (typeof inputElement.showPicker === 'function') {
+                try {
+                    inputElement.showPicker();
+                    return;
+                } catch (error) {
+                    // Fallback to focusing if showPicker throws
+                }
+            }
+
+            $input.trigger('focus');
+
+            // Attempt to hint browsers without showPicker support
+            try {
+                inputElement.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                inputElement.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                inputElement.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            } catch (error) {
+                // If dispatching fails, the focused input still allows manual date entry
+            }
         },
 
         getFocusableElements: function() {
