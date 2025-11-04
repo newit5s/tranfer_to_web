@@ -1375,12 +1375,43 @@
                 toggleBadge('[data-badge="loyal"]', isLoyal);
                 toggleBadge('[data-badge="problem"]', isProblem);
 
-                var $detailScroll = customerDetail.find('.rb-customer-detail-scroll');
-                if ($detailScroll.length) {
-                    $detailScroll.scrollTop(0);
-                } else {
-                    customerDetail.scrollTop(0);
+                function resetCustomerDetailScroll() {
+                    if (!customerDetail.length) {
+                        return;
+                    }
+
+                    var $targets = customerDetail.find('.rb-customer-detail-scroll');
+                    if (!$targets.length) {
+                        $targets = customerDetail;
+                    }
+
+                    function scrollElements($elements) {
+                        $elements.each(function() {
+                            var el = this;
+                            try {
+                                el.scrollTop = 0;
+                                if (typeof el.scrollTo === 'function') {
+                                    el.scrollTo(0, 0);
+                                }
+                            } catch (error) {
+                                // Fallback for older browsers
+                                $(el).scrollTop(0);
+                            }
+                        });
+                    }
+
+                    scrollElements($targets);
+                    if (typeof window.requestAnimationFrame === 'function') {
+                        window.requestAnimationFrame(function() {
+                            scrollElements($targets);
+                        });
+                    }
+                    setTimeout(function() {
+                        scrollElements($targets);
+                    }, 0);
                 }
+
+                resetCustomerDetailScroll();
 
                 var $noteField = customerDetail.find('.rb-manager-note-field');
                 $noteField.val(notes).attr('data-customer-id', customerId);
