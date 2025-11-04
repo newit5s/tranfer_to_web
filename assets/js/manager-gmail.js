@@ -413,6 +413,18 @@
             if (typeof window.requestAnimationFrame === 'function') {
                 window.requestAnimationFrame(runScrollReset);
             }
+
+            scrollElements($targets);
+
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(function () {
+                    scrollElements($targets);
+                });
+            }
+
+            setTimeout(function () {
+                scrollElements($targets);
+            }, 0);
         },
 
         revealHeader: function () {
