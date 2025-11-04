@@ -380,18 +380,38 @@
 
             var $targets = this.detailScroll;
 
-            function scrollElements($elements) {
-                $elements.each(function () {
-                    var el = this;
-                    try {
-                        el.scrollTop = 0;
-                        if (typeof el.scrollTo === 'function') {
+            function applyScroll(el) {
+                if (!el) {
+                    return;
+                }
+
+                try {
+                    if (typeof el.scrollTo === 'function') {
+                        try {
+                            el.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                            return;
+                        } catch (error) {
                             el.scrollTo(0, 0);
+                            return;
                         }
-                    } catch (error) {
-                        $(el).scrollTop(0);
                     }
+
+                    el.scrollTop = 0;
+                } catch (error) {
+                    $(el).scrollTop(0);
+                }
+            }
+
+            function runScrollReset() {
+                $targets.each(function () {
+                    applyScroll(this);
                 });
+            }
+
+            runScrollReset();
+
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(runScrollReset);
             }
 
             scrollElements($targets);
