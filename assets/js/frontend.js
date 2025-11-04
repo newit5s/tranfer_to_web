@@ -1375,6 +1375,13 @@
                 toggleBadge('[data-badge="loyal"]', isLoyal);
                 toggleBadge('[data-badge="problem"]', isProblem);
 
+                var $detailScroll = customerDetail.find('.rb-customer-detail-scroll');
+                if ($detailScroll.length) {
+                    $detailScroll.scrollTop(0);
+                } else {
+                    customerDetail.scrollTop(0);
+                }
+
                 var $noteField = customerDetail.find('.rb-manager-note-field');
                 $noteField.val(notes).attr('data-customer-id', customerId);
 
