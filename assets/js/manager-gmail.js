@@ -374,9 +374,37 @@
         },
 
         scrollDetailToTop: function () {
-            if (this.detailScroll && this.detailScroll.length) {
-                this.detailScroll.scrollTop(0);
+            if (!this.detailScroll || !this.detailScroll.length) {
+                return;
             }
+
+            var $targets = this.detailScroll;
+
+            function scrollElements($elements) {
+                $elements.each(function () {
+                    var el = this;
+                    try {
+                        el.scrollTop = 0;
+                        if (typeof el.scrollTo === 'function') {
+                            el.scrollTo(0, 0);
+                        }
+                    } catch (error) {
+                        $(el).scrollTop(0);
+                    }
+                });
+            }
+
+            scrollElements($targets);
+
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(function () {
+                    scrollElements($targets);
+                });
+            }
+
+            setTimeout(function () {
+                scrollElements($targets);
+            }, 0);
         },
 
         revealHeader: function () {
