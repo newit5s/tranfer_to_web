@@ -1222,6 +1222,46 @@
             var customerLists = $('.rb-customer-list');
             var customerNumberFormatter = null;
 
+            function forceScrollContainersToTop($elements) {
+                if (!$elements || !$elements.length) {
+                    return;
+                }
+
+                function applyScroll(el) {
+                    if (!el) {
+                        return;
+                    }
+
+                    try {
+                        if (typeof el.scrollTo === 'function') {
+                            try {
+                                el.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                                return;
+                            } catch (error) {
+                                el.scrollTo(0, 0);
+                                return;
+                            }
+                        }
+
+                        el.scrollTop = 0;
+                    } catch (error) {
+                        $(el).scrollTop(0);
+                    }
+                }
+
+                function runScrollReset() {
+                    $elements.each(function() {
+                        applyScroll(this);
+                    });
+                }
+
+                runScrollReset();
+
+                if (typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(runScrollReset);
+                }
+            }
+
             function formatCustomerNumber(value) {
                 var numeric = parseFloat(value);
                 if (isNaN(numeric)) {
@@ -1374,6 +1414,13 @@
                 toggleBadge('[data-badge="blacklist"]', isBlacklisted);
                 toggleBadge('[data-badge="loyal"]', isLoyal);
                 toggleBadge('[data-badge="problem"]', isProblem);
+
+                var $scrollTargets = customerDetail.find('.rb-customer-detail-scroll');
+                if ($scrollTargets.length) {
+                    forceScrollContainersToTop($scrollTargets);
+                } else {
+                    forceScrollContainersToTop(customerDetail);
+                }
 
                 var $noteField = customerDetail.find('.rb-manager-note-field');
                 $noteField.val(notes).attr('data-customer-id', customerId);

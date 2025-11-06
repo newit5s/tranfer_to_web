@@ -1084,6 +1084,13 @@ body.admin-bar {
     visibility: visible;
 }
 
+@media (min-width: 769px) {
+    .rb-manager-gmail-layout.has-detail-open .rb-gmail-overlay,
+    .rb-manager--gmail .rb-customer-inbox.has-detail-open .rb-gmail-overlay {
+        pointer-events: none;
+    }
+}
+
 .rb-gmail-sidebar {
     background: var(--rb-gmail-surface);
     border-radius: var(--rb-gmail-radius);

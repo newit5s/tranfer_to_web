@@ -374,8 +374,44 @@
         },
 
         scrollDetailToTop: function () {
-            if (this.detailScroll && this.detailScroll.length) {
-                this.detailScroll.scrollTop(0);
+            if (!this.detailScroll || !this.detailScroll.length) {
+                return;
+            }
+
+            var $targets = this.detailScroll;
+
+            function applyScroll(el) {
+                if (!el) {
+                    return;
+                }
+
+                try {
+                    if (typeof el.scrollTo === 'function') {
+                        try {
+                            el.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                            return;
+                        } catch (error) {
+                            el.scrollTo(0, 0);
+                            return;
+                        }
+                    }
+
+                    el.scrollTop = 0;
+                } catch (error) {
+                    $(el).scrollTop(0);
+                }
+            }
+
+            function runScrollReset() {
+                $targets.each(function () {
+                    applyScroll(this);
+                });
+            }
+
+            runScrollReset();
+
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(runScrollReset);
             }
         },
 
